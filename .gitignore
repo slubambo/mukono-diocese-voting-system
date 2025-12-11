@@ -23,3 +23,6 @@ logs/
 **/dist/
 **/build/
 **/coverage/
+
+.vscode/
+.idea/
