@@ -1,2 +1,3 @@
 frontend/.vite/deps/package.json
 frontend/.vite/deps/_metadata.json
+frontend/node_modules/*
