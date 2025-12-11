@@ -1,6 +1,8 @@
 package com.mukono.voting.config;
 
 import com.mukono.voting.security.CustomUserDetailsService;
+import com.mukono.voting.security.JwtAuthenticationEntryPoint;
+import com.mukono.voting.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +13,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -23,10 +26,21 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private final CustomUserDetailsService customUserDetailsService;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Autowired
-    public SecurityConfig(CustomUserDetailsService customUserDetailsService) {
+    public SecurityConfig(CustomUserDetailsService customUserDetailsService,
+                         JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
         this.customUserDetailsService = customUserDetailsService;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+    }
+
+    /**
+     * JWT Authentication Filter bean.
+     */
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter();
     }
 
     /**
@@ -58,9 +72,10 @@ public class SecurityConfig {
      * Configures the security filter chain with stateless JWT-style authentication.
      * - CSRF is disabled (appropriate for stateless JWT)
      * - Session management is set to stateless
+     * - JWT authentication entry point handles 401 responses
+     * - JwtAuthenticationFilter is added before UsernamePasswordAuthenticationFilter
      * - Public endpoints are permitted without authentication
      * - All other requests require authentication
-     * - JWT filter will be added later
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -70,6 +85,11 @@ public class SecurityConfig {
 
                 // Enable CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // Configure exception handling with JWT entry point
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                )
 
                 // Set session management to stateless for JWT
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -91,6 +111,9 @@ public class SecurityConfig {
                         // All other requests require authentication
                         .anyRequest().authenticated()
                 );
+
+        // Add JWT authentication filter before UsernamePasswordAuthenticationFilter
+        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
