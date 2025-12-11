@@ -1,3 +1,25 @@
-frontend/.vite/deps/package.json
-frontend/.vite/deps/_metadata.json
-frontend/node_modules/*
+# OS junk
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.iml
+
+# Logs (generic)
+logs/
+*.log
+
+# Environment files (if ever put at root)
+.env
+.env.*.local
+
+# Node modules anywhere (safety net)
+**/node_modules/
+
+# Build artifacts (safety net)
+**/dist/
+**/build/
+**/coverage/

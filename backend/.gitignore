@@ -1,6 +1,7 @@
 # IDE & Editor
 .vscode/
 .idea/
+*.iml
 *.swp
 *.swo
 *~
@@ -8,7 +9,7 @@
 .classpath
 .project
 .settings/
-*.iml
+.factorypath
 
 # Build & Output
 /target/
@@ -18,18 +19,14 @@
 *.war
 *.ear
 
-# Maven
+# Maven Wrapper
 .mvn/
+mvnw
 mvnw.cmd
 
-# Gradle
-.gradle/
-gradle/
-
-# Node (if frontend is included)
-node_modules/
-npm-debug.log
-yarn-error.log
+# Logs
+logs/
+*.log
 
 # Environment & Secrets
 .env
@@ -37,10 +34,7 @@ yarn-error.log
 .env.*.local
 *.p12
 *.jks
-
-# Logs
-logs/
-*.log
+*.keystore
 
 # OS
 Thumbs.db
