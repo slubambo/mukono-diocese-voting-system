@@ -1,1 +1,46 @@
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.classpath
+.project
+.settings/
+*.iml
+
+# Build & Output
 /target/
+/out/
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven
+.mvn/
+mvnw.cmd
+
+# Gradle
+.gradle/
+gradle/
+
+# Node (if frontend is included)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.p12
+*.jks
+
+# Logs
+logs/
+*.log
+
+# OS
+Thumbs.db
