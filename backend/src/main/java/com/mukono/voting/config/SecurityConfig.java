@@ -1,5 +1,7 @@
 package com.mukono.voting.config;
 
+import com.mukono.voting.security.CustomUserDetailsService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -19,6 +21,13 @@ import java.util.Arrays;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    private final CustomUserDetailsService customUserDetailsService;
+
+    @Autowired
+    public SecurityConfig(CustomUserDetailsService customUserDetailsService) {
+        this.customUserDetailsService = customUserDetailsService;
+    }
 
     /**
      * Password encoder bean using BCryptPasswordEncoder for user passwords.
@@ -64,6 +73,9 @@ public class SecurityConfig {
 
                 // Set session management to stateless for JWT
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // Configure authentication with UserDetailsService and PasswordEncoder
+                .userDetailsService(customUserDetailsService)
 
                 // Configure authorization for endpoints
                 .authorizeHttpRequests(authz -> authz
