@@ -2,8 +2,12 @@ package com.mukono.voting.backend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.mukono.voting")
+@EnableJpaRepositories(basePackages = "com.mukono.voting")
+@EntityScan(basePackages = "com.mukono.voting")
 public class BackendApplication {
 
 	public static void main(String[] args) {
