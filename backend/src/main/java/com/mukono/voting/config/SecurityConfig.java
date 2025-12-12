@@ -1,8 +1,7 @@
 package com.mukono.voting.config;
 
-import com.mukono.voting.security.CustomUserDetailsService;
-import com.mukono.voting.security.JwtAuthenticationEntryPoint;
-import com.mukono.voting.security.JwtAuthenticationFilter;
+import java.util.Arrays;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,7 +20,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
+import com.mukono.voting.security.CustomUserDetailsService;
+import com.mukono.voting.security.JwtAuthenticationEntryPoint;
+import com.mukono.voting.security.JwtAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -67,7 +68,9 @@ public class SecurityConfig {
      */
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(customUserDetailsService);
+        // Fix: use no-args constructor and set the userDetailsService explicitly
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(customUserDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
@@ -115,8 +118,8 @@ public class SecurityConfig {
                 // Set session management to stateless for JWT
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // Configure authentication with UserDetailsService and PasswordEncoder
-                .userDetailsService(customUserDetailsService)
+                // Register the authentication provider
+                .authenticationProvider(authenticationProvider())
 
                 // Configure authorization for endpoints
                 .authorizeHttpRequests(authz -> authz
