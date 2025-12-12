@@ -3,6 +3,8 @@ package com.mukono.voting.security;
 import com.mukono.voting.payload.request.LoginRequest;
 import com.mukono.voting.payload.response.JwtAuthenticationResponse;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final CustomUserDetailsService customUserDetailsService;
@@ -45,35 +48,44 @@ public class AuthController {
     public ResponseEntity<JwtAuthenticationResponse> authenticateUser(
             @Valid @RequestBody LoginRequest loginRequest) {
 
-        // Authenticate the user with username and password
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getUsername(),
-                        loginRequest.getPassword()
-                )
-        );
+        logger.info("Login attempt for username: {}", loginRequest.getUsername());
+        
+        try {
+            // Authenticate the user with username and password
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getUsername(),
+                            loginRequest.getPassword()
+                    )
+            );
 
-        // Set authentication in security context
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+            logger.info("Authentication successful for username: {}", loginRequest.getUsername());
 
-        // Get user principal from authentication
-        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            // Set authentication in security context
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        // Generate JWT token
-        String jwt = jwtTokenProvider.generateToken(userPrincipal);
+            // Get user principal from authentication
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
 
-        // Extract roles from authorities
-        List<String> roles = userPrincipal.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
+            // Generate JWT token
+            String jwt = jwtTokenProvider.generateToken(userPrincipal);
 
-        // Build and return response
-        JwtAuthenticationResponse response = new JwtAuthenticationResponse(
-                jwt,
-                userPrincipal.getUsername(),
-                roles
-        );
+            // Extract roles from authorities
+            List<String> roles = userPrincipal.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList());
 
-        return ResponseEntity.ok(response);
+            // Build and return response
+            JwtAuthenticationResponse response = new JwtAuthenticationResponse(
+                    jwt,
+                    userPrincipal.getUsername(),
+                    roles
+            );
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Authentication failed for username: {}, error: {}", loginRequest.getUsername(), e.getMessage(), e);
+            throw e;
+        }
     }
 }

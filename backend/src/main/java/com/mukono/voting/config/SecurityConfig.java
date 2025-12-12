@@ -126,6 +126,7 @@ public class SecurityConfig {
                         // Public endpoints
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/vote/login").permitAll()
+                        .requestMatchers("/api/v1/test/**").permitAll()
 
                         // Swagger/OpenAPI endpoints
                         .requestMatchers("/v3/api-docs/**").permitAll()
