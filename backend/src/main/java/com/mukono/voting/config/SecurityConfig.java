@@ -133,6 +133,14 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/swagger-ui.html").permitAll()
 
+                        // User management (special bootstrap mode for first user)
+                        // POST /api/v1/users is handled in controller for bootstrap
+                        .requestMatchers("POST", "/api/v1/users").permitAll()
+                        .requestMatchers("/api/v1/users/**").authenticated()
+
+                        // People management requires authentication
+                        .requestMatchers("/api/v1/people/**").authenticated()
+
                         // All other requests require authentication
                         .anyRequest().authenticated()
                 );

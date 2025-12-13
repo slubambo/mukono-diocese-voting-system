@@ -4,9 +4,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.mukono.voting.audit.DateAudit;
+import com.mukono.voting.people.Person;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -14,6 +17,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -33,6 +37,14 @@ public class User extends DateAudit {
     @Column(nullable = false)
     private String password;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Status status = Status.ACTIVE;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "person_id", nullable = true)
+    private Person person;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "user_roles",
@@ -40,6 +52,10 @@ public class User extends DateAudit {
         inverseJoinColumns = @JoinColumn(name="role_id")
     )
     private Set<Role> roles = new HashSet<>();
+
+    public enum Status {
+        ACTIVE, DISABLED
+    }
 
 	public User() {
 		super();
@@ -75,6 +91,22 @@ public class User extends DateAudit {
 
 	public void setPassword(String password) {
 		this.password = password;
+	}
+
+	public Status getStatus() {
+		return status;
+	}
+
+	public void setStatus(Status status) {
+		this.status = status;
+	}
+
+	public Person getPerson() {
+		return person;
+	}
+
+	public void setPerson(Person person) {
+		this.person = person;
 	}
 
 	public Set<Role> getRoles() {
