@@ -2,8 +2,6 @@ package com.mukono.voting.security;
 
 import com.mukono.voting.user.User;
 import com.mukono.voting.user.UserRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -13,7 +11,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private static final Logger logger = LoggerFactory.getLogger(CustomUserDetailsService.class);
     private final UserRepository userRepository;
 
     @Autowired
@@ -23,16 +20,8 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        logger.debug("[UDS] Loading user by username: {}", username);
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> {
-                    logger.error("[UDS] User not found with username: {}", username);
-                    return new UsernameNotFoundException("User not found with username: " + username);
-                });
-
-        logger.debug("[UDS] User found: {}, roles count: {}", user.getUsername(), user.getRoles().size());
-        UserPrincipal principal = UserPrincipal.create(user);
-        logger.debug("[UDS] Created UserPrincipal with authorities: {}", principal.getAuthorities());
-        return principal;
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+        return UserPrincipal.create(user);
     }
 }

@@ -88,17 +88,7 @@ public class UserController {
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal UserPrincipal currentUser) {
-        logger.debug("[/users/me] Endpoint invoked.");
-        if (currentUser == null) {
-            logger.warn("[/users/me] No AuthenticationPrincipal resolved (currentUser is null). Returning 401.");
-            throw new IllegalArgumentException("User not authenticated");
-        }
-
-        logger.debug("[/users/me] Resolved principal: username={}, id={}, authorities={}", currentUser.getUsername(), currentUser.getId(), currentUser.getAuthorities());
-        User user = userRepository.findById(currentUser.getId())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        logger.debug("[/users/me] Loaded user entity: username={}, email={}, roles={}", user.getUsername(), user.getEmail(), user.getRoles());
-        return ResponseEntity.ok(userService.toUserResponse(user));
+        return ResponseEntity.ok(userService.getCurrentUser(currentUser));
     }
 
     /**

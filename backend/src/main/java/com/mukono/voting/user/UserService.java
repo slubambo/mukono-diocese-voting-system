@@ -6,6 +6,8 @@ import com.mukono.voting.payload.request.CreateUserRequest;
 import com.mukono.voting.payload.request.UpdateUserRequest;
 import com.mukono.voting.payload.response.PersonResponse;
 import com.mukono.voting.payload.response.UserResponse;
+import com.mukono.voting.security.UserPrincipal;
+import org.springframework.data.domain.Page;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -203,5 +205,18 @@ public class UserService {
         response.setAge(person.getAge());
         response.setStatus(person.getStatus().toString());
         return response;
+    }
+
+    /**
+     * Return the current authenticated user's profile as a response.
+     * Throws IllegalArgumentException if principal is null or user not found.
+     */
+    public UserResponse getCurrentUser(UserPrincipal currentUser) {
+        if (currentUser == null) {
+            throw new IllegalArgumentException("User not authenticated");
+        }
+        User user = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return toUserResponse(user);
     }
 }
