@@ -1,6 +1,8 @@
 package com.mukono.voting.repository.org;
 
 import com.mukono.voting.model.org.Diocese;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
@@ -26,4 +28,21 @@ public interface DioceseRepository extends JpaRepository<Diocese, Long> {
      * @return true if diocese exists with the given name
      */
     boolean existsByNameIgnoreCase(String name);
+
+    /**
+     * Check if a diocese exists by code (case-insensitive).
+     * 
+     * @param code the diocese code
+     * @return true if diocese exists with the given code
+     */
+    boolean existsByCodeIgnoreCase(String code);
+
+    /**
+     * Find dioceses by name containing (case-insensitive) with pagination.
+     * 
+     * @param q the search term
+     * @param pageable pagination information
+     * @return page of dioceses matching criteria
+     */
+    Page<Diocese> findByNameContainingIgnoreCase(String q, Pageable pageable);
 }
