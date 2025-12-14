@@ -48,10 +48,11 @@ public class OrgSeeder implements ApplicationRunner {
         int fellowshipsCreated = 0;
 
         // 1. Seed Mukono Diocese
-        Diocese mukonoDiocese = seedMukonoDiocese();
-        if (mukonoDiocese.getCreatedAt().equals(mukonoDiocese.getUpdatedAt())) {
+        boolean dioceseIsNew = seedMukonoDiocese();
+        if (dioceseIsNew) {
             diocesesCreated++;
         }
+        Diocese mukonoDiocese = dioceseRepository.findByNameIgnoreCase("Mukono Diocese").orElseThrow();
 
         // 2. Seed 12 Archdeaconries under Mukono Diocese
         archdeaconriesCreated = seedArchdeaconries(mukonoDiocese);
@@ -63,21 +64,22 @@ public class OrgSeeder implements ApplicationRunner {
                 diocesesCreated, archdeaconriesCreated, fellowshipsCreated);
     }
 
-    private Diocese seedMukonoDiocese() {
+    private boolean seedMukonoDiocese() {
         String name = "Mukono Diocese";
         String code = "MUKONO";
 
         // Check if exists
-        return dioceseRepository.findByNameIgnoreCase(name)
-                .orElseGet(() -> {
-                    Diocese diocese = new Diocese();
-                    diocese.setName(name);
-                    diocese.setCode(code);
-                    diocese.setStatus(RecordStatus.ACTIVE);
-                    Diocese saved = dioceseRepository.save(diocese);
-                    log.debug("Created diocese: {}", name);
-                    return saved;
-                });
+        if (dioceseRepository.findByNameIgnoreCase(name).isPresent()) {
+            return false; // Already exists
+        }
+
+        Diocese diocese = new Diocese();
+        diocese.setName(name);
+        diocese.setCode(code);
+        diocese.setStatus(RecordStatus.ACTIVE);
+        dioceseRepository.save(diocese);
+        log.debug("Created diocese: {}", name);
+        return true;
     }
 
     private int seedArchdeaconries(Diocese diocese) {
