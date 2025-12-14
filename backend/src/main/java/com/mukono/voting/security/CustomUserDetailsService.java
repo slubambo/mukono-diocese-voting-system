@@ -1,7 +1,7 @@
 package com.mukono.voting.security;
 
-import com.mukono.voting.user.User;
-import com.mukono.voting.user.UserRepository;
+import com.mukono.voting.model.user.User;
+import com.mukono.voting.repository.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

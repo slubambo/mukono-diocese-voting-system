@@ -1,7 +1,7 @@
 package com.mukono.voting.security;
 
-import com.mukono.voting.user.User;
-import com.mukono.voting.user.Role;
+import com.mukono.voting.model.user.User;
+import com.mukono.voting.model.user.Role;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
