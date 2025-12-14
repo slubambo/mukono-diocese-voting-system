@@ -23,16 +23,16 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        logger.debug("Loading user by username: {}", username);
+        logger.debug("[UDS] Loading user by username: {}", username);
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> {
-                    logger.error("User not found with username: {}", username);
+                    logger.error("[UDS] User not found with username: {}", username);
                     return new UsernameNotFoundException("User not found with username: " + username);
                 });
 
-        logger.debug("User found: {}, password hash: {}, roles: {}", user.getUsername(), user.getPassword(), user.getRoles().size());
+        logger.debug("[UDS] User found: {}, roles count: {}", user.getUsername(), user.getRoles().size());
         UserPrincipal principal = UserPrincipal.create(user);
-        logger.debug("Created UserPrincipal with authorities: {}", principal.getAuthorities());
+        logger.debug("[UDS] Created UserPrincipal with authorities: {}", principal.getAuthorities());
         return principal;
     }
 }

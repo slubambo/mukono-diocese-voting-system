@@ -45,7 +45,8 @@ public class User extends DateAudit {
     @JoinColumn(name = "person_id", nullable = true)
     private Person person;
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    // Change roles to EAGER fetch to ensure authorities are available during security checks
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "user_roles",
         joinColumns = @JoinColumn(name="user_id"),

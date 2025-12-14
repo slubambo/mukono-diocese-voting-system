@@ -4,6 +4,8 @@ import com.mukono.voting.payload.request.CreateUserRequest;
 import com.mukono.voting.payload.request.UpdateUserRequest;
 import com.mukono.voting.payload.response.UserResponse;
 import com.mukono.voting.security.UserPrincipal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -11,6 +13,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 /**
  * UserController handles REST endpoints for managing system users.
@@ -19,6 +23,8 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
     private final UserRepository userRepository;
@@ -82,12 +88,28 @@ public class UserController {
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal UserPrincipal currentUser) {
+        logger.debug("[/users/me] Endpoint invoked.");
         if (currentUser == null) {
+            logger.warn("[/users/me] No AuthenticationPrincipal resolved (currentUser is null). Returning 401.");
             throw new IllegalArgumentException("User not authenticated");
         }
 
+        logger.debug("[/users/me] Resolved principal: username={}, id={}, authorities={}", currentUser.getUsername(), currentUser.getId(), currentUser.getAuthorities());
         User user = userRepository.findById(currentUser.getId())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        logger.debug("[/users/me] Loaded user entity: username={}, email={}, roles={}", user.getUsername(), user.getEmail(), user.getRoles());
         return ResponseEntity.ok(userService.toUserResponse(user));
+    }
+
+    /**
+     * List all system users with pagination.
+     * Requires ROLE_ADMIN.
+     */
+    @GetMapping
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<Page<UserResponse>> listUsers(Pageable pageable) {
+        Page<User> users = userRepository.findAll(pageable);
+        Page<UserResponse> responses = users.map(userService::toUserResponse);
+        return ResponseEntity.ok(responses);
     }
 }

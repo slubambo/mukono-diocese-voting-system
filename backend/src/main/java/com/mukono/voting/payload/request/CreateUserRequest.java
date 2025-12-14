@@ -1,6 +1,7 @@
 package com.mukono.voting.payload.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import java.util.Set;
 
@@ -16,7 +17,7 @@ public class CreateUserRequest {
 
     private String email;
 
-    @NotBlank(message = "Roles are required")
+    @NotEmpty(message = "Roles are required")
     private Set<String> roles; // e.g., ["ROLE_DS", "ROLE_ADMIN"]
 
     private Long personId; // Optional: link to existing person

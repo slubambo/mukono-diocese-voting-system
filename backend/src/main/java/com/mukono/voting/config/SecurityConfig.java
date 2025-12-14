@@ -100,6 +100,7 @@ public class SecurityConfig {
      * - JwtAuthenticationFilter is added before UsernamePasswordAuthenticationFilter
      * - Public endpoints are permitted without authentication
      * - All other requests require authentication
+     * - Namespace routes are properly secured by role
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -135,11 +136,22 @@ public class SecurityConfig {
 
                         // User management (special bootstrap mode for first user)
                         // POST /api/v1/users is handled in controller for bootstrap
-                        .requestMatchers("POST", "/api/v1/users").permitAll()
+                        .requestMatchers("/api/v1/users").permitAll()
                         .requestMatchers("/api/v1/users/**").authenticated()
 
-                        // People management requires authentication
+                        // People management requires ROLE_ADMIN or ROLE_DS
                         .requestMatchers("/api/v1/people/**").authenticated()
+
+                        // Namespace-based routes
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/ds/**").hasAnyRole("ADMIN", "DS")
+                        .requestMatchers("/api/v1/bishop/**").hasAnyRole("ADMIN", "BISHOP")
+                        .requestMatchers("/api/v1/staff/**").hasAnyRole("ADMIN", "SENIOR_STAFF")
+                        .requestMatchers("/api/v1/polling/**").hasAnyRole("ADMIN", "POLLING_OFFICER")
+                        .requestMatchers("/api/v1/vote/**").hasRole("VOTER")
+
+                        // Actuator endpoints - Admin only
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
 
                         // All other requests require authentication
                         .anyRequest().authenticated()
