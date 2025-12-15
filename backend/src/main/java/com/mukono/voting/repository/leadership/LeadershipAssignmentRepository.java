@@ -146,4 +146,55 @@ public interface LeadershipAssignmentRepository extends JpaRepository<Leadership
         PositionScope scope, 
         RecordStatus status
     );
+
+    // ========== Duplicate Prevention Methods ==========
+    
+    /**
+     * Check if a person already has an active assignment for a specific fellowship position + diocese.
+     * Prevents duplicate active assignments.
+     * 
+     * @param personId the person ID
+     * @param fellowshipPositionId the fellowship position ID
+     * @param dioceseId the diocese ID
+     * @param status the record status
+     * @return true if a matching assignment exists
+     */
+    boolean existsByPersonIdAndFellowshipPositionIdAndDioceseIdAndStatus(
+        Long personId, 
+        Long fellowshipPositionId, 
+        Long dioceseId, 
+        RecordStatus status
+    );
+
+    /**
+     * Check if a person already has an active assignment for a specific fellowship position + archdeaconry.
+     * 
+     * @param personId the person ID
+     * @param fellowshipPositionId the fellowship position ID
+     * @param archdeaconryId the archdeaconry ID
+     * @param status the record status
+     * @return true if a matching assignment exists
+     */
+    boolean existsByPersonIdAndFellowshipPositionIdAndArchdeaconryIdAndStatus(
+        Long personId, 
+        Long fellowshipPositionId, 
+        Long archdeaconryId, 
+        RecordStatus status
+    );
+
+    /**
+     * Check if a person already has an active assignment for a specific fellowship position + church.
+     * 
+     * @param personId the person ID
+     * @param fellowshipPositionId the fellowship position ID
+     * @param churchId the church ID
+     * @param status the record status
+     * @return true if a matching assignment exists
+     */
+    boolean existsByPersonIdAndFellowshipPositionIdAndChurchIdAndStatus(
+        Long personId, 
+        Long fellowshipPositionId, 
+        Long churchId, 
+        RecordStatus status
+    );
 }
