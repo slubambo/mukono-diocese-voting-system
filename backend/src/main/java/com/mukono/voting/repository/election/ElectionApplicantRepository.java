@@ -125,6 +125,19 @@ public interface ElectionApplicantRepository extends JpaRepository<ElectionAppli
     Page<ElectionApplicant> findByElectionIdAndElectionPositionIdAndStatus(
             Long electionId, Long electionPositionId, ApplicantStatus status, Pageable pageable);
 
+    /**
+     * Find applicants for an election with specific status and source (paginated).
+     * Supports combined filtering in service layer.
+     * 
+     * @param electionId the election ID
+     * @param status the applicant status
+     * @param source the applicant source
+     * @param pageable pagination information
+     * @return page of applicants matching election, status, and source
+     */
+    Page<ElectionApplicant> findByElectionIdAndStatusAndSource(
+            Long electionId, ApplicantStatus status, ApplicantSource source, Pageable pageable);
+
     // =========================================================================
     // F) PERSON-CENTRIC VIEWS (for "my applications")
     // =========================================================================
