@@ -40,6 +40,15 @@ public interface ElectionPositionRepository extends JpaRepository<ElectionPositi
      */
     List<ElectionPosition> findByElectionId(Long electionId);
 
+    /**
+     * Find all positions for a specific election ordered by ID (non-paginated).
+     * Useful for reporting and results display.
+     * 
+     * @param electionId the election ID
+     * @return list of all election positions for the election ordered by ID ASC
+     */
+    List<ElectionPosition> findByElectionIdOrderByIdAsc(Long electionId);
+
     // =========================================================================
     // LOOKUP SPECIFIC POSITION ENTRY
     // =========================================================================
@@ -83,4 +92,13 @@ public interface ElectionPositionRepository extends JpaRepository<ElectionPositi
      * @param electionId the election ID
      */
     void deleteByElectionId(Long electionId);
+
+    /**
+     * Count positions for an election.
+     * Used for results reporting.
+     * 
+     * @param electionId the election ID
+     * @return count of positions
+     */
+    long countByElectionId(Long electionId);
 }

@@ -7,7 +7,6 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 public interface VoteRecordRepository extends JpaRepository<VoteRecord, Long> {
 
@@ -24,4 +23,30 @@ public interface VoteRecordRepository extends JpaRepository<VoteRecord, Long> {
                                                @Param("votingPeriodId") Long votingPeriodId,
                                                @Param("personId") Long personId,
                                                @Param("positionIds") Collection<Long> positionIds);
+
+    // Count distinct voters for a position (turnout for position)
+    @Query("""
+        SELECT COUNT(DISTINCT vr.person.id) FROM VoteRecord vr
+        WHERE vr.election.id     = :electionId
+          AND vr.votingPeriod.id = :votingPeriodId
+          AND vr.position.id     = :positionId
+    """)
+    Long countDistinctVotersForPosition(@Param("electionId") Long electionId,
+                                        @Param("votingPeriodId") Long votingPeriodId,
+                                        @Param("positionId") Long positionId);
+
+    // Count distinct voters across election + voting period
+    @Query("""
+        SELECT COUNT(DISTINCT vr.person.id) FROM VoteRecord vr
+        WHERE vr.election.id     = :electionId
+          AND vr.votingPeriod.id = :votingPeriodId
+    """)
+    Long countDistinctVotersForElection(@Param("electionId") Long electionId,
+                                        @Param("votingPeriodId") Long votingPeriodId);
+
+    // Count all VoteRecords for election + period
+    long countByElectionIdAndVotingPeriodId(Long electionId, Long votingPeriodId);
+
+    // Count VoteRecords for election + period + position
+    long countByElectionIdAndVotingPeriodIdAndPositionId(Long electionId, Long votingPeriodId, Long positionId);
 }
