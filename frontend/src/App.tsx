@@ -1,16 +1,22 @@
 import { ThemeProvider, CssBaseline } from '@mui/material'
 import AppRoutes from './routes/AppRoutes'
 import { AuthProvider } from './context/AuthContext'
-import theme from './theme/theme'
+import ToastProvider from './components/feedback/ToastProvider'
+import ErrorBoundary from './components/feedback/ErrorBoundary'
+import { lightTheme } from './theme/theme'
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider theme={lightTheme}>
+        <CssBaseline />
+        <ToastProvider>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }
 
