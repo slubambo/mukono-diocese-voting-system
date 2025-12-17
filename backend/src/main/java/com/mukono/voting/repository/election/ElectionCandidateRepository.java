@@ -138,4 +138,22 @@ public interface ElectionCandidateRepository extends JpaRepository<ElectionCandi
     List<ElectionCandidate> findCandidatesForBallot(
             @Param("electionId") Long electionId, 
             @Param("electionPositionId") Long electionPositionId);
+
+    /**
+     * Find all candidates for an election, sorted by person's full name.
+     * Used for efficient ballot generation - fetches all candidates at once.
+     * 
+     * @param electionId the election ID
+     * @return list of all candidates for the election sorted by person's full name
+     */
+    @Query("""
+        SELECT c FROM ElectionCandidate c 
+        JOIN FETCH c.person
+        JOIN FETCH c.electionPosition ep
+        JOIN FETCH ep.fellowshipPosition fp
+        JOIN FETCH fp.title
+        WHERE c.election.id = :electionId
+        ORDER BY c.person.fullName ASC
+    """)
+    List<ElectionCandidate> findAllCandidatesForElectionWithDetails(@Param("electionId") Long electionId);
 }
