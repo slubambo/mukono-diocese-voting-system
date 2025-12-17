@@ -18,38 +18,4 @@ public class CandidateResultsResponse {
     private String fullName;
     private Long voteCount;
     private Double voteSharePercent; // null if no votes in position
-	public CandidateResultsResponse() {
-		super();
-	}
-	public Long getCandidateId() {
-		return candidateId;
-	}
-	public void setCandidateId(Long candidateId) {
-		this.candidateId = candidateId;
-	}
-	public Long getPersonId() {
-		return personId;
-	}
-	public void setPersonId(Long personId) {
-		this.personId = personId;
-	}
-	public String getFullName() {
-		return fullName;
-	}
-	public void setFullName(String fullName) {
-		this.fullName = fullName;
-	}
-	public Long getVoteCount() {
-		return voteCount;
-	}
-	public void setVoteCount(Long voteCount) {
-		this.voteCount = voteCount;
-	}
-	public Double getVoteSharePercent() {
-		return voteSharePercent;
-	}
-	public void setVoteSharePercent(Double voteSharePercent) {
-		this.voteSharePercent = voteSharePercent;
-	}
-    
 }
