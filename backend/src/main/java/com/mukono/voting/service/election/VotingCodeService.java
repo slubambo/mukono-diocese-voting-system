@@ -364,4 +364,157 @@ public class VotingCodeService {
         }
         return code.toString();
     }
+
+    // ============ HARDENING: LIFECYCLE VALIDATION & EXPIRATION ============
+
+    /**
+     * Validate voting period is suitable for issuing codes.
+     * Rules:
+     * - Status must be SCHEDULED or OPEN
+     * - Current time must be before endTime
+     */
+    private void validatePeriodForIssue(VotingPeriod votingPeriod) {
+        VotingPeriodStatus status = votingPeriod.getStatus();
+        
+        if (status == VotingPeriodStatus.CLOSED || status == VotingPeriodStatus.CANCELLED) {
+            throw new IllegalArgumentException(
+                    "Voting period is " + status + "; cannot issue codes");
+        }
+        
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isAfter(votingPeriod.getEndTime())) {
+            throw new IllegalArgumentException(
+                    "Voting period has ended; cannot issue codes");
+        }
+    }
+
+    /**
+     * Validate voting period is suitable for voting (F1 validate).
+     * Rules:
+     * - Status must be OPEN
+     * - Current time must be within [startTime, endTime)
+     */
+    private void validatePeriodForVoting(VotingPeriod votingPeriod) {
+        VotingPeriodStatus status = votingPeriod.getStatus();
+        
+        if (status != VotingPeriodStatus.OPEN) {
+            throw new IllegalArgumentException(
+                    "Voting is not OPEN for this period. Status: " + status);
+        }
+        
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(votingPeriod.getStartTime()) || !now.isBefore(votingPeriod.getEndTime())) {
+            throw new IllegalArgumentException(
+                    "Voting is not within the period time window");
+        }
+    }
+
+    /**
+     * Validate voting code lifecycle transitions (immutability of terminal states).
+     * Rules:
+     * - USED, REVOKED, EXPIRED are terminal (no transitions out)
+     * - ACTIVE can transition to USED, REVOKED, or EXPIRED
+     */
+    private void validateTransition(VotingCodeStatus currentStatus, VotingCodeStatus targetStatus) {
+        if (currentStatus == VotingCodeStatus.USED) {
+            throw new IllegalArgumentException(
+                    "Cannot transition from USED. Voting codes are immutable once used");
+        }
+        if (currentStatus == VotingCodeStatus.REVOKED) {
+            throw new IllegalArgumentException(
+                    "Cannot transition from REVOKED. Code is permanently revoked");
+        }
+        if (currentStatus == VotingCodeStatus.EXPIRED) {
+            throw new IllegalArgumentException(
+                    "Cannot transition from EXPIRED. Code is permanently expired");
+        }
+    }
+
+    /**
+     * Expire all ACTIVE codes for a voting period.
+     * Called when period transitions to CLOSED or CANCELLED.
+     * Atomic operation.
+     */
+    public int expireActiveCodesForPeriod(Long electionId, Long votingPeriodId) {
+        LocalDateTime now = LocalDateTime.now();
+        return votingCodeRepository.expireActiveCodesForPeriod(electionId, votingPeriodId, now);
+    }
+
+    /**
+     * Regenerate a voting code with concurrency safety.
+     * Uses pessimistic locking to prevent concurrent modifications.
+     */
+    public VotingCode regenerateCodeSafe(
+            Long electionId,
+            Long votingPeriodId,
+            Long personId,
+            Long issuedByPersonId,
+            String reason) {
+        
+        // Fetch with pessimistic lock
+        Optional<VotingCode> existingCodeOpt = votingCodeRepository.findActiveForUpdate(
+                electionId, votingPeriodId, personId);
+        
+        if (existingCodeOpt.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "No ACTIVE voting code found for person in this election + voting period");
+        }
+        
+        VotingCode existingCode = existingCodeOpt.get();
+        
+        // Validate period is suitable for new issue
+        VotingPeriod votingPeriod = existingCode.getVotingPeriod();
+        validatePeriodForIssue(votingPeriod);
+        
+        // Revoke and issue new (atomic via @Transactional)
+        revokeCode(existingCode.getId(), issuedByPersonId, "Regenerated: " + reason);
+        return issueCode(electionId, votingPeriodId, personId, issuedByPersonId, "Regenerated: " + reason);
+    }
+
+    /**
+     * Mark a voting code as USED with enhanced validation and idempotency.
+     * Period must be OPEN and within time window.
+     * Idempotent: if already USED, returns success (no-op).
+     */
+    public void markCodeUsedSafe(String code) {
+        VotingCode votingCode = votingCodeRepository.findByCode(code)
+                .orElseThrow(() -> new IllegalArgumentException("Voting code not found"));
+        
+        // Idempotent: if already USED, no-op
+        if (votingCode.getStatus() == VotingCodeStatus.USED) {
+            return;
+        }
+        
+        // Validate transition (no transitions out of REVOKED/EXPIRED)
+        validateTransition(votingCode.getStatus(), VotingCodeStatus.USED);
+        
+        // Validate period is OPEN and within time window
+        VotingPeriod period = votingCode.getVotingPeriod();
+        validatePeriodForVoting(period);
+        
+        votingCode.setStatus(VotingCodeStatus.USED);
+        votingCode.setUsedAt(LocalDateTime.now());
+        votingCodeRepository.save(votingCode);
+    }
+
+    /**
+     * Validate a voting code for use with enhanced checks.
+     * Must be ACTIVE, period must be OPEN, within time window.
+     * Does not mark code as USED.
+     */
+    @Transactional(readOnly = true)
+    public VotingCode validateCodeSafe(String code) {
+        VotingCode votingCode = votingCodeRepository.findByCode(code)
+                .orElseThrow(() -> new IllegalArgumentException("Voting code not found"));
+        
+        if (votingCode.getStatus() != VotingCodeStatus.ACTIVE) {
+            throw new IllegalArgumentException(
+                    "Voting code is " + votingCode.getStatus() + "; cannot use");
+        }
+        
+        VotingPeriod period = votingCode.getVotingPeriod();
+        validatePeriodForVoting(period);
+        
+        return votingCode;
+    }
 }

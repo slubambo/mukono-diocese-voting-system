@@ -91,6 +91,9 @@ public class VotingCode extends DateAudit {
     @JoinColumn(name = "revoked_by_person_id")
     private Person revokedBy;
 
+    @Column(name = "expired_at")
+    private LocalDateTime expiredAt;
+
     @Column(length = 1000)
     @Size(max = 1000, message = "Remarks must not exceed 1000 characters")
     private String remarks;
@@ -196,6 +199,14 @@ public class VotingCode extends DateAudit {
 
     public void setRevokedBy(Person revokedBy) {
         this.revokedBy = revokedBy;
+    }
+
+    public LocalDateTime getExpiredAt() {
+        return expiredAt;
+    }
+
+    public void setExpiredAt(LocalDateTime expiredAt) {
+        this.expiredAt = expiredAt;
     }
 
     public String getRemarks() {

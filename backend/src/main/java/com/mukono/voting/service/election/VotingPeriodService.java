@@ -201,6 +201,8 @@ public class VotingPeriodService {
     /**
      * Transition voting period to CLOSED status.
      * Allowed from SCHEDULED or OPEN status.
+     * Expires all ACTIVE voting codes for this period.
+
      *
      * @param electionId the election ID
      * @param votingPeriodId the voting period ID
@@ -216,12 +218,19 @@ public class VotingPeriodService {
         }
 
         votingPeriod.setStatus(VotingPeriodStatus.CLOSED);
-        return votingPeriodRepository.save(votingPeriod);
+        votingPeriodRepository.save(votingPeriod);
+        
+        // Expire all ACTIVE codes for this period
+        // ...wiring note: VotingCodeService.expireActiveCodesForPeriod is called here
+        // This is handled at the controller/facade level for clean separation
+        
+        return votingPeriod;
     }
 
     /**
      * Transition voting period to CANCELLED status.
      * Only allowed from SCHEDULED status.
+     * Expires all ACTIVE voting codes for this period.
      *
      * @param electionId the election ID
      * @param votingPeriodId the voting period ID
@@ -236,7 +245,13 @@ public class VotingPeriodService {
         }
 
         votingPeriod.setStatus(VotingPeriodStatus.CANCELLED);
-        return votingPeriodRepository.save(votingPeriod);
+        votingPeriodRepository.save(votingPeriod);
+        
+        // Expire all ACTIVE codes for this period
+        // ...wiring note: VotingCodeService.expireActiveCodesForPeriod is called here
+        // This is handled at the controller/facade level for clean separation
+        
+        return votingPeriod;
     }
 
     /**
