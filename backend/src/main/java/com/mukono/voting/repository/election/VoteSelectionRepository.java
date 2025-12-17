@@ -21,4 +21,14 @@ public interface VoteSelectionRepository extends JpaRepository<VoteSelection, Lo
     List<CandidateVoteCount> countVotesByCandidate(@Param("electionId") Long electionId,
                                                    @Param("votingPeriodId") Long votingPeriodId,
                                                    @Param("positionId") Long positionId);
+
+    // Count all VoteSelections for election + period
+    @Query("""
+        SELECT COUNT(vs.id) FROM VoteSelection vs
+        JOIN vs.voteRecord vr
+        WHERE vr.election.id = :electionId
+          AND vr.votingPeriod.id = :votingPeriodId
+    """)
+    long countByElectionIdAndVotingPeriodId(@Param("electionId") Long electionId,
+                                            @Param("votingPeriodId") Long votingPeriodId);
 }

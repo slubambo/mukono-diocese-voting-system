@@ -43,4 +43,10 @@ public interface VoteRecordRepository extends JpaRepository<VoteRecord, Long> {
     """)
     Long countDistinctVotersForElection(@Param("electionId") Long electionId,
                                         @Param("votingPeriodId") Long votingPeriodId);
+
+    // Count all VoteRecords for election + period
+    long countByElectionIdAndVotingPeriodId(Long electionId, Long votingPeriodId);
+
+    // Count VoteRecords for election + period + position
+    long countByElectionIdAndVotingPeriodIdAndPositionId(Long electionId, Long votingPeriodId, Long positionId);
 }

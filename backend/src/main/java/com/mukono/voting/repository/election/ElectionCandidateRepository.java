@@ -156,4 +156,18 @@ public interface ElectionCandidateRepository extends JpaRepository<ElectionCandi
         ORDER BY c.person.fullName ASC
     """)
     List<ElectionCandidate> findAllCandidatesForElectionWithDetails(@Param("electionId") Long electionId);
+
+    /**
+     * Find all candidates for a position, sorted by person's full name.
+     * Used for results reporting.
+     * 
+     * @param electionPositionId the election position ID
+     * @return list of candidates for the position sorted by ID
+     */
+    @Query("""
+        SELECT c FROM ElectionCandidate c 
+        WHERE c.electionPosition.id = :positionId
+        ORDER BY c.id ASC
+    """)
+    List<ElectionCandidate> findByPositionIdOrderByIdAsc(@Param("positionId") Long positionId);
 }
