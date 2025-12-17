@@ -1,14 +1,10 @@
 package com.mukono.voting.api.admin.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * Flat row for export (suitable for CSV conversion in UI).
  */
-@Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class FlatResultRowResponse {
     private Long electionId;

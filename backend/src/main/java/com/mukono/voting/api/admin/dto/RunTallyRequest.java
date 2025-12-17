@@ -1,32 +1,30 @@
 package com.mukono.voting.api.admin.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 /**
  * Request to run a tally.
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class RunTallyRequest {
-    private String remarks; // max 1000
-    private Boolean force = false; // allow tally even if period not CLOSED
+	private String remarks; // max 1000
+	private Boolean force = false; // allow tally even if period not CLOSED
+
 	public RunTallyRequest() {
 		super();
 	}
+
 	public String getRemarks() {
 		return remarks;
 	}
+
 	public void setRemarks(String remarks) {
 		this.remarks = remarks;
 	}
+
 	public Boolean getForce() {
 		return force;
 	}
+
 	public void setForce(Boolean force) {
 		this.force = force;
 	}
-    
+
 }
