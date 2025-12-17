@@ -128,10 +128,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/vote/login").permitAll()
 
-                        // Swagger/OpenAPI endpoints
+                        // Swagger/OpenAPI endpoints (authentication disabled for development)
+                        // TODO: Re-enable authentication for Swagger in production
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/swagger-ui.html").permitAll()
+                        .requestMatchers("/swagger-resources/**").permitAll()
+                        .requestMatchers("/webjars/**").permitAll()
 
                         // User management (special bootstrap mode for first user)
                         // POST /api/v1/users is handled in controller for bootstrap

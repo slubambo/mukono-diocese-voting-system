@@ -4,6 +4,8 @@ import com.mukono.voting.payload.response.common.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -19,6 +21,8 @@ import java.util.stream.Collectors;
  */
 @RestControllerAdvice
 public class GlobalApiExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalApiExceptionHandler.class);
 
     /**
      * Handle Bean Validation errors (request body validation).
@@ -123,6 +127,9 @@ public class GlobalApiExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGenericException(
             Exception ex, HttpServletRequest request) {
+        
+        // Log full stacktrace for diagnostics
+        log.error("Unhandled exception at {}", request.getRequestURI(), ex);
         
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
