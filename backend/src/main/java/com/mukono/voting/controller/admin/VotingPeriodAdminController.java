@@ -1,0 +1,210 @@
+package com.mukono.voting.controller.admin;
+
+import com.mukono.voting.model.election.VotingPeriod;
+import com.mukono.voting.model.election.VotingPeriodStatus;
+import com.mukono.voting.payload.request.CreateVotingPeriodRequest;
+import com.mukono.voting.payload.request.UpdateVotingPeriodRequest;
+import com.mukono.voting.payload.response.VotingPeriodResponse;
+import com.mukono.voting.service.election.VotingPeriodService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+/**
+ * Admin controller for managing voting periods within elections.
+ * Provides endpoints to create, read, update, list, and transition voting periods.
+ * 
+ * Base path: /api/v1/admin/elections/{electionId}/voting-periods
+ */
+@RestController
+@RequestMapping("/api/v1/admin/elections/{electionId}/voting-periods")
+@PreAuthorize("hasRole('ADMIN')")
+@Validated
+public class VotingPeriodAdminController {
+
+    private final VotingPeriodService votingPeriodService;
+
+    public VotingPeriodAdminController(VotingPeriodService votingPeriodService) {
+        this.votingPeriodService = votingPeriodService;
+    }
+
+    /**
+     * Create a new voting period for an election.
+     *
+     * POST /api/v1/admin/elections/{electionId}/voting-periods
+     *
+     * @param electionId the election ID
+     * @param request create request with name, description, startTime, endTime
+     * @return created voting period response (201 Created)
+     */
+    @PostMapping
+    public ResponseEntity<VotingPeriodResponse> createVotingPeriod(
+            @PathVariable @NotNull Long electionId,
+            @Valid @RequestBody CreateVotingPeriodRequest request) {
+        VotingPeriod created = votingPeriodService.createVotingPeriod(electionId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(votingPeriodService.toResponse(created));
+    }
+
+    /**
+     * Get a single voting period by ID.
+     *
+     * GET /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @return voting period response (200 OK)
+     */
+    @GetMapping("/{votingPeriodId}")
+    public ResponseEntity<VotingPeriodResponse> getVotingPeriod(
+            @PathVariable @NotNull Long electionId,
+            @PathVariable @NotNull Long votingPeriodId) {
+        VotingPeriod votingPeriod = votingPeriodService.getVotingPeriod(electionId, votingPeriodId);
+        return ResponseEntity.ok(votingPeriodService.toResponse(votingPeriod));
+    }
+
+    /**
+     * List voting periods for an election (paginated, optionally filtered by status).
+     *
+     * GET /api/v1/admin/elections/{electionId}/voting-periods?page=0&size=10&sort=name,asc&status=OPEN
+     *
+     * @param electionId the election ID
+     * @param page page number (0-indexed, default 0)
+     * @param size page size (default 10)
+     * @param sort sort order (default: "id,desc")
+     * @param status optional status filter (SCHEDULED, OPEN, CLOSED, CANCELLED)
+     * @return paginated voting period responses (200 OK)
+     */
+    @GetMapping
+    public ResponseEntity<Page<VotingPeriodResponse>> listVotingPeriods(
+            @PathVariable @NotNull Long electionId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id,desc") String sort,
+            @RequestParam(required = false) VotingPeriodStatus status) {
+        
+        Pageable pageable = toPageable(page, size, sort);
+        Page<VotingPeriod> votingPeriods = votingPeriodService.listVotingPeriods(electionId, status, pageable);
+        Page<VotingPeriodResponse> responses = votingPeriods.map(votingPeriodService::toResponse);
+        
+        return ResponseEntity.ok(responses);
+    }
+
+    /**
+     * Update a voting period.
+     * Allowed only when status is SCHEDULED or OPEN (and only description for OPEN).
+     * Rejects if status is CLOSED or CANCELLED.
+     *
+     * PUT /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @param request update request with optional fields (name, description, startTime, endTime)
+     * @return updated voting period response (200 OK)
+     */
+    @PutMapping("/{votingPeriodId}")
+    public ResponseEntity<VotingPeriodResponse> updateVotingPeriod(
+            @PathVariable @NotNull Long electionId,
+            @PathVariable @NotNull Long votingPeriodId,
+            @Valid @RequestBody UpdateVotingPeriodRequest request) {
+        VotingPeriod updated = votingPeriodService.updateVotingPeriod(electionId, votingPeriodId, request);
+        return ResponseEntity.ok(votingPeriodService.toResponse(updated));
+    }
+
+    /**
+     * Transition a voting period to OPEN status.
+     * Only allowed from SCHEDULED status.
+     * Enforces: only one OPEN period per election at a time.
+     *
+     * POST /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}/open
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @return updated voting period response (200 OK)
+     */
+    @PostMapping("/{votingPeriodId}/open")
+    public ResponseEntity<VotingPeriodResponse> openVotingPeriod(
+            @PathVariable @NotNull Long electionId,
+            @PathVariable @NotNull Long votingPeriodId) {
+        VotingPeriod opened = votingPeriodService.openVotingPeriod(electionId, votingPeriodId);
+        return ResponseEntity.ok(votingPeriodService.toResponse(opened));
+    }
+
+    /**
+     * Transition a voting period to CLOSED status.
+     * Allowed from SCHEDULED or OPEN status.
+     *
+     * POST /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}/close
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @return updated voting period response (200 OK)
+     */
+    @PostMapping("/{votingPeriodId}/close")
+    public ResponseEntity<VotingPeriodResponse> closeVotingPeriod(
+            @PathVariable @NotNull Long electionId,
+            @PathVariable @NotNull Long votingPeriodId) {
+        VotingPeriod closed = votingPeriodService.closeVotingPeriod(electionId, votingPeriodId);
+        return ResponseEntity.ok(votingPeriodService.toResponse(closed));
+    }
+
+    /**
+     * Transition a voting period to CANCELLED status.
+     * Only allowed from SCHEDULED status.
+     *
+     * POST /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}/cancel
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @return updated voting period response (200 OK)
+     */
+    @PostMapping("/{votingPeriodId}/cancel")
+    public ResponseEntity<VotingPeriodResponse> cancelVotingPeriod(
+            @PathVariable @NotNull Long electionId,
+            @PathVariable @NotNull Long votingPeriodId) {
+        VotingPeriod cancelled = votingPeriodService.cancelVotingPeriod(electionId, votingPeriodId);
+        return ResponseEntity.ok(votingPeriodService.toResponse(cancelled));
+    }
+
+    /**
+     * Convert page/size/sort query parameters to Pageable.
+     * Default sort is "id,desc".
+     *
+     * @param page page number (0-indexed)
+     * @param size page size
+     * @param sort sort specification ("field,asc|desc" or "field1,asc;field2,desc")
+     * @return Pageable object
+     */
+    private Pageable toPageable(int page, int size, String sort) {
+        Sort sortSpec = Sort.by(Sort.Direction.DESC, "id");
+        
+        if (sort != null && !sort.isEmpty()) {
+            String[] sortParts = sort.split(";");
+            Sort.Order[] orders = new Sort.Order[sortParts.length];
+            
+            for (int i = 0; i < sortParts.length; i++) {
+                String[] parts = sortParts[i].trim().split(",");
+                String field = parts[0].trim();
+                Sort.Direction direction = Sort.Direction.DESC;
+                
+                if (parts.length > 1) {
+                    String dir = parts[1].trim().toUpperCase();
+                    direction = "ASC".equals(dir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+                }
+                
+                orders[i] = new Sort.Order(direction, field);
+            }
+            
+            sortSpec = Sort.by(orders);
+        }
+        
+        return PageRequest.of(page, size, sortSpec);
+    }
+}

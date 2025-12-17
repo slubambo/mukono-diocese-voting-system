@@ -53,10 +53,29 @@ public interface VotingPeriodRepository extends JpaRepository<VotingPeriod, Long
     Optional<VotingPeriod> findByElectionIdAndId(Long electionId, Long id);
 
     /**
+     * Find all voting periods for an election with status filter (paginated).
+     * 
+     * @param electionId the election ID
+     * @param status the voting period status
+     * @param pageable pagination information
+     * @return page of voting periods
+     */
+    Page<VotingPeriod> findByElectionIdAndStatus(Long electionId, VotingPeriodStatus status, Pageable pageable);
+
+    /**
      * Count voting periods for an election.
      * 
      * @param electionId the election ID
      * @return count of voting periods
      */
     long countByElectionId(Long electionId);
+
+    /**
+     * Count voting periods for an election with a specific status.
+     * 
+     * @param electionId the election ID
+     * @param status the voting period status
+     * @return count of voting periods with the specified status
+     */
+    long countByElectionIdAndStatus(Long electionId, VotingPeriodStatus status);
 }
