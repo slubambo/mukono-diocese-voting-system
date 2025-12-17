@@ -197,4 +197,46 @@ public interface LeadershipAssignmentRepository extends JpaRepository<Leadership
         Long churchId, 
         RecordStatus status
     );
+
+    // ========== Person-Specific Eligibility Methods (for voting) ==========
+
+    /**
+     * Find a person's active assignment for a fellowship at a specific scope.
+     * Used by eligibility service to verify voter belongs to fellowship.
+     * 
+     * @param personId the person ID
+     * @param fellowshipId the fellowship ID
+     * @param scope the position scope (DIOCESE, ARCHDEACONRY, CHURCH)
+     * @param status the record status
+     * @return list of matching assignments (usually 0 or 1)
+     */
+    List<LeadershipAssignment> findByPersonIdAndFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndStatus(
+        Long personId,
+        Long fellowshipId,
+        PositionScope scope,
+        RecordStatus status
+    );
+
+    /**
+     * Find a person's active assignment for a specific scope target.
+     * Used by eligibility service to verify voter eligible within scope (diocese/archdeaconry/church).
+     * 
+     * @param personId the person ID
+     * @param fellowshipId the fellowship ID
+     * @param scope the position scope (DIOCESE, ARCHDEACONRY, CHURCH)
+     * @param dioceseId the diocese ID (relevant if scope=DIOCESE)
+     * @param archdeaconryId the archdeaconry ID (relevant if scope=ARCHDEACONRY)
+     * @param churchId the church ID (relevant if scope=CHURCH)
+     * @param status the record status
+     * @return list of matching assignments (usually 0 or 1)
+     */
+    List<LeadershipAssignment> findByPersonIdAndFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndDioceseIdAndArchdeaconryIdAndChurchIdAndStatus(
+        Long personId,
+        Long fellowshipId,
+        PositionScope scope,
+        Long dioceseId,
+        Long archdeaconryId,
+        Long churchId,
+        RecordStatus status
+    );
 }

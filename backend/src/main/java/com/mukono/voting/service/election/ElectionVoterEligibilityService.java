@@ -116,94 +116,141 @@ public class ElectionVoterEligibilityService {
 
         // === TIER 2: FELLOWSHIP MEMBERSHIP CHECK ===
         // Check if voter belongs to the election's fellowship via active leadership assignment
+        // PERSON-SPECIFIC: Only fetch assignments for THIS voter
         Long fellowshipId = election.getFellowship().getId();
-        List<LeadershipAssignment> fellowshipAssignments = leadershipAssignmentRepository
-                .findByFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndStatus(
+        List<LeadershipAssignment> voterFellowshipAssignments = leadershipAssignmentRepository
+                .findByPersonIdAndFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndStatus(
+                        voterPersonId,
                         fellowshipId,
                         election.getScope(),
                         RecordStatus.ACTIVE);
         
-        boolean isFellowshipMember = fellowshipAssignments.stream()
-                .anyMatch(la -> la.getPerson().getId().equals(voterPersonId));
-        
-        if (!isFellowshipMember) {
+        if (voterFellowshipAssignments.isEmpty()) {
             return new EligibilityDecision(false, "FELLOWSHIP_CHECK",
                     "Not a member of the required fellowship: " + election.getFellowship().getName());
         }
 
         // === TIER 3: SCOPE-TARGET MEMBERSHIP CHECK ===
         // Verify voter is eligible within the election's scope
-        return checkScopeEligibility(election, voter, fellowshipAssignments, voterPersonId);
+        // PERSON-SPECIFIC: Check this voter's assignment matches the scope target
+        return checkScopeEligibility(election, voter, voterFellowshipAssignments, voterPersonId);
     }
 
     /**
      * Check scope-based eligibility (Diocese, Archdeaconry, or Church).
      * 
+     * This is the PERSON-SPECIFIC final validation step:
+     * Given voter's fellowship assignment(s), verify they target the election's scope.
+     * 
      * @param election the election
      * @param voter the voter person
-     * @param fellowshipAssignments all fellowship assignments at this scope
+     * @param voterFellowshipAssignments this specific voter's active fellowship assignments (from Tier 2)
      * @param voterPersonId voter person ID
      * @return EligibilityDecision based on scope check
      */
     private EligibilityDecision checkScopeEligibility(Election election, Person voter,
-                                                       List<LeadershipAssignment> fellowshipAssignments,
+                                                       List<LeadershipAssignment> voterFellowshipAssignments,
                                                        Long voterPersonId) {
         PositionScope scope = election.getScope();
 
+        // Find an assignment that matches the election's scope target
+        // Since voterFellowshipAssignments are PERSON-SPECIFIC, we just check if any match the target
+        boolean scopeEligible = voterFellowshipAssignments.stream()
+                .anyMatch(la -> matchesScopeTarget(la, election, scope));
+
+        if (!scopeEligible) {
+            return buildScopeFailureDecision(election, scope);
+        }
+
+        return buildScopeSuccessDecision(election, scope);
+    }
+
+    /**
+     * Check if a leadership assignment matches the election's scope target.
+     * 
+     * @param assignment the voter's leadership assignment
+     * @param election the election
+     * @param scope the election scope
+     * @return true if assignment targets the same scope as election
+     */
+    private boolean matchesScopeTarget(LeadershipAssignment assignment, Election election, PositionScope scope) {
+        switch (scope) {
+            case DIOCESE:
+                return election.getDiocese() != null &&
+                       assignment.getDiocese() != null &&
+                       assignment.getDiocese().getId().equals(election.getDiocese().getId());
+
+            case ARCHDEACONRY:
+                return election.getArchdeaconry() != null &&
+                       assignment.getArchdeaconry() != null &&
+                       assignment.getArchdeaconry().getId().equals(election.getArchdeaconry().getId());
+
+            case CHURCH:
+                return election.getChurch() != null &&
+                       assignment.getChurch() != null &&
+                       assignment.getChurch().getId().equals(election.getChurch().getId());
+
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Build success decision for scope check.
+     * 
+     * @param election the election
+     * @param scope the scope
+     * @return EligibilityDecision indicating success
+     */
+    private EligibilityDecision buildScopeSuccessDecision(Election election, PositionScope scope) {
+        switch (scope) {
+            case DIOCESE:
+                return new EligibilityDecision(true, "SCOPE_CHECK",
+                        "Eligible within diocese: " + election.getDiocese().getName());
+            case ARCHDEACONRY:
+                return new EligibilityDecision(true, "SCOPE_CHECK",
+                        "Eligible within archdeaconry: " + election.getArchdeaconry().getName());
+            case CHURCH:
+                return new EligibilityDecision(true, "SCOPE_CHECK",
+                        "Eligible within church: " + election.getChurch().getName());
+            default:
+                return new EligibilityDecision(false, "SCOPE_CHECK",
+                        "Unknown election scope: " + scope);
+        }
+    }
+
+    /**
+     * Build failure decision for scope check.
+     * 
+     * @param election the election
+     * @param scope the scope
+     * @return EligibilityDecision indicating failure
+     */
+    private EligibilityDecision buildScopeFailureDecision(Election election, PositionScope scope) {
         switch (scope) {
             case DIOCESE:
                 if (election.getDiocese() == null) {
                     return new EligibilityDecision(false, "SCOPE_CHECK",
                             "Election scope is DIOCESE but no target diocese specified");
                 }
-                // Voter must have an active assignment at this diocese
-                boolean dioceseEligible = fellowshipAssignments.stream()
-                        .anyMatch(la -> la.getPerson().getId().equals(voterPersonId) &&
-                                la.getDiocese() != null &&
-                                la.getDiocese().getId().equals(election.getDiocese().getId()));
-                
-                if (!dioceseEligible) {
-                    return new EligibilityDecision(false, "SCOPE_CHECK",
-                            "Not eligible for diocese: " + election.getDiocese().getName());
-                }
-                return new EligibilityDecision(true, "SCOPE_CHECK",
-                        "Eligible within diocese: " + election.getDiocese().getName());
+                return new EligibilityDecision(false, "SCOPE_CHECK",
+                        "Not eligible for diocese: " + election.getDiocese().getName());
 
             case ARCHDEACONRY:
                 if (election.getArchdeaconry() == null) {
                     return new EligibilityDecision(false, "SCOPE_CHECK",
                             "Election scope is ARCHDEACONRY but no target archdeaconry specified");
                 }
-                // Voter must have an active assignment at this archdeaconry
-                boolean archdeaconryEligible = fellowshipAssignments.stream()
-                        .anyMatch(la -> la.getPerson().getId().equals(voterPersonId) &&
-                                la.getArchdeaconry() != null &&
-                                la.getArchdeaconry().getId().equals(election.getArchdeaconry().getId()));
-                
-                if (!archdeaconryEligible) {
-                    return new EligibilityDecision(false, "SCOPE_CHECK",
-                            "Not eligible for archdeaconry: " + election.getArchdeaconry().getName());
-                }
-                return new EligibilityDecision(true, "SCOPE_CHECK",
-                        "Eligible within archdeaconry: " + election.getArchdeaconry().getName());
+                return new EligibilityDecision(false, "SCOPE_CHECK",
+                        "Not eligible for archdeaconry: " + election.getArchdeaconry().getName());
 
             case CHURCH:
                 if (election.getChurch() == null) {
                     return new EligibilityDecision(false, "SCOPE_CHECK",
                             "Election scope is CHURCH but no target church specified");
                 }
-                // Voter must have an active assignment at this church
-                boolean churchEligible = fellowshipAssignments.stream()
-                        .anyMatch(la -> la.getPerson().getId().equals(voterPersonId) &&
-                                la.getChurch() != null &&
-                                la.getChurch().getId().equals(election.getChurch().getId()));
-                
-                if (!churchEligible) {
-                    return new EligibilityDecision(false, "SCOPE_CHECK",
-                            "Not eligible for church: " + election.getChurch().getName());
-                }
-                return new EligibilityDecision(true, "SCOPE_CHECK",
-                        "Eligible within church: " + election.getChurch().getName());
+                return new EligibilityDecision(false, "SCOPE_CHECK",
+                        "Not eligible for church: " + election.getChurch().getName());
 
             default:
                 return new EligibilityDecision(false, "SCOPE_CHECK",
