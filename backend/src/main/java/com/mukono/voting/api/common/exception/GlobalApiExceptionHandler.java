@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 /**
@@ -80,36 +81,44 @@ public class GlobalApiExceptionHandler {
     }
 
     /**
-     * Handle entity not found (if used in future).
+     * Handle NoSuchElementException (specific not-found exception).
+     * Thrown by Optional.get() and similar operations when element not found.
      */
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiErrorResponse> handleRuntimeException(
-            RuntimeException ex, HttpServletRequest request) {
+    @ExceptionHandler(NoSuchElementException.class)
+    public ResponseEntity<ApiErrorResponse> handleNoSuchElement(
+            NoSuchElementException ex, HttpServletRequest request) {
         
-        // Check for common not-found patterns
-        if (ex.getMessage() != null && ex.getMessage().contains("not found")) {
-            ApiErrorResponse errorResponse = new ApiErrorResponse(
-                    HttpStatus.NOT_FOUND.value(),
-                    "Not Found",
-                    ex.getMessage(),
-                    request.getRequestURI()
-            );
-            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-        }
-        
-        // Generic runtime error
         ApiErrorResponse errorResponse = new ApiErrorResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Internal Server Error",
-                "An unexpected error occurred",
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                ex.getMessage() != null ? ex.getMessage() : "Requested resource not found",
                 request.getRequestURI()
         );
         
-        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    /**
+     * Handle javax.persistence.EntityNotFoundException (JPA not-found exception).
+     * Thrown by JPA when entity not found with specific ID.
+     */
+    @ExceptionHandler(jakarta.persistence.EntityNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleEntityNotFound(
+            jakarta.persistence.EntityNotFoundException ex, HttpServletRequest request) {
+        
+        ApiErrorResponse errorResponse = new ApiErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                ex.getMessage() != null ? ex.getMessage() : "Requested entity not found",
+                request.getRequestURI()
+        );
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
     /**
      * Fallback for any uncaught exceptions.
+     * Only handles exceptions not explicitly matched above.
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGenericException(
