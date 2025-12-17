@@ -1,6 +1,6 @@
 package com.mukono.voting.api.admin.controller;
 
-import com.mukono.voting.api.admin.dto.*;
+import com.mukono.voting.payload.response.tally.*;
 import com.mukono.voting.api.admin.service.ElectionResultsAdminService;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.ResponseEntity;

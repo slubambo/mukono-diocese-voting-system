@@ -1,7 +1,7 @@
 package com.mukono.voting.api.admin.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mukono.voting.api.admin.dto.RunTallyRequest;
+import com.mukono.voting.payload.request.tally.RunTallyRequest;
 import com.mukono.voting.backend.integration.IntegrationTestBase;
 import com.mukono.voting.model.election.*;
 import com.mukono.voting.model.people.Person;

@@ -1,6 +1,7 @@
 package com.mukono.voting.api.admin.controller;
 
-import com.mukono.voting.api.admin.dto.*;
+import com.mukono.voting.payload.request.tally.RunTallyRequest;
+import com.mukono.voting.payload.response.tally.*;
 import com.mukono.voting.api.admin.service.ElectionTallyService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;

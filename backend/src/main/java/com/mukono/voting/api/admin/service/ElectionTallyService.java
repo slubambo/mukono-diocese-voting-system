@@ -1,6 +1,7 @@
 package com.mukono.voting.api.admin.service;
 
-import com.mukono.voting.api.admin.dto.*;
+import com.mukono.voting.payload.request.tally.RunTallyRequest;
+import com.mukono.voting.payload.response.tally.*;
 import com.mukono.voting.model.election.*;
 import com.mukono.voting.repository.election.*;
 import com.mukono.voting.service.election.VoteTallyService;

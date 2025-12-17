@@ -1,6 +1,6 @@
 package com.mukono.voting.api.common.exception;
 
-import com.mukono.voting.api.common.dto.ApiErrorResponse;
+import com.mukono.voting.payload.response.common.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;

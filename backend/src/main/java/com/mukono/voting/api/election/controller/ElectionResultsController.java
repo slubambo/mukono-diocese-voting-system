@@ -1,6 +1,6 @@
 package com.mukono.voting.api.election.controller;
 
-import com.mukono.voting.api.election.dto.*;
+import com.mukono.voting.payload.response.election.*;
 import com.mukono.voting.repository.election.CandidateVoteCount;
 import com.mukono.voting.repository.election.PositionVoteCount;
 import com.mukono.voting.service.election.ElectionResultsService;

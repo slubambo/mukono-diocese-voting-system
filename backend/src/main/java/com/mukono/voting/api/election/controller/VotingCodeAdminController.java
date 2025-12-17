@@ -1,10 +1,10 @@
 package com.mukono.voting.api.election.controller;
 
-import com.mukono.voting.api.common.dto.CountResponse;
-import com.mukono.voting.api.common.dto.PagedResponse;
-import com.mukono.voting.api.election.dto.IssueVotingCodeRequest;
-import com.mukono.voting.api.election.dto.RegenerateVotingCodeRequest;
-import com.mukono.voting.api.election.dto.VotingCodeResponse;
+import com.mukono.voting.payload.response.common.CountResponse;
+import com.mukono.voting.payload.response.common.PagedResponse;
+import com.mukono.voting.payload.request.voting.IssueVotingCodeRequest;
+import com.mukono.voting.payload.request.voting.RegenerateVotingCodeRequest;
+import com.mukono.voting.payload.response.voting.VotingCodeResponse;
 import com.mukono.voting.model.election.VotingCode;
 import com.mukono.voting.model.election.VotingCodeStatus;
 import com.mukono.voting.service.election.VotingCodeService;
