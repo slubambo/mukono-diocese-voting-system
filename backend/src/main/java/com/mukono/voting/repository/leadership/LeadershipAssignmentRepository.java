@@ -239,4 +239,14 @@ public interface LeadershipAssignmentRepository extends JpaRepository<Leadership
         Long churchId,
         RecordStatus status
     );
+
+    /**
+     * Find all assignments for a specific person with a given status.
+     * Used for ballot generation to get candidate origin information.
+     * 
+     * @param personId the person ID
+     * @param status the record status
+     * @return list of leadership assignments
+     */
+    List<LeadershipAssignment> findByPersonIdAndStatus(Long personId, RecordStatus status);
 }
