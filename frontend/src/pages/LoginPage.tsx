@@ -6,6 +6,8 @@ import {
   Checkbox,
   Container,
   FormControlLabel,
+  IconButton,
+  InputAdornment,
   Paper,
   Tab,
   Tabs,
@@ -16,6 +18,8 @@ import {
 } from '@mui/material'
 import LockIcon from '@mui/icons-material/Lock'
 import HowToVoteIcon from '@mui/icons-material/HowToVote'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import { useToast } from '../components/feedback/ToastProvider'
 import { useAuth } from '../context/AuthContext'
 import logoSrc from '../assets/COU-Logo-Boundary_Favicon.png'
@@ -46,6 +50,7 @@ const LoginPage = () => {
   const [tab, setTab] = useState(0)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(false)
   const [loading, setLoading] = useState(false)
   const { loginSystem } = useAuth()
@@ -200,7 +205,7 @@ const LoginPage = () => {
                 />
                 <TextField
                   fullWidth
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   label="Password"
                   placeholder="Enter your password"
                   value={password}
@@ -208,6 +213,23 @@ const LoginPage = () => {
                   disabled={loading}
                   margin="normal"
                   required
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle password visibility"
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                            tabIndex={-1}
+                            disabled={loading}
+                          >
+                            {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
                 />
                 <FormControlLabel
                   control={
