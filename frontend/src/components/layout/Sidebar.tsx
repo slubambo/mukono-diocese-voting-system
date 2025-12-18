@@ -19,7 +19,6 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { useAuth } from '../../context/AuthContext'
 import { LOGOUT_MENU_ITEM, getMenuItemsByRole } from '../../routes/menu'
-import logoSrc from '../../assets/COU-Logo-Boundary_Favicon.png'
 
 interface SidebarProps {
   open: boolean
@@ -60,19 +59,19 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
 
   const sidebarContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Header with branding and logo */}
+      {/* Header with branding and avatar */}
       <Box sx={{ p: collapsed ? 1 : 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: collapsed ? 0 : 2 }}>
-          <Box
-            component="img"
-            src={logoSrc}
-            alt="Church of Uganda Logo"
+          <Avatar
             sx={{
-              width: 40,
-              height: 40,
-              flexShrink: 0,
+              bgcolor: 'primary.main',
+              color: 'primary.contrastText',
+              fontWeight: 700,
+              fontSize: '1.25rem',
             }}
-          />
+          >
+            M
+          </Avatar>
           {!collapsed && (
             <Box>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main' }}>
