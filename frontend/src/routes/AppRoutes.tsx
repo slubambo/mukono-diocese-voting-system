@@ -4,8 +4,11 @@ import VoteLoginPage from '../pages/VoteLoginPage'
 import AdminDashboard from '../pages/AdminDashboard'
 import DSMainPage from '../pages/DSMainPage'
 import VoterBallotPage from '../pages/VoterBallotPage'
-import ProtectedRoute from './ProtectedRoute'
-import VoterRoute from './VoterRoute'
+import UnauthorizedPage from '../pages/UnauthorizedPage'
+import RequireRole from './RequireRole'
+import RequireVoter from './RequireVoter'
+
+const DS_ROLES = ['ROLE_DS', 'ROLE_BISHOP', 'ROLE_SENIOR_STAFF', 'ROLE_POLLING_OFFICER']
 
 const AppRoutes = () => (
   <Routes>
@@ -19,9 +22,9 @@ const AppRoutes = () => (
     <Route
       path="/admin/*"
       element={
-        <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+        <RequireRole roles={['ROLE_ADMIN']}>
           <AdminDashboard />
-        </ProtectedRoute>
+        </RequireRole>
       }
     />
 
@@ -29,9 +32,9 @@ const AppRoutes = () => (
     <Route
       path="/ds/*"
       element={
-        <ProtectedRoute allowedRoles={['ROLE_DS']}>
+        <RequireRole roles={DS_ROLES}>
           <DSMainPage />
-        </ProtectedRoute>
+        </RequireRole>
       }
     />
 
@@ -39,11 +42,14 @@ const AppRoutes = () => (
     <Route
       path="/vote"
       element={
-        <VoterRoute>
+        <RequireVoter>
           <VoterBallotPage />
-        </VoterRoute>
+        </RequireVoter>
       }
     />
+
+    {/* Unauthorized */}
+    <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
     {/* Default route */}
     <Route path="*" element={<Navigate to="/login" replace />} />
