@@ -23,8 +23,8 @@ const axiosClient: AxiosInstance = axios.create({
  */
 axiosClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Get token from localStorage (when auth is implemented)
-    const token = localStorage.getItem('mdvs_token')
+    // Pull token from sessionStorage first (non-remember sessions), then localStorage
+    const token = sessionStorage.getItem('mdvs_token') || localStorage.getItem('mdvs_token')
 
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
@@ -49,7 +49,9 @@ axiosClient.interceptors.response.use(
     if (error.response?.status === 401) {
       // Clear auth and redirect to login (when auth is implemented)
       localStorage.removeItem('mdvs_token')
+      sessionStorage.removeItem('mdvs_token')
       localStorage.removeItem('mdvs_user')
+      sessionStorage.removeItem('mdvs_user')
       // window.location.href = '/login'
     }
 

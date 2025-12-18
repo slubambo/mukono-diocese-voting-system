@@ -67,8 +67,7 @@ const decodeJwtExp = (token: string): number | null => {
   }
 }
 
-const loadStoredAuth = (): AuthState | null => {
-  const raw = localStorage.getItem(STORAGE_KEY)
+const parseStoredAuth = (raw: string | null): AuthState | null => {
   if (!raw) return null
   try {
     const parsed = JSON.parse(raw) as AuthState
@@ -82,28 +81,43 @@ const loadStoredAuth = (): AuthState | null => {
   }
 }
 
+const loadStoredAuth = (): AuthState | null => {
+  // Prefer sessionStorage for non-"remember me" sessions, fall back to localStorage
+  const fromSession = parseStoredAuth(sessionStorage.getItem(STORAGE_KEY))
+  if (fromSession) return fromSession
+  return parseStoredAuth(localStorage.getItem(STORAGE_KEY))
+}
+
 const persistAuth = (state: AuthState | null) => {
   if (!state || state.authType === null) {
     localStorage.removeItem(STORAGE_KEY)
+    sessionStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem('mdvs_token')
+    sessionStorage.removeItem('mdvs_token')
     return
   }
 
-  // Store current session token to localStorage for axios interceptor
-  if (state.authType === 'system' && state.system?.token) {
-    localStorage.setItem('mdvs_token', state.system.token)
-  } else if (state.authType === 'voter' && state.voter?.token) {
-    localStorage.setItem('mdvs_token', state.voter.token)
-  }
+  // Decide where to persist: sessionStorage for non-remember system logins, localStorage otherwise
+  const prefersSession =
+    state.authType === 'system' ? !state.system?.remember : false
+  const primaryStorage = prefersSession ? sessionStorage : localStorage
+  const secondaryStorage = prefersSession ? localStorage : sessionStorage
 
-  // Persist full auth state only if remember is enabled or voter session
-  if (state.authType === 'system' && state.system?.remember) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  } else if (state.authType === 'voter') {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  } else {
-    localStorage.removeItem(STORAGE_KEY)
+  const token =
+    state.authType === 'system'
+      ? state.system?.token
+      : state.authType === 'voter'
+        ? state.voter?.token
+        : null
+
+  if (token) {
+    primaryStorage.setItem('mdvs_token', token)
   }
+  secondaryStorage.removeItem('mdvs_token')
+
+  // Persist full auth state
+  primaryStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  secondaryStorage.removeItem(STORAGE_KEY)
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
