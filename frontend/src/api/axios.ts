@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
+import type { AxiosInstance, InternalAxiosRequestConfig, AxiosRequestConfig } from 'axios'
 
 /**
  * Create axios instance with base URL from environment
@@ -69,14 +69,14 @@ export default axiosClient
  * Usage: api.get('/endpoint'), api.post('/endpoint', data), etc.
  */
 export const api = {
-  get: <T = any>(url: string, config = {}) =>
+  get: <T = unknown>(url: string, config: AxiosRequestConfig = {}) =>
     axiosClient.get<T>(url, config).then(res => res.data),
-  post: <T = any>(url: string, data = {}, config = {}) =>
+  post: <T = unknown>(url: string, data: unknown = {}, config: AxiosRequestConfig = {}) =>
     axiosClient.post<T>(url, data, config).then(res => res.data),
-  put: <T = any>(url: string, data = {}, config = {}) =>
+  put: <T = unknown>(url: string, data: unknown = {}, config: AxiosRequestConfig = {}) =>
     axiosClient.put<T>(url, data, config).then(res => res.data),
-  patch: <T = any>(url: string, data = {}, config = {}) =>
+  patch: <T = unknown>(url: string, data: unknown = {}, config: AxiosRequestConfig = {}) =>
     axiosClient.patch<T>(url, data, config).then(res => res.data),
-  delete: <T = any>(url: string, config = {}) =>
+  delete: <T = unknown>(url: string, config: AxiosRequestConfig = {}) =>
     axiosClient.delete<T>(url, config).then(res => res.data),
 }

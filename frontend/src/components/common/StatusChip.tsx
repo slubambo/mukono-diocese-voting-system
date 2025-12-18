@@ -14,7 +14,7 @@ interface StatusChipProps extends Omit<ChipProps, 'label' | 'variant'> {
  * Automatically colors based on status type
  */
 const StatusChip: React.FC<StatusChipProps> = ({ status, label, ...props }) => {
-  const statusConfig: Record<StatusType, { color: any; label: string }> = {
+  const statusConfig: Record<StatusType, { color: ChipProps['color']; label: string }> = {
     active: { color: 'success', label: 'Active' },
     used: { color: 'info', label: 'Used' },
     revoked: { color: 'error', label: 'Revoked' },

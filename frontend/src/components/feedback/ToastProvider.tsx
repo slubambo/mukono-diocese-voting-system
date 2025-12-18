@@ -106,6 +106,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
  * toast.success('Operation completed')
  * toast.error('Something went wrong')
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useToast = (): ToastContextType => {
   const context = useContext(ToastContext)
   if (!context) {

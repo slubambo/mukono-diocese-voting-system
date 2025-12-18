@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState } from 'react'
 
 type Role =
   | 'ROLE_ADMIN'
@@ -23,17 +23,11 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserInfo>(null)
-  const [token, setToken] = useState<string | null>(null)
-
-  useEffect(() => {
-    const storedToken = localStorage.getItem('mdvs_token')
+  const [user, setUser] = useState<UserInfo>(() => {
     const storedUser = localStorage.getItem('mdvs_user')
-    if (storedToken && storedUser) {
-      setToken(storedToken)
-      setUser(JSON.parse(storedUser))
-    }
-  }, [])
+    return storedUser ? (JSON.parse(storedUser) as UserInfo) : null
+  })
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('mdvs_token'))
 
   const login = (newToken: string, newUser: UserInfo) => {
     setToken(newToken)
@@ -56,6 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const ctx = useContext(AuthContext)
   if (!ctx) {

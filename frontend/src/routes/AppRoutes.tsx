@@ -7,6 +7,8 @@ import VoterBallotPage from '../pages/VoterBallotPage'
 import ProtectedRoute from './ProtectedRoute'
 import VoterRoute from './VoterRoute'
 
+const DS_ROLES = ['ROLE_DS', 'ROLE_BISHOP', 'ROLE_SENIOR_STAFF', 'ROLE_POLLING_OFFICER']
+
 const AppRoutes = () => (
   <Routes>
     {/* System user login */}
@@ -29,7 +31,7 @@ const AppRoutes = () => (
     <Route
       path="/ds/*"
       element={
-        <ProtectedRoute allowedRoles={['ROLE_DS']}>
+        <ProtectedRoute allowedRoles={DS_ROLES}>
           <DSMainPage />
         </ProtectedRoute>
       }
