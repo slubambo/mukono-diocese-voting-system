@@ -95,24 +95,63 @@ const LoginPage = () => {
             value={tab}
             onChange={(_, newValue) => setTab(newValue)}
             aria-label="login tabs"
-            sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
+            sx={{
+              borderBottom: 1,
+              borderColor: 'divider',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+            }}
           >
-            <Tab
-              icon={<LockIcon sx={{ mr: 1 }} />}
-              iconPosition="start"
-              label="System Access"
-              id="auth-tab-0"
-            />
             <Tab
               icon={<HowToVoteIcon sx={{ mr: 1 }} />}
               iconPosition="start"
               label="Vote / Londa"
+              id="auth-tab-0"
+              sx={{ borderRight: 1, borderColor: 'divider' }}
+            />
+            <Tab
+              icon={<LockIcon sx={{ mr: 1 }} />}
+              iconPosition="start"
+              label="System Access"
               id="auth-tab-1"
             />
           </Tabs>
 
-          {/* System Login Tab */}
+          {/* Voter Entry Tab */}
           <TabPanel value={tab} index={0}>
+            <Box sx={{ px: 3, pb: 3, textAlign: 'center' }}>
+              <Card
+                sx={{
+                  p: 3,
+                  bgcolor: 'background.default',
+                  border: '2px dashed',
+                  borderColor: 'primary.main',
+                  mb: 3,
+                }}
+              >
+                <HowToVoteIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  Ready to Vote?
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  Enter your voting code to access the ballot. Your code was provided by the Diocese.
+                </Typography>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  onClick={handleVoterEntry}
+                  sx={{ py: 1.5, fontSize: '1rem' }}
+                >
+                  Continue to Voter Login
+                </Button>
+              </Card>
+            </Box>
+          </TabPanel>
+
+          {/* System Login Tab */}
+          <TabPanel value={tab} index={1}>
             <Box sx={{ px: 3, pb: 3 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Admin and Diocesan Secretary login
@@ -162,39 +201,6 @@ const LoginPage = () => {
                   {loading ? 'Signing in...' : 'Sign In'}
                 </Button>
               </form>
-            </Box>
-          </TabPanel>
-
-          {/* Voter Entry Tab */}
-          <TabPanel value={tab} index={1}>
-            <Box sx={{ px: 3, pb: 3, textAlign: 'center' }}>
-              <Card
-                sx={{
-                  p: 3,
-                  bgcolor: 'background.default',
-                  border: '2px dashed',
-                  borderColor: 'primary.main',
-                  mb: 3,
-                }}
-              >
-                <HowToVoteIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-                <Typography variant="h6" gutterBottom>
-                  Ready to Vote?
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Enter your voting code to access the ballot. Your code was provided by the Diocese.
-                </Typography>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  onClick={handleVoterEntry}
-                  sx={{ py: 1.5, fontSize: '1rem' }}
-                >
-                  Continue to Voter Login
-                </Button>
-              </Card>
             </Box>
           </TabPanel>
         </Paper>
