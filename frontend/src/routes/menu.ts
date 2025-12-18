@@ -6,6 +6,9 @@ import PollIcon from '@mui/icons-material/Poll'
 import LogoutIcon from '@mui/icons-material/Logout'
 import PolicyIcon from '@mui/icons-material/Policy'
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts'
+import SettingsIcon from '@mui/icons-material/Settings'
+import LocationCityIcon from '@mui/icons-material/LocationCity'
+import EventSeatIcon from '@mui/icons-material/EventSeat'
 
 export type MenuItem = {
   id: string
@@ -33,13 +36,75 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: DashboardIcon,
     roles: ADMIN_ROLES,
   },
-  // ADMIN: Master Data (B)
+  // ADMIN: Configuration (B)
   {
-    id: 'master-data',
-    label: 'Master Data',
-    path: '/admin/master-data',
-    icon: PolicyIcon,
+    id: 'configuration',
+    label: 'Configuration',
+    path: '/admin/config',
+    icon: SettingsIcon,
     roles: ADMIN_ROLES,
+    children: [
+      {
+        id: 'config-org',
+        label: 'Organisational Structure',
+        path: '/admin/config/org',
+        icon: LocationCityIcon,
+        roles: ADMIN_ROLES,
+        children: [
+          {
+            id: 'dioceses',
+            label: 'Diocese',
+            path: '/admin/config/org/dioceses',
+            icon: LocationCityIcon,
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: 'archdeaconries',
+            label: 'Archdeaconry',
+            path: '/admin/config/org/archdeaconries',
+            icon: LocationCityIcon,
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: 'churches',
+            label: 'Church',
+            path: '/admin/config/org/churches',
+            icon: LocationCityIcon,
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: 'fellowships',
+            label: 'Fellowship',
+            path: '/admin/config/org/fellowships',
+            icon: GroupIcon,
+            roles: ADMIN_ROLES,
+          },
+        ],
+      },
+      {
+        id: 'config-master',
+        label: 'Master Data',
+        path: '/admin/config/master',
+        icon: PolicyIcon,
+        roles: ADMIN_ROLES,
+        children: [
+          {
+            id: 'position-titles',
+            label: 'Position Titles',
+            path: '/admin/config/master/position-titles',
+            icon: EventSeatIcon,
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: 'positions',
+            label: 'Positions',
+            path: '/admin/config/master/positions',
+            icon: EventSeatIcon,
+            roles: ADMIN_ROLES,
+          },
+        ],
+      },
+    ],
   },
   // ADMIN: People & Leadership (C)
   {
