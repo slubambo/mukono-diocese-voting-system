@@ -11,11 +11,14 @@ import {
   Tabs,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import LockIcon from '@mui/icons-material/Lock'
 import HowToVoteIcon from '@mui/icons-material/HowToVote'
 import { useToast } from '../components/feedback/ToastProvider'
 import { useAuth } from '../context/AuthContext'
+import logoSrc from '../assets/COU-Logo-Boundary_Favicon.png'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -47,6 +50,8 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false)
   const { loginSystem } = useAuth()
   const toast = useToast()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
   const handleSystemLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,19 +80,33 @@ const LoginPage = () => {
     <Container maxWidth="sm">
       <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', py: 4 }}>
         <Paper elevation={3} sx={{ width: '100%', overflow: 'hidden' }}>
-          {/* Header */}
+          {/* Header with Logo */}
           <Box
             sx={{
               background: 'linear-gradient(135deg, #8F3493 0%, #0E61AD 100%)',
               color: 'white',
               p: 3,
-              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
             }}
           >
-            <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-              Mukono Diocese
-            </Typography>
-            <Typography variant="body2">Voting System</Typography>
+            <Box
+              component="img"
+              src={logoSrc}
+              alt="Church of Uganda Logo"
+              sx={{
+                width: isMobile ? 40 : 56,
+                height: isMobile ? 40 : 56,
+                flexShrink: 0,
+              }}
+            />
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
+                Mukono Diocese
+              </Typography>
+              <Typography variant="body2">Voting System</Typography>
+            </Box>
           </Box>
 
           {/* Tab Navigation */}
@@ -100,19 +119,24 @@ const LoginPage = () => {
               borderColor: 'divider',
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
+              '& .MuiTab-root': {
+                minHeight: 64,
+                py: 2,
+                px: 1,
+                textTransform: 'none',
+                fontSize: isMobile ? '0.85rem' : '0.95rem',
+              },
             }}
           >
             <Tab
-              icon={<HowToVoteIcon sx={{ mr: 1 }} />}
-              iconPosition="start"
-              label="Vote / Londa"
+              icon={<HowToVoteIcon />}
+              label={isMobile ? 'Vote' : 'Vote / Londa'}
               id="auth-tab-0"
               sx={{ borderRight: 1, borderColor: 'divider' }}
             />
             <Tab
-              icon={<LockIcon sx={{ mr: 1 }} />}
-              iconPosition="start"
-              label="System Access"
+              icon={<LockIcon />}
+              label={isMobile ? 'System' : 'System Access'}
               id="auth-tab-1"
             />
           </Tabs>
