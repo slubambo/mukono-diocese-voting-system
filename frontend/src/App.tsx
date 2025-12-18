@@ -1,11 +1,27 @@
+import { useEffect } from 'react'
 import { ThemeProvider, CssBaseline } from '@mui/material'
 import AppRoutes from './routes/AppRoutes'
 import { AuthProvider } from './context/AuthContext'
 import ToastProvider from './components/feedback/ToastProvider'
 import ErrorBoundary from './components/feedback/ErrorBoundary'
 import { lightTheme } from './theme/theme'
+import logoSrc from './assets/COU-Logo-Boundary_Favicon.png'
 
 function App() {
+  useEffect(() => {
+    // Set page title
+    document.title = 'Mukono Diocese Voting System'
+
+    // Set favicon
+    let favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement
+    if (!favicon) {
+      favicon = document.createElement('link')
+      favicon.rel = 'icon'
+      document.head.appendChild(favicon)
+    }
+    favicon.href = logoSrc
+  }, [])
+
   return (
     <ErrorBoundary>
       <ThemeProvider theme={lightTheme}>

@@ -85,9 +85,18 @@ const loadStoredAuth = (): AuthState | null => {
 const persistAuth = (state: AuthState | null) => {
   if (!state || state.authType === null) {
     localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem('mdvs_token')
     return
   }
-  // Only persist if remember is set for system; voters persist for the session duration
+
+  // Store current session token to localStorage for axios interceptor
+  if (state.authType === 'system' && state.system?.token) {
+    localStorage.setItem('mdvs_token', state.system.token)
+  } else if (state.authType === 'voter' && state.voter?.token) {
+    localStorage.setItem('mdvs_token', state.voter.token)
+  }
+
+  // Persist full auth state only if remember is enabled or voter session
   if (state.authType === 'system' && state.system?.remember) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   } else if (state.authType === 'voter') {

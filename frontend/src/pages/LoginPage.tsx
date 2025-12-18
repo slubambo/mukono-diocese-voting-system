@@ -117,14 +117,20 @@ const LoginPage = () => {
             sx={{
               borderBottom: 1,
               borderColor: 'divider',
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              display: 'flex',
+              width: '100%',
               '& .MuiTab-root': {
-                minHeight: 64,
-                py: 2,
-                px: 1,
+                flex: 1,
+                minHeight: 56,
+                py: 1.5,
+                px: 2,
                 textTransform: 'none',
-                fontSize: isMobile ? '0.85rem' : '0.95rem',
+                fontSize: isMobile ? '0.8rem' : '0.9rem',
+                fontWeight: 500,
+                '&:first-of-type': {
+                  borderRight: 1,
+                  borderColor: 'divider',
+                },
               },
             }}
           >
@@ -132,7 +138,6 @@ const LoginPage = () => {
               icon={<HowToVoteIcon />}
               label={isMobile ? 'Vote' : 'Vote / Londa'}
               id="auth-tab-0"
-              sx={{ borderRight: 1, borderColor: 'divider' }}
             />
             <Tab
               icon={<LockIcon />}
