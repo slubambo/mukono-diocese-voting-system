@@ -41,10 +41,10 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: DashboardIcon,
     roles: ADMIN_ROLES,
   },
-  // ADMIN & DS: Configuration (UI-B)
+  // ADMIN & DS: Master Data (UI-B - Organizational Structure & Master Data)
   {
-    id: 'configuration',
-    label: 'Configuration',
+    id: 'master-data-config',
+    label: 'Master Data',
     path: '/config',
     icon: SettingsIcon,
     roles: [...ADMIN_ROLES, ...DS_ROLES],

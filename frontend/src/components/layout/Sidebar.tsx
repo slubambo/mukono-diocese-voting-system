@@ -44,6 +44,20 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
   // Get menu items based on user roles
   const visibleMenuItems = user?.roles ? getMenuItemsByRole(user.roles) : []
 
+  // Auto-expand parent menu when child is active
+  React.useEffect(() => {
+    const newExpanded: Record<string, boolean> = {}
+    visibleMenuItems.forEach(item => {
+      if (item.children) {
+        const hasActiveChild = item.children.some(child => location.pathname.startsWith(child.path))
+        if (hasActiveChild) {
+          newExpanded[item.id] = true
+        }
+      }
+    })
+    setExpandedItems(prev => ({ ...prev, ...newExpanded }))
+  }, [location.pathname, visibleMenuItems])
+
   const handleMenuItemClick = (path: string, id?: string, hasChildren?: boolean) => {
     if (hasChildren) {
       // Toggle expand/collapse for items with children

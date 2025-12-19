@@ -41,6 +41,7 @@ import StatusChip from '../../components/common/StatusChip'
 import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
+import AppShell from '../../components/layout/AppShell'
 
 type DialogMode = 'create' | 'edit' | null
 
@@ -159,7 +160,8 @@ export const PositionPage: React.FC = () => {
   const getTitleName = (position: FellowshipPosition) => position.title.name
 
   return (
-    <PageLayout
+    <AppShell>
+      <PageLayout
       title="Positions"
       subtitle="Manage fellowship positions"
       actions={isAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormData({ fellowshipId: 0, titleId: 0, seats: 1, scope: 'DIOCESE' }); setDialogMode('create'); }}>Add Position</Button>}
@@ -260,5 +262,6 @@ export const PositionPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </PageLayout>
+    </AppShell>
   )
 }

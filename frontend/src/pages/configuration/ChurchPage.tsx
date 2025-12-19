@@ -40,6 +40,7 @@ import StatusChip from '../../components/common/StatusChip'
 import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
+import AppShell from '../../components/layout/AppShell'
 
 type DialogMode = 'create' | 'edit' | null
 
@@ -197,7 +198,8 @@ export const ChurchPage: React.FC = () => {
   }
 
   return (
-    <PageLayout
+    <AppShell>
+      <PageLayout
       title="Church Management"
       subtitle="Manage churches within archdeaconries"
       actions={
@@ -339,5 +341,6 @@ export const ChurchPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </PageLayout>
+    </AppShell>
   )
 }

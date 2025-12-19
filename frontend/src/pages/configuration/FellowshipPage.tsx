@@ -38,6 +38,7 @@ import StatusChip from '../../components/common/StatusChip'
 import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
+import AppShell from '../../components/layout/AppShell'
 
 type DialogMode = 'create' | 'edit' | null
 
@@ -128,7 +129,8 @@ export const FellowshipPage: React.FC = () => {
   }
 
   return (
-    <PageLayout
+    <AppShell>
+      <PageLayout
       title="Fellowship Management"
       subtitle="Manage fellowships"
       actions={!isAdmin ? undefined : <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>Add Fellowship</Button>}
@@ -210,5 +212,6 @@ export const FellowshipPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </PageLayout>
+    </AppShell>
   )
 }

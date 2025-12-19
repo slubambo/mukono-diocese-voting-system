@@ -27,10 +27,14 @@ import {
   MenuItem,
   Typography,
   Tooltip,
+  InputAdornment,
+  Card,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import SearchIcon from '@mui/icons-material/Search'
+import BusinessIcon from '@mui/icons-material/Business'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/feedback/ToastProvider'
 import { dioceseApi } from '../../api/diocese.api'
@@ -39,6 +43,7 @@ import StatusChip from '../../components/common/StatusChip'
 import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
+import AppShell from '../../components/layout/AppShell'
 
 type DialogMode = 'create' | 'edit' | null
 
@@ -47,6 +52,8 @@ export const DiocesePage: React.FC = () => {
   const { addToast: showToast } = useToast()
   
   const [dioceses, setDioceses] = useState<Diocese[]>([])
+  const [filteredDioceses, setFilteredDioceses] = useState<Diocese[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(20)
@@ -88,6 +95,28 @@ export const DiocesePage: React.FC = () => {
   useEffect(() => {
     fetchDioceses()
   }, [page, rowsPerPage])
+
+  // Filter dioceses based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredDioceses(dioceses)
+    } else {
+      const query = searchQuery.toLowerCase()
+      const filtered = dioceses.filter(
+        (d) =>
+          d.name.toLowerCase().includes(query) ||
+          d.code?.toLowerCase().includes(query)
+      )
+      setFilteredDioceses(filtered)
+    }
+  }, [searchQuery, dioceses])
+
+  // Calculate stats
+  const stats = {
+    total: totalElements,
+    active: dioceses.filter((d) => d.status === 'ACTIVE').length,
+    inactive: dioceses.filter((d) => d.status === 'INACTIVE').length,
+  }
 
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage)
@@ -184,7 +213,8 @@ export const DiocesePage: React.FC = () => {
   }
 
   return (
-    <PageLayout
+    <AppShell>
+      <PageLayout
       title="Diocese Management"
       subtitle="Manage dioceses in the organizational hierarchy"
       actions={
@@ -199,19 +229,112 @@ export const DiocesePage: React.FC = () => {
         )
       }
     >
+      {/* Stats Cards */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2, mb: 3 }}>
+        <Card sx={{ p: 2.5, bgcolor: 'background.paper' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                p: 1.5,
+                borderRadius: 2,
+                bgcolor: 'rgba(143, 52, 147, 0.1)',
+                color: 'primary.main',
+                display: 'flex',
+              }}
+            >
+              <BusinessIcon />
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Total Dioceses
+              </Typography>
+              <Typography variant="h5" fontWeight={700}>
+                {stats.total}
+              </Typography>
+            </Box>
+          </Box>
+        </Card>
+        <Card sx={{ p: 2.5, bgcolor: 'background.paper' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                p: 1.5,
+                borderRadius: 2,
+                bgcolor: 'rgba(46, 125, 50, 0.1)',
+                color: 'success.main',
+                display: 'flex',
+              }}
+            >
+              <BusinessIcon />
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Active
+              </Typography>
+              <Typography variant="h5" fontWeight={700} color="success.main">
+                {stats.active}
+              </Typography>
+            </Box>
+          </Box>
+        </Card>
+        <Card sx={{ p: 2.5, bgcolor: 'background.paper' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                p: 1.5,
+                borderRadius: 2,
+                bgcolor: 'action.hover',
+                color: 'text.secondary',
+                display: 'flex',
+              }}
+            >
+              <BusinessIcon />
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Inactive
+              </Typography>
+              <Typography variant="h5" fontWeight={700} color="text.secondary">
+                {stats.inactive}
+              </Typography>
+            </Box>
+          </Box>
+        </Card>
+      </Box>
+
+      {/* Search Bar */}
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <TextField
+          fullWidth
+          placeholder="Search by name or code..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" />
+              </InputAdornment>
+            ),
+          }}
+          size="small"
+        />
+      </Paper>
+
       <Paper sx={{ width: '100%', mb: 2 }}>
         {loading ? (
           <LoadingState count={5} variant="row" />
-        ) : dioceses.length === 0 ? (
+        ) : filteredDioceses.length === 0 ? (
           <EmptyState
-            title="No dioceses found"
+            title={searchQuery ? 'No dioceses found' : 'No dioceses found'}
             description={
-              isReadOnly
+              searchQuery
+                ? 'Try adjusting your search query.'
+                : isReadOnly
                 ? 'No dioceses have been created yet.'
                 : 'Get started by creating your first diocese.'
             }
             action={
-              !isReadOnly && (
+              !isReadOnly && !searchQuery && (
                 <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreateDialog}>
                   Add Diocese
                 </Button>
@@ -232,7 +355,7 @@ export const DiocesePage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {dioceses.map((diocese) => (
+                  {filteredDioceses.map((diocese) => (
                     <TableRow key={diocese.id} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight={500}>
@@ -348,5 +471,6 @@ export const DiocesePage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </PageLayout>
+    </AppShell>
   )
 }
