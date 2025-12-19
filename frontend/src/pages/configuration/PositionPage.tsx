@@ -56,6 +56,7 @@ export const PositionPage: React.FC = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
+  const [selectedFellowshipId, setSelectedFellowshipId] = useState<number | null>(null)
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selected, setSelected] = useState<FellowshipPosition | null>(null)
@@ -71,10 +72,20 @@ export const PositionPage: React.FC = () => {
   const isAdmin = user?.roles.includes('ROLE_ADMIN') || false
 
   const fetchPositions = async () => {
+    if (!selectedFellowshipId) {
+      setPositions([])
+      setTotalElements(0)
+      return
+    }
+
     try {
       setLoading(true)
-      // Fetch all positions - pass empty fellowshipId to get all positions
-      const response = await fellowshipPositionApi.list({ page, size: rowsPerPage, sort: 'id,desc' } as any)
+      const response = await fellowshipPositionApi.list({ 
+        fellowshipId: selectedFellowshipId, 
+        page, 
+        size: rowsPerPage, 
+        sort: 'id,desc' 
+      })
       setPositions(response.content)
       setTotalElements(response.totalElements)
     } catch (error) {
@@ -105,7 +116,7 @@ export const PositionPage: React.FC = () => {
 
   useEffect(() => {
     fetchPositions()
-  }, [page, rowsPerPage])
+  }, [page, rowsPerPage, selectedFellowshipId])
 
   useEffect(() => {
     loadFellowships()
@@ -165,13 +176,34 @@ export const PositionPage: React.FC = () => {
       <PageLayout
       title="Positions"
       subtitle="Manage fellowship positions"
-      actions={isAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormData({ fellowshipId: 0, titleId: 0, seats: 1, scope: 'DIOCESE' }); setDialogMode('create'); }}>Add Position</Button>}
+      actions={isAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormData({ fellowshipId: selectedFellowshipId || 0, titleId: 0, seats: 1, scope: 'DIOCESE' }); setDialogMode('create'); }}>Add Position</Button>}
     >
+      <Paper sx={{ width: '100%', mb: 2, p: 2 }}>
+        <FormControl sx={{ minWidth: 250, mb: 2 }}>
+          <InputLabel>Select Fellowship</InputLabel>
+          <Select 
+            value={selectedFellowshipId || ''} 
+            label="Select Fellowship"
+            onChange={(e) => {
+              setSelectedFellowshipId(e.target.value ? Number(e.target.value) : null)
+              setPage(0)
+            }}
+          >
+            <MenuItem value="">-- Select a Fellowship --</MenuItem>
+            {fellowships.map(f => (
+              <MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Paper>
+
       <Paper sx={{ width: '100%', mb: 2 }}>
         {loading ? (
           <LoadingState count={5} variant="row" />
+        ) : !selectedFellowshipId ? (
+          <EmptyState title="Select a Fellowship" description="Choose a fellowship to view its positions." />
         ) : positions.length === 0 ? (
-          <EmptyState title="No positions" description={isAdmin ? 'Create your first position.' : 'No positions exist yet.'} action={isAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormData({ fellowshipId: 0, titleId: 0, seats: 1, scope: 'DIOCESE' }); setDialogMode('create'); }}>Add Position</Button>} />
+          <EmptyState title="No positions" description={isAdmin ? 'Create your first position for this fellowship.' : 'No positions exist for this fellowship.'} action={isAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormData({ fellowshipId: selectedFellowshipId || 0, titleId: 0, seats: 1, scope: 'DIOCESE' }); setDialogMode('create'); }}>Add Position</Button>} />
         ) : (
           <>
             <TableContainer>
