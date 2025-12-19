@@ -19,6 +19,10 @@ import {
   Typography,
   Box,
   Autocomplete,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
@@ -29,6 +33,7 @@ import { useToast } from '../components/feedback/ToastProvider'
 import { leadershipApi } from '../api/leadership.api'
 import { fellowshipPositionApi } from '../api/fellowshipPosition.api'
 import { peopleApi } from '../api/people.api'
+import { fellowshipApi } from '../api/fellowship.api'
 import type { LeadershipAssignmentResponse, CreateLeadershipAssignmentRequest, LeadershipAssignmentListParams } from '../types/leadership'
 import StatusChip from '../components/common/StatusChip'
 import LoadingState from '../components/common/LoadingState'
@@ -44,6 +49,8 @@ const LeadershipAssignmentsPage: React.FC = () => {
 
   const [assignments, setAssignments] = useState<LeadershipAssignmentResponse[]>([])
   const [positions, setPositions] = useState<any[]>([])
+  const [fellowships, setFellowships] = useState<any[]>([])
+  const [selectedFellowshipId, setSelectedFellowshipId] = useState<number | null>(null)
   const [people, setPeople] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
@@ -76,8 +83,12 @@ const LeadershipAssignmentsPage: React.FC = () => {
   }
 
   const loadPositions = async () => {
+    if (!selectedFellowshipId) {
+      setPositions([])
+      return
+    }
     try {
-      const resp = await fellowshipPositionApi.list({ fellowshipId: 0 as any, page: 0, size: 1000 })
+      const resp = await fellowshipPositionApi.list({ fellowshipId: selectedFellowshipId, page: 0, size: 1000 })
       setPositions(resp.content)
     } catch (e) {
       // ignore
@@ -93,8 +104,19 @@ const LeadershipAssignmentsPage: React.FC = () => {
     }
   }
 
-  useEffect(() => { fetchAssignments() }, [page, rowsPerPage, filters])
-  useEffect(() => { loadPositions(); loadPeople() }, [])
+  const loadFellowships = async () => {
+    try {
+      const resp = await fellowshipApi.list({ page: 0, size: 1000 })
+      setFellowships(resp.content)
+      if (resp.content.length > 0 && !selectedFellowshipId) setSelectedFellowshipId(resp.content[0].id)
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  useEffect(() => { fetchAssignments() }, [page, rowsPerPage, filters, selectedFellowshipId])
+  useEffect(() => { loadFellowships(); loadPeople() }, [])
+  useEffect(() => { loadPositions() }, [selectedFellowshipId])
 
   const openCreate = () => { setEditing(null); reset({ personId: 0, fellowshipPositionId: 0, termStartDate: '', termEndDate: '', notes: '' }); setDialogOpen(true) }
   const openEdit = (a: LeadershipAssignmentResponse) => { setEditing(a); reset({ personId: a.person.id, fellowshipPositionId: a.fellowshipPositionId, termStartDate: a.termStartDate, termEndDate: a.termEndDate || '', notes: a.notes || '' }); setDialogOpen(true) }
@@ -213,6 +235,14 @@ const LeadershipAssignmentsPage: React.FC = () => {
               <Controller name="personId" control={control} render={({ field }) => (
                 <Autocomplete options={people} getOptionLabel={(p) => p.fullName} onChange={(_, v) => field.onChange(v?.id || 0)} renderInput={(params) => <TextField {...params} label="Person" required />} />
               )} />
+
+              <FormControl fullWidth>
+                <InputLabel>Fellowship</InputLabel>
+                <Select value={selectedFellowshipId ?? ''} label="Fellowship" onChange={(e: any) => { const v = e.target.value as number; setSelectedFellowshipId(v); }}>
+                  <MenuItem value="" disabled>-- Select Fellowship --</MenuItem>
+                  {fellowships.map((f) => (<MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>))}
+                </Select>
+              </FormControl>
 
               <Controller name="fellowshipPositionId" control={control} render={({ field }) => (
                 <Autocomplete options={positions} getOptionLabel={(p) => `${p.title.name} — ${p.fellowship.name}`} onChange={(_, v) => field.onChange(v?.id || 0)} renderInput={(params) => <TextField {...params} label="Position" required />} />

@@ -188,7 +188,11 @@ export const MENU_ITEMS: MenuItem[] = [
  * @returns Menu items accessible to the user
  */
 export const getMenuItemsByRole = (roles: string[]): MenuItem[] =>
-  MENU_ITEMS.filter(item => item.roles.some(role => roles.includes(role)))
+  // Return items where the item itself is allowed OR it has children allowed for the roles.
+  MENU_ITEMS.map((item) => {
+    const children = item.children?.filter((c) => c.roles.some((r) => roles.includes(r)))
+    return { ...item, children }
+  }).filter((item) => item.roles.some((role) => roles.includes(role)) || (item.children && item.children.length > 0))
 
 /**
  * Logout menu item (always visible)
