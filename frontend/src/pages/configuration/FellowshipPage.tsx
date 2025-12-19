@@ -137,7 +137,7 @@ export const FellowshipPage: React.FC = () => {
 
   return (
     <AppShell>
-      <PageLayout>
+      <PageLayout title="Fellowships">
         {/* Modern Header */}
         <MasterDataHeader
           title="Fellowship Management"

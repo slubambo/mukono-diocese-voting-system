@@ -9,7 +9,7 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import AccountTreeIcon from '@mui/icons-material/AccountTree'
 import BusinessIcon from '@mui/icons-material/Business'
 import ChurchIcon from '@mui/icons-material/Church'
-import HomeWorkIcon from '@mui/icons-material/HomeWork'
+// HomeWorkIcon unused
 import GroupsIcon from '@mui/icons-material/Groups'
 import BadgeIcon from '@mui/icons-material/Badge'
 import WorkOutlineIcon from '@mui/icons-material/WorkOutline'
@@ -100,7 +100,37 @@ export const MENU_ITEMS: MenuItem[] = [
     label: 'People & Leadership',
     path: '/admin/leadership',
     icon: ManageAccountsIcon,
-    roles: ADMIN_ROLES,
+    roles: [...ADMIN_ROLES, ...DS_ROLES],
+    children: [
+      {
+        id: 'people-registry',
+        label: 'People Registry',
+        path: '/admin/people',
+        icon: BadgeIcon,
+        roles: ADMIN_ROLES,
+      },
+      {
+        id: 'people-registry-ds',
+        label: 'People Registry',
+        path: '/ds/people',
+        icon: BadgeIcon,
+        roles: DS_ROLES,
+      },
+      {
+        id: 'leadership-assignments',
+        label: 'Leadership Assignments',
+        path: '/admin/leadership/assignments',
+        icon: GroupIcon,
+        roles: ADMIN_ROLES,
+      },
+      {
+        id: 'leadership-assignments-ds',
+        label: 'Leadership Assignments',
+        path: '/ds/leadership/assignments',
+        icon: GroupIcon,
+        roles: DS_ROLES,
+      },
+    ],
   },
   // ADMIN: Elections (D)
   {

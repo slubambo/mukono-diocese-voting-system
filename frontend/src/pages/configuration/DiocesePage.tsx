@@ -28,13 +28,12 @@ import {
   Typography,
   Tooltip,
   InputAdornment,
-  Card,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SearchIcon from '@mui/icons-material/Search'
-import BusinessIcon from '@mui/icons-material/Business'
+// BusinessIcon unused
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/feedback/ToastProvider'
 import { dioceseApi } from '../../api/diocese.api'
@@ -215,7 +214,7 @@ export const DiocesePage: React.FC = () => {
 
   return (
     <AppShell>
-      <PageLayout>
+      <PageLayout title="Dioceses">
         {/* Modern Header with Stats */}
         <MasterDataHeader
           title="Diocese Management"

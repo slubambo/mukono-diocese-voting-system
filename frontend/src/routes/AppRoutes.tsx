@@ -13,6 +13,8 @@ import { ChurchPage } from '../pages/configuration/ChurchPage'
 import { FellowshipPage } from '../pages/configuration/FellowshipPage'
 import { PositionTitlePage } from '../pages/configuration/PositionTitlePage'
 import { PositionPage } from '../pages/configuration/PositionPage'
+import PeopleRegistryPage from '../pages/PeopleRegistryPage'
+import LeadershipAssignmentsPage from '../pages/LeadershipAssignmentsPage'
 
 const DS_ROLES = ['ROLE_DS', 'ROLE_BISHOP', 'ROLE_SENIOR_STAFF', 'ROLE_POLLING_OFFICER']
 const CONFIG_ROLES = ['ROLE_ADMIN', ...DS_ROLES] // Admin has full CRUD, DS roles have read-only
@@ -103,6 +105,42 @@ const AppRoutes = () => (
       element={
         <RequireRole roles={CONFIG_ROLES}>
           <PositionPage />
+        </RequireRole>
+      }
+    />
+
+    {/* UI-C: People Registry */}
+    <Route
+      path="/admin/people"
+      element={
+        <RequireRole roles={['ROLE_ADMIN']}>
+          <PeopleRegistryPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="/ds/people"
+      element={
+        <RequireRole roles={DS_ROLES}>
+          <PeopleRegistryPage />
+        </RequireRole>
+      }
+    />
+
+    {/* UI-C: Leadership Assignments */}
+    <Route
+      path="/admin/leadership/assignments"
+      element={
+        <RequireRole roles={['ROLE_ADMIN']}>
+          <LeadershipAssignmentsPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="/ds/leadership/assignments"
+      element={
+        <RequireRole roles={DS_ROLES}>
+          <LeadershipAssignmentsPage />
         </RequireRole>
       }
     />
