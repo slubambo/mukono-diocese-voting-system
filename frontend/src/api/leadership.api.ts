@@ -2,7 +2,7 @@
  * Leadership Assignments API Client
  */
 import axiosInstance from './axios'
-import { LEADERSHIP_ASSIGNMENT_ENDPOINTS } from '../config/endpoints'
+import { LEADERSHIP_ASSIGNMENT_ENDPOINTS, LEADERSHIP_META_ENDPOINTS } from '../config/endpoints'
 import type {
   LeadershipAssignmentResponse,
   PageLeadershipAssignmentResponse,
@@ -42,6 +42,16 @@ export const eligibleVoters = async (params: EligibleVotersParams): Promise<Page
   return data
 }
 
+export const getLevels = async (): Promise<string[]> => {
+  try {
+    const { data } = await axiosInstance.get<string[]>(LEADERSHIP_META_ENDPOINTS.LEVELS)
+    return data
+  } catch (e) {
+    // If server endpoint not available, return fallback
+    return ['DIOCESE', 'ARCHDEACONRY', 'CHURCH']
+  }
+}
+
 export const leadershipApi = {
   list: listAssignments,
   get: getAssignment,
@@ -49,4 +59,5 @@ export const leadershipApi = {
   update: updateAssignment,
   delete: deleteAssignment,
   eligibleVoters,
+  getLevels,
 }

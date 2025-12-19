@@ -218,6 +218,7 @@ export interface LeadershipAssignmentListParams {
   archdeaconryId?: number
   churchId?: number
   dioceseId?: number
+  scope?: PositionScope
   page?: number
   size?: number
   sort?: string

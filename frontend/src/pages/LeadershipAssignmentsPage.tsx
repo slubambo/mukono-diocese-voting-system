@@ -34,6 +34,9 @@ import { leadershipApi } from '../api/leadership.api'
 import { fellowshipPositionApi } from '../api/fellowshipPosition.api'
 import { peopleApi } from '../api/people.api'
 import { fellowshipApi } from '../api/fellowship.api'
+import { dioceseApi } from '../api/diocese.api'
+import { archdeaconryApi } from '../api/archdeaconry.api'
+import { churchApi } from '../api/church.api'
 import type { LeadershipAssignmentResponse, CreateLeadershipAssignmentRequest, LeadershipAssignmentListParams } from '../types/leadership'
 import StatusChip from '../components/common/StatusChip'
 import LoadingState from '../components/common/LoadingState'
@@ -50,7 +53,21 @@ const LeadershipAssignmentsPage: React.FC = () => {
   const [assignments, setAssignments] = useState<LeadershipAssignmentResponse[]>([])
   const [positions, setPositions] = useState<any[]>([])
   const [fellowships, setFellowships] = useState<any[]>([])
+  const [levels, setLevels] = useState<string[]>([])
   const [selectedFellowshipId, setSelectedFellowshipId] = useState<number | null>(null)
+  const [dioceses, setDioceses] = useState<any[]>([])
+  const [archdeaconries, setArchdeaconries] = useState<any[]>([])
+  const [churches, setChurches] = useState<any[]>([])
+  const [selectedDioceseId, setSelectedDioceseId] = useState<number | null>(null)
+  const [selectedArchdeaconryId, setSelectedArchdeaconryId] = useState<number | null>(null)
+  const [selectedChurchId, setSelectedChurchId] = useState<number | null>(null)
+  const [dioceseFixed, setDioceseFixed] = useState(false)
+  // Filters (page-level)
+  const [filterDioceseId, setFilterDioceseId] = useState<number | null>(null)
+  const [filterLevel, setFilterLevel] = useState<string | null>(null)
+  const [filterArchdeaconryId, setFilterArchdeaconryId] = useState<number | null>(null)
+  const [filterChurchId, setFilterChurchId] = useState<number | null>(null)
+  const [filterFellowshipId, setFilterFellowshipId] = useState<number | null>(null)
   const [people, setPeople] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
@@ -63,16 +80,24 @@ const LeadershipAssignmentsPage: React.FC = () => {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [toDelete, setToDelete] = useState<LeadershipAssignmentResponse | null>(null)
 
-  const [eligibleOpen, setEligibleOpen] = useState(false)
-  const [eligibleList, setEligibleList] = useState<any[]>([])
-  const [eligibleLoading, setEligibleLoading] = useState(false)
+  
 
+  const [selectedLevelForm, setSelectedLevelForm] = useState<string | null>(null)
   const { control, handleSubmit, reset } = useForm<CreateLeadershipAssignmentRequest & { scope?: string }>({ defaultValues: { personId: 0, fellowshipPositionId: 0, termStartDate: '', dioceseId: undefined, archdeaconryId: undefined, churchId: undefined, termEndDate: '', notes: '' } })
 
   const fetchAssignments = async () => {
     try {
       setLoading(true)
-      const resp = await leadershipApi.list({ ...filters, page, size: rowsPerPage })
+      const resp = await leadershipApi.list({
+        ...filters,
+        page,
+        size: rowsPerPage,
+        dioceseId: filterDioceseId ?? undefined,
+        archdeaconryId: filterArchdeaconryId ?? undefined,
+        churchId: filterChurchId ?? undefined,
+        fellowshipId: filterFellowshipId ?? undefined,
+        scope: (filterLevel as any) ?? undefined,
+      })
       setAssignments(resp.content)
       setTotal(resp.totalElements)
     } catch (error: any) {
@@ -114,20 +139,99 @@ const LeadershipAssignmentsPage: React.FC = () => {
     }
   }
 
-  useEffect(() => { fetchAssignments() }, [page, rowsPerPage, filters, selectedFellowshipId])
-  useEffect(() => { loadFellowships(); loadPeople() }, [])
-  useEffect(() => { loadPositions() }, [selectedFellowshipId])
+  const loadLevels = async () => {
+    try {
+      const lv = await leadershipApi.getLevels()
+      setLevels(lv)
+    } catch (e) {
+      setLevels(['DIOCESE', 'ARCHDEACONRY', 'CHURCH'])
+    }
+  }
 
-  const openCreate = () => { setEditing(null); reset({ personId: 0, fellowshipPositionId: 0, termStartDate: '', termEndDate: '', notes: '' }); setDialogOpen(true) }
-  const openEdit = (a: LeadershipAssignmentResponse) => { setEditing(a); reset({ personId: a.person.id, fellowshipPositionId: a.fellowshipPositionId, termStartDate: a.termStartDate, termEndDate: a.termEndDate || '', notes: a.notes || '' }); setDialogOpen(true) }
+  const loadDioceses = async () => {
+    try {
+      const resp = await dioceseApi.list({ page: 0, size: 100 })
+      setDioceses(resp.content)
+      if (resp.content.length === 1) {
+        setSelectedDioceseId(resp.content[0].id)
+        setDioceseFixed(true)
+      } else if (resp.content.length > 0 && !selectedDioceseId) {
+        setSelectedDioceseId(resp.content[0].id)
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  const loadArchdeaconries = async (dioceseId: number) => {
+    try {
+      const resp = await archdeaconryApi.list({ dioceseId, page: 0, size: 1000 })
+      setArchdeaconries(resp.content)
+      if (resp.content.length > 0 && !selectedArchdeaconryId) setSelectedArchdeaconryId(resp.content[0].id)
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  const loadChurches = async (archdeaconryId: number) => {
+    try {
+      const resp = await churchApi.list({ archdeaconryId, page: 0, size: 1000 })
+      setChurches(resp.content)
+      if (resp.content.length > 0 && !selectedChurchId) setSelectedChurchId(resp.content[0].id)
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  useEffect(() => { fetchAssignments() }, [page, rowsPerPage, filters, selectedFellowshipId, selectedDioceseId, selectedArchdeaconryId, selectedChurchId])
+  useEffect(() => { loadFellowships(); loadPeople(); loadDioceses(); loadLevels() }, [])
+  useEffect(() => { loadPositions() }, [selectedFellowshipId])
+  useEffect(() => { if (selectedDioceseId) { loadArchdeaconries(selectedDioceseId) } else { setArchdeaconries([]); setSelectedArchdeaconryId(null); setSelectedChurchId(null) } }, [selectedDioceseId])
+  useEffect(() => { if (selectedArchdeaconryId) { loadChurches(selectedArchdeaconryId) } else { setChurches([]); setSelectedChurchId(null) } }, [selectedArchdeaconryId])
+
+  // Re-fetch when filters change
+  useEffect(() => { setPage(0); fetchAssignments() }, [filterDioceseId, filterLevel, filterArchdeaconryId, filterChurchId, filterFellowshipId])
+
+  const openCreate = () => { setEditing(null); reset({ personId: 0, fellowshipPositionId: 0, termStartDate: '', termEndDate: '', notes: '' }); setSelectedLevelForm(null); setSelectedDioceseId(null); setSelectedArchdeaconryId(null); setSelectedChurchId(null); setDialogOpen(true) }
+  const openEdit = (a: LeadershipAssignmentResponse) => {
+    setEditing(a)
+    reset({ personId: a.person.id, fellowshipPositionId: a.fellowshipPositionId, termStartDate: a.termStartDate, termEndDate: a.termEndDate || '', notes: a.notes || '' })
+    if (a.dioceseId) setSelectedDioceseId(a.dioceseId)
+    if (a.archdeaconryId) setSelectedArchdeaconryId(a.archdeaconryId)
+    if (a.churchId) setSelectedChurchId(a.churchId)
+    // derive level from selected fellowship position if available
+    const pos = positions.find((p) => p.id === a.fellowshipPositionId)
+    setSelectedLevelForm(pos?.scope ?? null)
+    setDialogOpen(true)
+  }
 
   const onSubmit = async (data: any) => {
     try {
+      const payload: any = { ...data }
+      // determine scope from selected fellowship position
+      const posId = data.fellowshipPositionId || editing?.fellowshipPositionId
+      const pos = positions.find((p) => p.id === posId)
+      // allow form-selected level to override if set, otherwise use position scope
+      const scope = selectedLevelForm ?? pos?.scope
+      if (scope === 'DIOCESE') {
+        payload.dioceseId = selectedDioceseId
+        payload.archdeaconryId = undefined
+        payload.churchId = undefined
+      } else if (scope === 'ARCHDEACONRY') {
+        payload.archdeaconryId = selectedArchdeaconryId
+        payload.dioceseId = selectedDioceseId ?? undefined
+        payload.churchId = undefined
+      } else if (scope === 'CHURCH') {
+        payload.churchId = selectedChurchId
+        payload.archdeaconryId = selectedArchdeaconryId ?? undefined
+        payload.dioceseId = selectedDioceseId ?? undefined
+      }
+
       if (editing) {
-        await leadershipApi.update(editing.id, data)
+        await leadershipApi.update(editing.id, payload)
         showToast('Assignment updated', 'success')
       } else {
-        await leadershipApi.create(data)
+        await leadershipApi.create(payload)
         showToast('Assignment created', 'success')
       }
       setDialogOpen(false)
@@ -149,24 +253,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
     }
   }
 
-  const openEligible = async () => {
-    setEligibleOpen(true)
-    setEligibleLoading(true)
-    try {
-      // require fellowshipId and scope; use first position if available
-      const pos = positions[0]
-      if (!pos) {
-        setEligibleList([])
-        return
-      }
-      const resp = await leadershipApi.eligibleVoters({ fellowshipId: pos.fellowship.id, scope: pos.scope as any, page: 0, size: 50 })
-      setEligibleList(resp.content)
-    } catch (e: any) {
-      showToast(e.response?.data?.message || 'Failed to load eligible voters', 'error')
-    } finally {
-      setEligibleLoading(false)
-    }
-  }
+  // Eligible voters deferred to Elections management
 
   return (
     <AppShell>
@@ -177,10 +264,50 @@ const LeadershipAssignmentsPage: React.FC = () => {
           onAddClick={isAdmin ? openCreate : undefined}
           addButtonLabel="Create Assignment"
           isAdmin={isAdmin}
-          actions={[
-            { id: 'eligible', label: 'View Eligible Voters', onClick: openEligible }
+          filters={[
+            {
+              id: 'diocese',
+              label: 'Diocese',
+              value: filterDioceseId,
+              options: dioceses.map((d) => ({ id: d.id, name: d.name })),
+              onChange: (v: any) => { setFilterDioceseId(v as number | null); if (v) { setFilterArchdeaconryId(null); setFilterChurchId(null) } },
+              placeholder: 'Diocese',
+            },
+            {
+              id: 'level',
+              label: 'Level',
+              value: filterLevel,
+              options: levels.map((l) => ({ id: l, name: l })),
+              onChange: (v: any) => { setFilterLevel(v as string | null) },
+              placeholder: 'Level',
+            },
+            {
+              id: 'archdeaconry',
+              label: 'Archdeaconry',
+              value: filterArchdeaconryId,
+              options: archdeaconries.map((a) => ({ id: a.id, name: a.name })),
+              onChange: (v: any) => { setFilterArchdeaconryId(v as number | null); if (v) setFilterChurchId(null) },
+              placeholder: 'Archdeaconry',
+              disabled: !archdeaconries.length,
+            },
+            {
+              id: 'church',
+              label: 'Church',
+              value: filterChurchId,
+              options: churches.map((c) => ({ id: c.id, name: c.name })),
+              onChange: (v: any) => setFilterChurchId(v as number | null),
+              placeholder: 'Church',
+              disabled: !churches.length,
+            },
+            {
+              id: 'fellowship',
+              label: 'Fellowship',
+              value: filterFellowshipId,
+              options: fellowships.map((f) => ({ id: f.id, name: f.name })),
+              onChange: (v: any) => setFilterFellowshipId(v as number | null),
+              placeholder: 'Fellowship',
+            },
           ]}
-          filters={[]}
         />
 
         <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
@@ -237,6 +364,24 @@ const LeadershipAssignmentsPage: React.FC = () => {
               )} />
 
               <FormControl fullWidth>
+                <InputLabel>Level</InputLabel>
+                <Select value={selectedLevelForm ?? ''} label="Level" onChange={(e: any) => { const v = e.target.value as string; setSelectedLevelForm(v || null); }}>
+                  <MenuItem value="">-- Select Level --</MenuItem>
+                  {levels.map((l) => (<MenuItem key={l} value={l}>{l}</MenuItem>))}
+                </Select>
+              </FormControl>
+
+              {(selectedLevelForm === null || selectedLevelForm === 'DIOCESE' || selectedLevelForm === 'ARCHDEACONRY' || selectedLevelForm === 'CHURCH') && (
+                <FormControl fullWidth>
+                  <InputLabel>Diocese</InputLabel>
+                  <Select value={selectedDioceseId ?? ''} label="Diocese" onChange={(e: any) => { const v = e.target.value as number; setSelectedDioceseId(v); }} disabled={dioceseFixed}>
+                    <MenuItem value="" disabled>-- Select Diocese --</MenuItem>
+                    {dioceses.map((d) => (<MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>))}
+                  </Select>
+                </FormControl>
+              )}
+
+              <FormControl fullWidth>
                 <InputLabel>Fellowship</InputLabel>
                 <Select value={selectedFellowshipId ?? ''} label="Fellowship" onChange={(e: any) => { const v = e.target.value as number; setSelectedFellowshipId(v); }}>
                   <MenuItem value="" disabled>-- Select Fellowship --</MenuItem>
@@ -247,6 +392,26 @@ const LeadershipAssignmentsPage: React.FC = () => {
               <Controller name="fellowshipPositionId" control={control} render={({ field }) => (
                 <Autocomplete options={positions} getOptionLabel={(p) => `${p.title.name} — ${p.fellowship.name}`} onChange={(_, v) => field.onChange(v?.id || 0)} renderInput={(params) => <TextField {...params} label="Position" required />} />
               )} />
+
+              {(selectedLevelForm === 'ARCHDEACONRY' || selectedLevelForm === 'CHURCH' || selectedLevelForm === null) && (
+                <FormControl fullWidth>
+                  <InputLabel>Archdeaconry</InputLabel>
+                  <Select value={selectedArchdeaconryId ?? ''} label="Archdeaconry" onChange={(e: any) => { const v = e.target.value as number; setSelectedArchdeaconryId(v); }} disabled={!archdeaconries.length}>
+                    <MenuItem value="" disabled>-- Select Archdeaconry --</MenuItem>
+                    {archdeaconries.map((a) => (<MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>))}
+                  </Select>
+                </FormControl>
+              )}
+
+              {(selectedLevelForm === 'CHURCH' || selectedLevelForm === null) && (
+                <FormControl fullWidth>
+                  <InputLabel>Church</InputLabel>
+                  <Select value={selectedChurchId ?? ''} label="Church" onChange={(e: any) => { const v = e.target.value as number; setSelectedChurchId(v); }} disabled={!churches.length}>
+                    <MenuItem value="" disabled>-- Select Church --</MenuItem>
+                    {churches.map((c) => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
+                  </Select>
+                </FormControl>
+              )}
 
               <Controller name="termStartDate" control={control} rules={{ required: 'Start date required' }} render={({ field }) => (
                 <TextField {...field} label="Term Start" type="date" InputLabelProps={{ shrink: true }} required />
@@ -277,23 +442,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
           </DialogActions>
         </Dialog>
 
-        <Dialog open={eligibleOpen} onClose={() => setEligibleOpen(false)} maxWidth="md" fullWidth>
-          <DialogTitle>Eligible Voters</DialogTitle>
-          <DialogContent>
-            {eligibleLoading ? <LoadingState count={5} variant="row" /> : (
-              <Box>
-                {eligibleList.map((p: any) => (
-                  <Box key={p.id} sx={{ py: 1, borderBottom: '1px solid #eee' }}>
-                    <Typography>{p.fullName} — {p.email}</Typography>
-                  </Box>
-                ))}
-              </Box>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setEligibleOpen(false)}>Close</Button>
-          </DialogActions>
-        </Dialog>
+        {/* Eligible voters dialog removed (handled in Elections module) */}
 
       </PageLayout>
     </AppShell>

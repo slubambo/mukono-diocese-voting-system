@@ -77,3 +77,8 @@ export const LEADERSHIP_ASSIGNMENT_ENDPOINTS = {
   DELETE: (id: number) => `${API_ENV.API_V1}/ds/leadership/assignments/${id}`,
   ELIGIBLE_VOTERS: `${API_ENV.API_V1}/ds/leadership/assignments/eligible-voters`,
 } as const
+
+// Leadership enums (levels) - UI may request this if available
+export const LEADERSHIP_META_ENDPOINTS = {
+  LEVELS: `${API_ENV.API_V1}/ds/leadership/levels`,
+} as const
