@@ -153,7 +153,9 @@ const LeadershipAssignmentsPage: React.FC = () => {
       const resp = await dioceseApi.list({ page: 0, size: 100 })
       setDioceses(resp.content)
       if (resp.content.length === 1) {
-        setSelectedDioceseId(resp.content[0].id)
+        const id = resp.content[0].id
+        setSelectedDioceseId(id)
+        setFilterDioceseId(id)
         setDioceseFixed(true)
       } else if (resp.content.length > 0 && !selectedDioceseId) {
         setSelectedDioceseId(resp.content[0].id)
@@ -189,19 +191,52 @@ const LeadershipAssignmentsPage: React.FC = () => {
   useEffect(() => { if (selectedDioceseId) { loadArchdeaconries(selectedDioceseId) } else { setArchdeaconries([]); setSelectedArchdeaconryId(null); setSelectedChurchId(null) } }, [selectedDioceseId])
   useEffect(() => { if (selectedArchdeaconryId) { loadChurches(selectedArchdeaconryId) } else { setChurches([]); setSelectedChurchId(null) } }, [selectedArchdeaconryId])
 
+  // Support filters loading dependent options
+  useEffect(() => {
+    if (filterDioceseId) {
+      loadArchdeaconries(filterDioceseId)
+    } else {
+      // if no filter diocese, clear filter-level archdeaconry/church options
+      setArchdeaconries([])
+      setFilterArchdeaconryId(null)
+      setFilterChurchId(null)
+    }
+  }, [filterDioceseId])
+
+  useEffect(() => {
+    if (filterArchdeaconryId) {
+      loadChurches(filterArchdeaconryId)
+    } else {
+      setChurches([])
+      setFilterChurchId(null)
+    }
+  }, [filterArchdeaconryId])
+
   // Re-fetch when filters change
   useEffect(() => { setPage(0); fetchAssignments() }, [filterDioceseId, filterLevel, filterArchdeaconryId, filterChurchId, filterFellowshipId])
 
-  const openCreate = () => { setEditing(null); reset({ personId: 0, fellowshipPositionId: 0, termStartDate: '', termEndDate: '', notes: '' }); setSelectedLevelForm(null); setSelectedDioceseId(null); setSelectedArchdeaconryId(null); setSelectedChurchId(null); setDialogOpen(true) }
+  const openCreate = () => {
+    setEditing(null)
+    reset({ personId: 0, fellowshipPositionId: 0, termStartDate: '', termEndDate: '', notes: '' })
+    setSelectedLevelForm(null)
+    if (!dioceseFixed) setSelectedDioceseId(null)
+    setSelectedArchdeaconryId(null)
+    setSelectedChurchId(null)
+    setDialogOpen(true)
+  }
   const openEdit = (a: LeadershipAssignmentResponse) => {
     setEditing(a)
-    reset({ personId: a.person.id, fellowshipPositionId: a.fellowshipPositionId, termStartDate: a.termStartDate, termEndDate: a.termEndDate || '', notes: a.notes || '' })
-    if (a.dioceseId) setSelectedDioceseId(a.dioceseId)
-    if (a.archdeaconryId) setSelectedArchdeaconryId(a.archdeaconryId)
-    if (a.churchId) setSelectedChurchId(a.churchId)
+    reset({ personId: a.person.id, fellowshipPositionId: a.fellowshipPosition?.id ?? a.fellowshipPositionId, termStartDate: a.termStartDate, termEndDate: a.termEndDate || '', notes: a.notes || '' })
+    if (a.diocese) setSelectedDioceseId(a.diocese.id)
+    if (a.archdeaconry) setSelectedArchdeaconryId(a.archdeaconry.id)
+    if (a.church) setSelectedChurchId(a.church.id)
     // derive level from selected fellowship position if available
-    const pos = positions.find((p) => p.id === a.fellowshipPositionId)
-    setSelectedLevelForm(pos?.scope ?? null)
+    const posId = a.fellowshipPosition?.id ?? a.fellowshipPositionId
+    const pos = positions.find((p) => p.id === posId)
+    setSelectedLevelForm(pos?.scope ?? (a.fellowshipPosition as any)?.scope ?? null)
+    const fp = a.fellowshipPosition as any
+    if (fp?.fellowshipId) setSelectedFellowshipId(fp.fellowshipId)
+    else if (fp?.fellowship?.id) setSelectedFellowshipId(fp.fellowship.id)
     setDialogOpen(true)
   }
 
@@ -264,6 +299,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
           onAddClick={isAdmin ? openCreate : undefined}
           addButtonLabel="Create Assignment"
           isAdmin={isAdmin}
+          actions={[{ id: 'clear', label: 'Clear Filters', onClick: () => { setFilterDioceseId(null); setFilterLevel(null); setFilterArchdeaconryId(null); setFilterChurchId(null); setFilterFellowshipId(null); setPage(0); fetchAssignments() } } ]}
           filters={[
             {
               id: 'diocese',
@@ -272,12 +308,13 @@ const LeadershipAssignmentsPage: React.FC = () => {
               options: dioceses.map((d) => ({ id: d.id, name: d.name })),
               onChange: (v: any) => { setFilterDioceseId(v as number | null); if (v) { setFilterArchdeaconryId(null); setFilterChurchId(null) } },
               placeholder: 'Diocese',
+              disabled: dioceseFixed,
             },
             {
               id: 'level',
               label: 'Level',
               value: filterLevel,
-              options: levels.map((l) => ({ id: l, name: l })),
+              options: levels.map((l) => ({ id: l, name: `${l.charAt(0)}${l.slice(1).toLowerCase()}` })),
               onChange: (v: any) => { setFilterLevel(v as string | null) },
               placeholder: 'Level',
             },
@@ -318,11 +355,14 @@ const LeadershipAssignmentsPage: React.FC = () => {
           ) : (
             <>
               <TableContainer>
-                <Table>
+                <Table sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Person</TableCell>
+                      <TableCell>Full Name</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell>Phone</TableCell>
                       <TableCell>Position</TableCell>
+                      <TableCell>Fellowship</TableCell>
                       <TableCell>Scope</TableCell>
                       <TableCell>Term Start</TableCell>
                       <TableCell>Term End</TableCell>
@@ -333,9 +373,12 @@ const LeadershipAssignmentsPage: React.FC = () => {
                   <TableBody>
                     {assignments.map((a) => (
                       <TableRow key={a.id} hover>
-                        <TableCell>{a.person.fullName}</TableCell>
-                        <TableCell>{a.fellowship?.name || a.fellowshipPositionId}</TableCell>
-                        <TableCell>{a.dioceseId ? 'Diocese' : a.archdeaconryId ? 'Archdeaconry' : a.churchId ? 'Church' : '—'}</TableCell>
+                        <TableCell><Typography variant="body2">{a.person.fullName}</Typography></TableCell>
+                        <TableCell>{a.person.email}</TableCell>
+                        <TableCell>{a.person.phoneNumber}</TableCell>
+                        <TableCell>{((a.fellowshipPosition as any)?.titleName) ?? (a.fellowshipPosition as any)?.title?.name ?? '—'}</TableCell>
+                        <TableCell>{((a.fellowshipPosition as any)?.fellowshipName) ?? a.fellowship?.name ?? '—'}</TableCell>
+                        <TableCell>{(((a.fellowshipPosition as any)?.scope) ?? '').charAt(0) + (((a.fellowshipPosition as any)?.scope) ?? '').slice(1).toLowerCase()}</TableCell>
                         <TableCell>{new Date(a.termStartDate).toLocaleDateString()}</TableCell>
                         <TableCell>{a.termEndDate ? new Date(a.termEndDate).toLocaleDateString() : '—'}</TableCell>
                         <TableCell><StatusChip status={(a.status as any) ?? 'INACTIVE'} /></TableCell>
@@ -403,10 +446,10 @@ const LeadershipAssignmentsPage: React.FC = () => {
                 </FormControl>
               )}
 
-              {(selectedLevelForm === 'CHURCH' || selectedLevelForm === null) && (
+              {selectedLevelForm === 'CHURCH' && selectedArchdeaconryId && churches.length > 0 && (
                 <FormControl fullWidth>
                   <InputLabel>Church</InputLabel>
-                  <Select value={selectedChurchId ?? ''} label="Church" onChange={(e: any) => { const v = e.target.value as number; setSelectedChurchId(v); }} disabled={!churches.length}>
+                  <Select value={selectedChurchId ?? ''} label="Church" onChange={(e: any) => { const v = e.target.value as number; setSelectedChurchId(v); }}>
                     <MenuItem value="" disabled>-- Select Church --</MenuItem>
                     {churches.map((c) => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
                   </Select>

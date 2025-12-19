@@ -167,6 +167,10 @@ export interface LeadershipAssignmentResponse {
     id: number
     name: string
   }
+  fellowshipPosition?: FellowshipPosition | FellowshipPositionSummary
+  diocese?: { id: number; name: string; code?: string | null }
+  archdeaconry?: { id: number; name: string; code?: string | null; dioceseId?: number }
+  church?: { id: number; name: string; code?: string | null; archdeaconryId?: number }
   dioceseId?: number | null
   archdeaconryId?: number | null
   churchId?: number | null
