@@ -40,6 +40,15 @@ public interface ChurchRepository extends JpaRepository<Church, Long> {
     );
 
     /**
+     * Find all churches by archdeaconry id with pagination.
+     * 
+     * @param archdeaconryId the archdeaconry id
+     * @param pageable pagination information
+     * @return page of churches
+     */
+    Page<Church> findByArchdeaconryId(Long archdeaconryId, Pageable pageable);
+
+    /**
      * Find a church by archdeaconry id and name (exact match, case-insensitive).
      * 
      * @param archdeaconryId the archdeaconry id

@@ -42,6 +42,7 @@ import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
 import AppShell from '../../components/layout/AppShell'
+import MasterDataHeader from '../../components/common/MasterDataHeader'
 
 type DialogMode = 'create' | 'edit' | null
 
@@ -216,45 +217,43 @@ export const ArchdeaconryPage: React.FC = () => {
     })
   }
 
+  const stats = {
+    total: totalElements,
+    active: archdeaconries.filter((a) => a.status === 'ACTIVE').length,
+    inactive: archdeaconries.filter((a) => a.status === 'INACTIVE').length,
+  }
+
   return (
     <AppShell>
-      <PageLayout
-      title="Archdeaconry Management"
-      subtitle="Manage archdeaconries within dioceses"
-      actions={
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Diocese</InputLabel>
-            <Select
-              value={selectedDioceseId || ''}
-              label="Diocese"
-              onChange={(e) => {
-                setSelectedDioceseId(e.target.value as number)
+      <PageLayout>
+        {/* Modern Header with Filters */}
+        <MasterDataHeader
+          title="Archdeaconry Management"
+          subtitle="Manage archdeaconries within dioceses"
+          onAddClick={!isReadOnly && selectedDioceseId ? handleOpenCreateDialog : undefined}
+          addButtonLabel="Add Archdeaconry"
+          isAdmin={!isReadOnly}
+          stats={[
+            { label: 'Total', value: stats.total },
+            { label: 'Active', value: stats.active },
+            { label: 'Inactive', value: stats.inactive },
+          ]}
+          filters={[
+            {
+              id: 'diocese',
+              label: 'Diocese',
+              value: selectedDioceseId,
+              options: dioceses.map(d => ({ id: d.id, name: d.name })),
+              onChange: (value) => {
+                setSelectedDioceseId(value as number | null)
                 setPage(0)
-              }}
-              size="small"
-            >
-              {dioceses.map((diocese) => (
-                <MenuItem key={diocese.id} value={diocese.id}>
-                  {diocese.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          {!isReadOnly && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleOpenCreateDialog}
-              disabled={!selectedDioceseId}
-            >
-              Add Archdeaconry
-            </Button>
-          )}
-        </Box>
-      }
-    >
-      <Paper sx={{ width: '100%', mb: 2 }}>
+              },
+              placeholder: 'Select Diocese',
+            }
+          ]}
+        />
+
+        <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
         {loading ? (
           <LoadingState count={5} variant="row" />
         ) : !selectedDioceseId ? (
@@ -281,7 +280,24 @@ export const ArchdeaconryPage: React.FC = () => {
         ) : (
           <>
             <TableContainer>
-              <Table>
+              <Table
+                sx={{
+                  '& thead th': {
+                    backgroundColor: 'rgba(88, 28, 135, 0.08)',
+                    fontWeight: 700,
+                    color: '#2d1b4e',
+                    borderBottom: '2px solid rgba(88, 28, 135, 0.2)',
+                  },
+                  '& tbody tr': {
+                    '&:hover': {
+                      backgroundColor: 'rgba(88, 28, 135, 0.04)',
+                    },
+                  },
+                  '& tbody tr:last-child td': {
+                    borderBottom: 'none',
+                  },
+                }}
+              >
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>

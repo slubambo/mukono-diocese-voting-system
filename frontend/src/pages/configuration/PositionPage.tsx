@@ -42,6 +42,7 @@ import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
 import AppShell from '../../components/layout/AppShell'
+import MasterDataHeader from '../../components/common/MasterDataHeader'
 
 type DialogMode = 'create' | 'edit' | null
 
@@ -57,6 +58,7 @@ export const PositionPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
   const [selectedFellowshipId, setSelectedFellowshipId] = useState<number | null>(null)
+  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 })
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selected, setSelected] = useState<FellowshipPosition | null>(null)
@@ -88,6 +90,11 @@ export const PositionPage: React.FC = () => {
       })
       setPositions(response.content)
       setTotalElements(response.totalElements)
+      setStats({
+        total: response.totalElements,
+        active: response.content.filter((p) => p.status === 'ACTIVE').length,
+        inactive: response.content.filter((p) => p.status === 'INACTIVE').length,
+      })
     } catch (error) {
       showToast('Failed to load positions', 'error')
       console.error('Error fetching positions:', error)
@@ -99,7 +106,12 @@ export const PositionPage: React.FC = () => {
   const loadFellowships = async () => {
     try {
       const response = await fellowshipApi.list({ page: 0, size: 1000 })
-      setFellowships(response.content.filter(f => f.status === 'ACTIVE'))
+      const activeFellowships = response.content.filter(f => f.status === 'ACTIVE')
+      setFellowships(activeFellowships)
+      // Select first fellowship by default
+      if (activeFellowships.length > 0 && !selectedFellowshipId) {
+        setSelectedFellowshipId(activeFellowships[0].id)
+      }
     } catch (error) {
       console.error('Failed to load fellowships')
     }
@@ -173,31 +185,35 @@ export const PositionPage: React.FC = () => {
 
   return (
     <AppShell>
-      <PageLayout
-      title="Positions"
-      subtitle="Manage fellowship positions"
-      actions={isAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormData({ fellowshipId: selectedFellowshipId || 0, titleId: 0, seats: 1, scope: 'DIOCESE' }); setDialogMode('create'); }}>Add Position</Button>}
-    >
-      <Paper sx={{ width: '100%', mb: 2, p: 2 }}>
-        <FormControl sx={{ minWidth: 250, mb: 2 }}>
-          <InputLabel>Select Fellowship</InputLabel>
-          <Select 
-            value={selectedFellowshipId || ''} 
-            label="Select Fellowship"
-            onChange={(e) => {
-              setSelectedFellowshipId(e.target.value ? Number(e.target.value) : null)
-              setPage(0)
-            }}
-          >
-            <MenuItem value="">-- Select a Fellowship --</MenuItem>
-            {fellowships.map(f => (
-              <MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Paper>
+      <PageLayout>
+        {/* Modern Header with Filters */}
+        <MasterDataHeader
+          title="Positions"
+          subtitle="Manage fellowship positions"
+          onAddClick={isAdmin && selectedFellowshipId ? () => { setFormData({ fellowshipId: selectedFellowshipId || 0, titleId: 0, seats: 1, scope: 'DIOCESE' }); setDialogMode('create'); } : undefined}
+          addButtonLabel="Add Position"
+          isAdmin={isAdmin}
+          stats={[
+            { label: 'Total', value: stats.total },
+            { label: 'Active', value: stats.active },
+            { label: 'Inactive', value: stats.inactive },
+          ]}
+          filters={[
+            {
+              id: 'fellowship',
+              label: 'Fellowship',
+              value: selectedFellowshipId,
+              options: fellowships.map(f => ({ id: f.id, name: f.name })),
+              onChange: (value) => {
+                setSelectedFellowshipId(value as number | null)
+                setPage(0)
+              },
+              placeholder: 'Select Fellowship',
+            }
+          ]}
+        />
 
-      <Paper sx={{ width: '100%', mb: 2 }}>
+        <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
         {loading ? (
           <LoadingState count={5} variant="row" />
         ) : !selectedFellowshipId ? (
@@ -207,7 +223,24 @@ export const PositionPage: React.FC = () => {
         ) : (
           <>
             <TableContainer>
-              <Table>
+              <Table
+                sx={{
+                  '& thead th': {
+                    backgroundColor: 'rgba(88, 28, 135, 0.08)',
+                    fontWeight: 700,
+                    color: '#2d1b4e',
+                    borderBottom: '2px solid rgba(88, 28, 135, 0.2)',
+                  },
+                  '& tbody tr': {
+                    '&:hover': {
+                      backgroundColor: 'rgba(88, 28, 135, 0.04)',
+                    },
+                  },
+                  '& tbody tr:last-child td': {
+                    borderBottom: 'none',
+                  },
+                }}
+              >
                 <TableHead>
                   <TableRow>
                     <TableCell>Fellowship</TableCell>

@@ -39,6 +39,7 @@ import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
 import AppShell from '../../components/layout/AppShell'
+import MasterDataHeader from '../../components/common/MasterDataHeader'
 
 type DialogMode = 'create' | 'edit' | null
 
@@ -51,6 +52,7 @@ export const FellowshipPage: React.FC = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
+  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 })
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selected, setSelected] = useState<Fellowship | null>(null)
@@ -66,6 +68,11 @@ export const FellowshipPage: React.FC = () => {
       const response = await fellowshipApi.list({ page, size: rowsPerPage, sort: 'id,desc' })
       setFellowships(response.content)
       setTotalElements(response.totalElements)
+      setStats({
+        total: response.totalElements,
+        active: response.content.filter((f) => f.status === 'ACTIVE').length,
+        inactive: response.content.filter((f) => f.status === 'INACTIVE').length,
+      })
     } catch (error) {
       showToast('Failed to load fellowships', 'error')
     } finally {
@@ -130,12 +137,22 @@ export const FellowshipPage: React.FC = () => {
 
   return (
     <AppShell>
-      <PageLayout
-      title="Fellowship Management"
-      subtitle="Manage fellowships"
-      actions={!isAdmin ? undefined : <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>Add Fellowship</Button>}
-    >
-      <Paper sx={{ width: '100%', mb: 2 }}>
+      <PageLayout>
+        {/* Modern Header */}
+        <MasterDataHeader
+          title="Fellowship Management"
+          subtitle="Manage fellowships in the organizational structure"
+          onAddClick={isAdmin ? handleOpenCreate : undefined}
+          addButtonLabel="Add Fellowship"
+          isAdmin={isAdmin}
+          stats={[
+            { label: 'Total', value: stats.total },
+            { label: 'Active', value: stats.active },
+            { label: 'Inactive', value: stats.inactive },
+          ]}
+        />
+
+        <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
         {loading ? (
           <LoadingState count={5} variant="row" />
         ) : fellowships.length === 0 ? (
@@ -147,7 +164,24 @@ export const FellowshipPage: React.FC = () => {
         ) : (
           <>
             <TableContainer>
-              <Table>
+              <Table
+                sx={{
+                  '& thead th': {
+                    backgroundColor: 'rgba(88, 28, 135, 0.08)',
+                    fontWeight: 700,
+                    color: '#2d1b4e',
+                    borderBottom: '2px solid rgba(88, 28, 135, 0.2)',
+                  },
+                  '& tbody tr': {
+                    '&:hover': {
+                      backgroundColor: 'rgba(88, 28, 135, 0.04)',
+                    },
+                  },
+                  '& tbody tr:last-child td': {
+                    borderBottom: 'none',
+                  },
+                }}
+              >
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>

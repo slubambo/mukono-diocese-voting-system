@@ -44,6 +44,7 @@ import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
 import AppShell from '../../components/layout/AppShell'
+import MasterDataHeader from '../../components/common/MasterDataHeader'
 
 type DialogMode = 'create' | 'edit' | null
 
@@ -214,113 +215,57 @@ export const DiocesePage: React.FC = () => {
 
   return (
     <AppShell>
-      <PageLayout
-      title="Diocese Management"
-      subtitle="Manage dioceses in the organizational hierarchy"
-      actions={
-        !isReadOnly && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleOpenCreateDialog}
-          >
-            Add Diocese
-          </Button>
-        )
-      }
-    >
-      {/* Stats Cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2, mb: 3 }}>
-        <Card sx={{ p: 2.5, bgcolor: 'background.paper' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box
-              sx={{
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: 'rgba(143, 52, 147, 0.1)',
-                color: 'primary.main',
-                display: 'flex',
-              }}
-            >
-              <BusinessIcon />
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Total Dioceses
-              </Typography>
-              <Typography variant="h5" fontWeight={700}>
-                {stats.total}
-              </Typography>
-            </Box>
-          </Box>
-        </Card>
-        <Card sx={{ p: 2.5, bgcolor: 'background.paper' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box
-              sx={{
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: 'rgba(46, 125, 50, 0.1)',
-                color: 'success.main',
-                display: 'flex',
-              }}
-            >
-              <BusinessIcon />
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Active
-              </Typography>
-              <Typography variant="h5" fontWeight={700} color="success.main">
-                {stats.active}
-              </Typography>
-            </Box>
-          </Box>
-        </Card>
-        <Card sx={{ p: 2.5, bgcolor: 'background.paper' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box
-              sx={{
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: 'action.hover',
-                color: 'text.secondary',
-                display: 'flex',
-              }}
-            >
-              <BusinessIcon />
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Inactive
-              </Typography>
-              <Typography variant="h5" fontWeight={700} color="text.secondary">
-                {stats.inactive}
-              </Typography>
-            </Box>
-          </Box>
-        </Card>
-      </Box>
-
-      {/* Search Bar */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <TextField
-          fullWidth
-          placeholder="Search by name or code..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon color="action" />
-              </InputAdornment>
-            ),
-          }}
-          size="small"
+      <PageLayout>
+        {/* Modern Header with Stats */}
+        <MasterDataHeader
+          title="Diocese Management"
+          subtitle="Manage dioceses in the organizational hierarchy"
+          onAddClick={!isReadOnly ? handleOpenCreateDialog : undefined}
+          addButtonLabel="Add Diocese"
+          isAdmin={!isReadOnly}
+          stats={[
+            { label: 'Total Dioceses', value: stats.total },
+            { label: 'Active', value: stats.active },
+            { label: 'Inactive', value: stats.inactive },
+          ]}
         />
-      </Paper>
 
-      <Paper sx={{ width: '100%', mb: 2 }}>
+        {/* Search Bar */}
+        <Paper
+          sx={{
+            p: 2,
+            mb: 3,
+            borderRadius: 1.5,
+            border: '1px solid rgba(88, 28, 135, 0.1)',
+          }}
+        >
+          <TextField
+            fullWidth
+            placeholder="Search by name or code..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" sx={{ mr: 1 }} />
+                </InputAdornment>
+              ),
+            }}
+            size="small"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: '#7c3aed',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#7c3aed',
+                },
+              },
+            }}
+          />
+        </Paper>
+
+      <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
         {loading ? (
           <LoadingState count={5} variant="row" />
         ) : filteredDioceses.length === 0 ? (
@@ -344,7 +289,22 @@ export const DiocesePage: React.FC = () => {
         ) : (
           <>
             <TableContainer>
-              <Table>
+              <Table sx={{
+                '& thead th': {
+                  backgroundColor: 'rgba(88, 28, 135, 0.08)',
+                  fontWeight: 700,
+                  color: '#2d1b4e',
+                  borderBottom: '2px solid rgba(88, 28, 135, 0.2)',
+                },
+                '& tbody tr': {
+                  '&:hover': {
+                    backgroundColor: 'rgba(88, 28, 135, 0.04)',
+                  },
+                },
+                '& tbody tr:last-child td': {
+                  borderBottom: 'none',
+                },
+              }}>
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>

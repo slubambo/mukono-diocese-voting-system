@@ -41,6 +41,7 @@ import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
 import AppShell from '../../components/layout/AppShell'
+import MasterDataHeader from '../../components/common/MasterDataHeader'
 
 type DialogMode = 'create' | 'edit' | null
 
@@ -57,6 +58,7 @@ export const ChurchPage: React.FC = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
+  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 })
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selectedChurch, setSelectedChurch] = useState<Church | null>(null)
@@ -108,6 +110,11 @@ export const ChurchPage: React.FC = () => {
       })
       setChurches(response.content)
       setTotalElements(response.totalElements)
+      setStats({
+        total: response.totalElements,
+        active: response.content.filter((c) => c.status === 'ACTIVE').length,
+        inactive: response.content.filter((c) => c.status === 'INACTIVE').length,
+      })
     } catch (error) {
       showToast('Failed to load churches', 'error')
     } finally {
@@ -197,50 +204,36 @@ export const ChurchPage: React.FC = () => {
 
   return (
     <AppShell>
-      <PageLayout
-      title="Church Management"
-      subtitle="Manage churches within archdeaconries"
-      actions={
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <FormControl sx={{ minWidth: 150 }} size="small">
-            <InputLabel>Diocese</InputLabel>
-            <Select
-              value={selectedDioceseId || ''}
-              label="Diocese"
-              onChange={(e) => setSelectedDioceseId(e.target.value as number)}
-            >
-              {dioceses.map((d) => (
-                <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl sx={{ minWidth: 150 }} size="small">
-            <InputLabel>Archdeaconry</InputLabel>
-            <Select
-              value={selectedArchdeaconryId || ''}
-              label="Archdeaconry"
-              onChange={(e) => setSelectedArchdeaconryId(e.target.value as number)}
-              disabled={!archdeaconries.length}
-            >
-              {archdeaconries.map((a) => (
-                <MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          {!isReadOnly && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleOpenCreateDialog}
-              disabled={!selectedArchdeaconryId}
-            >
-              Add Church
-            </Button>
-          )}
-        </Box>
-      }
-    >
-      <Paper sx={{ width: '100%', mb: 2 }}>
+      <PageLayout>
+        {/* Modern Header with Filters */}
+        <MasterDataHeader
+          title="Church Management"
+          subtitle="Manage churches within archdeaconries"
+          onAddClick={!isReadOnly && selectedArchdeaconryId ? handleOpenCreateDialog : undefined}
+          addButtonLabel="Add Church"
+          isAdmin={!isReadOnly}
+          filters={[
+            {
+              id: 'diocese',
+              label: 'Diocese',
+              value: selectedDioceseId,
+              options: dioceses.map(d => ({ id: d.id, name: d.name })),
+              onChange: (value) => setSelectedDioceseId(value as number | null),
+              placeholder: 'Select Diocese',
+            },
+            {
+              id: 'archdeaconry',
+              label: 'Archdeaconry',
+              value: selectedArchdeaconryId,
+              options: archdeaconries.map(a => ({ id: a.id, name: a.name })),
+              onChange: (value) => setSelectedArchdeaconryId(value as number | null),
+              disabled: !archdeaconries.length,
+              placeholder: 'Select Archdeaconry',
+            }
+          ]}
+        />
+
+        <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
         {loading ? (
           <LoadingState count={5} variant="row" />
         ) : !selectedArchdeaconryId ? (
@@ -254,7 +247,24 @@ export const ChurchPage: React.FC = () => {
         ) : (
           <>
             <TableContainer>
-              <Table>
+              <Table
+                sx={{
+                  '& thead th': {
+                    backgroundColor: 'rgba(88, 28, 135, 0.08)',
+                    fontWeight: 700,
+                    color: '#2d1b4e',
+                    borderBottom: '2px solid rgba(88, 28, 135, 0.2)',
+                  },
+                  '& tbody tr': {
+                    '&:hover': {
+                      backgroundColor: 'rgba(88, 28, 135, 0.04)',
+                    },
+                  },
+                  '& tbody tr:last-child td': {
+                    borderBottom: 'none',
+                  },
+                }}
+              >
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>

@@ -37,6 +37,7 @@ import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
 import AppShell from '../../components/layout/AppShell'
+import MasterDataHeader from '../../components/common/MasterDataHeader'
 
 type DialogMode = 'create' | 'edit' | null
 
@@ -49,6 +50,7 @@ export const PositionTitlePage: React.FC = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
+  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 })
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selected, setSelected] = useState<PositionTitle | null>(null)
@@ -64,6 +66,11 @@ export const PositionTitlePage: React.FC = () => {
       const response = await positionTitleApi.list({ page, size: rowsPerPage, sort: 'id,desc' })
       setTitles(response.content)
       setTotalElements(response.totalElements)
+      setStats({
+        total: response.totalElements,
+        active: response.content.filter((t) => t.status === 'ACTIVE').length,
+        inactive: response.content.filter((t) => t.status === 'INACTIVE').length,
+      })
     } catch (error) {
       showToast('Failed to load position titles', 'error')
     } finally {
@@ -111,12 +118,22 @@ export const PositionTitlePage: React.FC = () => {
 
   return (
     <AppShell>
-      <PageLayout
-      title="Position Titles"
-      subtitle="Manage position title templates"
-      actions={isAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormData({ name: '' }); setDialogMode('create'); }}>Add Title</Button>}
-    >
-      <Paper sx={{ width: '100%', mb: 2 }}>
+      <PageLayout>
+        {/* Modern Header */}
+        <MasterDataHeader
+          title="Position Titles"
+          subtitle="Manage position title templates"
+          onAddClick={isAdmin ? () => { setFormData({ name: '' }); setDialogMode('create'); } : undefined}
+          addButtonLabel="Add Title"
+          isAdmin={isAdmin}
+          stats={[
+            { label: 'Total', value: stats.total },
+            { label: 'Active', value: stats.active },
+            { label: 'Inactive', value: stats.inactive },
+          ]}
+        />
+
+        <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
         {loading ? (
           <LoadingState count={5} variant="row" />
         ) : titles.length === 0 ? (
@@ -124,7 +141,24 @@ export const PositionTitlePage: React.FC = () => {
         ) : (
           <>
             <TableContainer>
-              <Table>
+              <Table
+                sx={{
+                  '& thead th': {
+                    backgroundColor: 'rgba(88, 28, 135, 0.08)',
+                    fontWeight: 700,
+                    color: '#2d1b4e',
+                    borderBottom: '2px solid rgba(88, 28, 135, 0.2)',
+                  },
+                  '& tbody tr': {
+                    '&:hover': {
+                      backgroundColor: 'rgba(88, 28, 135, 0.04)',
+                    },
+                  },
+                  '& tbody tr:last-child td': {
+                    borderBottom: 'none',
+                  },
+                }}
+              >
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
