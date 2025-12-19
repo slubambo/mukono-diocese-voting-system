@@ -73,12 +73,13 @@ export const PositionPage: React.FC = () => {
   const fetchPositions = async () => {
     try {
       setLoading(true)
-      // Fetch all positions - use fellowshipId: 0 to get all (backend should handle this)
-      const response = await fellowshipPositionApi.list({ fellowshipId: 0, page, size: rowsPerPage, sort: 'id,desc' })
+      // Fetch all positions - pass empty fellowshipId to get all positions
+      const response = await fellowshipPositionApi.list({ page, size: rowsPerPage, sort: 'id,desc' } as any)
       setPositions(response.content)
       setTotalElements(response.totalElements)
     } catch (error) {
       showToast('Failed to load positions', 'error')
+      console.error('Error fetching positions:', error)
     } finally {
       setLoading(false)
     }

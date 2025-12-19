@@ -128,9 +128,7 @@ export const ChurchPage: React.FC = () => {
   }, [selectedDioceseId])
 
   useEffect(() => {
-    if (selectedArchdeaconryId) {
-      fetchChurches()
-    }
+    fetchChurches()
   }, [page, rowsPerPage, selectedArchdeaconryId])
 
   const handleOpenCreateDialog = () => {

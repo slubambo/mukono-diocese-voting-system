@@ -4,7 +4,6 @@ import GroupIcon from '@mui/icons-material/Group'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import PollIcon from '@mui/icons-material/Poll'
 import LogoutIcon from '@mui/icons-material/Logout'
-import PolicyIcon from '@mui/icons-material/Policy'
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts'
 import SettingsIcon from '@mui/icons-material/Settings'
 import AccountTreeIcon from '@mui/icons-material/AccountTree'
@@ -94,14 +93,6 @@ export const MENU_ITEMS: MenuItem[] = [
         roles: [...ADMIN_ROLES, ...DS_ROLES],
       },
     ],
-  },
-  // ADMIN: Master Data (B)
-  {
-    id: 'master-data',
-    label: 'Master Data',
-    path: '/admin/master-data',
-    icon: PolicyIcon,
-    roles: ADMIN_ROLES,
   },
   // ADMIN: People & Leadership (C)
   {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import {
   Drawer,
   List,
@@ -38,27 +38,51 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   
-  // Track expanded menu items
-  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({})
+  // Get menu items based on user roles - memoize to prevent re-renders
+  const visibleMenuItems = useMemo(
+    () => (user?.roles ? getMenuItemsByRole(user.roles) : []),
+    [user?.roles]
+  )
 
-  // Get menu items based on user roles
-  const visibleMenuItems = user?.roles ? getMenuItemsByRole(user.roles) : []
-
-  // Auto-expand parent menu when child is active
-  React.useEffect(() => {
-    const newExpanded: Record<string, boolean> = {}
-    visibleMenuItems.forEach(item => {
+  // Initialize expanded items based on current path
+  const getInitialExpandedState = () => {
+    const expanded: Record<string, boolean> = {}
+    const menuItems = user?.roles ? getMenuItemsByRole(user.roles) : []
+    
+    menuItems.forEach(item => {
       if (item.children) {
         const hasActiveChild = item.children.some(child => location.pathname.startsWith(child.path))
         if (hasActiveChild) {
+          expanded[item.id] = true
+        }
+      }
+    })
+    return expanded
+  }
+
+  // Track expanded menu items
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>(getInitialExpandedState)
+
+  // Auto-expand parent menu when path changes
+  React.useEffect(() => {
+    const newExpanded: Record<string, boolean> = {}
+    
+    visibleMenuItems.forEach(item => {
+      if (item.children) {
+        const hasActiveChild = item.children.some(child => location.pathname.startsWith(child.path))
+        if (hasActiveChild && !expandedItems[item.id]) {
           newExpanded[item.id] = true
         }
       }
     })
-    setExpandedItems(prev => ({ ...prev, ...newExpanded }))
+    
+    // Only update if there are new items to expand
+    if (Object.keys(newExpanded).length > 0) {
+      setExpandedItems(prev => ({ ...prev, ...newExpanded }))
+    }
   }, [location.pathname, visibleMenuItems])
 
-  const handleMenuItemClick = (path: string, id?: string, hasChildren?: boolean) => {
+  const handleMenuItemClick = useCallback((path: string, id?: string, hasChildren?: boolean) => {
     if (hasChildren) {
       // Toggle expand/collapse for items with children
       setExpandedItems(prev => ({
@@ -80,23 +104,24 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
     if (onNavigate) {
       onNavigate()
     }
-  }
+  }, [navigate, isMobile, onClose, onNavigate, logout])
 
-  const isActive = (path: string) => {
-    return location.pathname.startsWith(path)
-  }
+  const isActive = useCallback((path: string) => {
+    return location.pathname === path || (path !== '/admin' && location.pathname.startsWith(path))
+  }, [location.pathname])
   
-  const isParentActive = (item: MenuItem) => {
+  const isParentActive = useCallback((item: MenuItem) => {
     if (!item.children) return false
     return item.children.some(child => isActive(child.path))
-  }
+  }, [isActive])
 
-  const renderMenuItem = (item: MenuItem, level: number = 0) => {
+  const renderMenuItem = useCallback((item: MenuItem, level: number = 0) => {
     const Icon = item.icon
     const active = isActive(item.path)
     const hasChildren = item.children && item.children.length > 0
     const isExpanded = expandedItems[item.id] || false
     const parentActive = isParentActive(item)
+    const isChildItem = level > 0
 
     return (
       <React.Fragment key={item.id}>
@@ -113,16 +138,26 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
               pl: collapsed ? 1 : level > 0 ? 4 : 2,
               borderRadius: 1,
               justifyContent: collapsed ? 'center' : 'flex-start',
-              bgcolor: active || parentActive ? 'rgba(143, 52, 147, 0.12)' : 'transparent',
-              color: active || parentActive ? 'primary.main' : 'text.primary',
-              fontWeight: active || parentActive ? 600 : 500,
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              // Different styling for parent vs child items
+              bgcolor: isChildItem && active
+                ? 'transparent'
+                : (active || parentActive)
+                ? 'rgba(143, 52, 147, 0.12)'
+                : 'transparent',
+              color: (active || parentActive) ? 'primary.main' : 'text.primary',
+              fontWeight: (active || parentActive) ? 600 : 500,
+              borderLeft: isChildItem && active ? `3px solid ${theme.palette.primary.main}` : 'none',
+              ml: isChildItem && active ? 'calc(8px - 3px)' : collapsed ? 0.5 : 1,
               '&:hover': {
                 bgcolor: 'rgba(143, 52, 147, 0.08)',
+                transform: 'translateX(2px)',
               },
               '&.Mui-selected': {
-                bgcolor: 'rgba(143, 52, 147, 0.12)',
-                borderLeft: `4px solid ${theme.palette.primary.main}`,
-                paddingLeft: collapsed ? 'calc(16px - 4px)' : level > 0 ? 'calc(32px - 4px)' : 'calc(16px - 4px)',
+                bgcolor: isChildItem ? 'transparent' : 'rgba(143, 52, 147, 0.12)',
+                borderLeft: isChildItem && active ? `3px solid ${theme.palette.primary.main}` : `4px solid ${theme.palette.primary.main}`,
+                paddingLeft: isChildItem && active ? 'calc(32px - 3px)' : collapsed ? 'calc(8px - 4px)' : level > 0 ? 'calc(32px - 4px)' : 'calc(16px - 4px)',
+                ml: isChildItem && active ? 'calc(8px - 3px)' : collapsed ? 'calc(4px - 4px)' : 'calc(8px - 4px)',
                 '&:hover': {
                   bgcolor: 'rgba(143, 52, 147, 0.16)',
                 },
@@ -157,7 +192,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
         
         {/* Render children if they exist */}
         {hasChildren && !collapsed && (
-          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+          <Collapse in={isExpanded} timeout={300} unmountOnExit>
             <List component="div" disablePadding>
               {item.children!.map(child => renderMenuItem(child, level + 1))}
             </List>
@@ -165,7 +200,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
         )}
       </React.Fragment>
     )
-  }
+  }, [collapsed, expandedItems, isActive, isParentActive, handleMenuItemClick, theme.palette.primary.main])
 
   const sidebarContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -320,4 +355,4 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
   )
 }
 
-export default Sidebar
+export default React.memo(Sidebar)
