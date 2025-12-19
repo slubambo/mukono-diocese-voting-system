@@ -19,6 +19,7 @@ interface AppShellProps {
 const AppShell: React.FC<AppShellProps> = ({ children, title, hideOnVoter = true }) => {
   const { user } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -35,6 +36,8 @@ const AppShell: React.FC<AppShellProps> = ({ children, title, hideOnVoter = true
         onMenuOpen={() => setSidebarOpen(true)}
         showMenuButton={isMobile}
         title={title}
+        onToggleSidebarCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        sidebarCollapsed={sidebarCollapsed}
       />
 
       {/* Main content area */}
@@ -44,6 +47,8 @@ const AppShell: React.FC<AppShellProps> = ({ children, title, hideOnVoter = true
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
           onNavigate={() => setSidebarOpen(false)}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
 
         {/* Content wrapper */}

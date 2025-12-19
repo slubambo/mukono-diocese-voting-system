@@ -10,18 +10,24 @@ import {
   Chip,
   useMediaQuery,
   useTheme,
+  Tooltip,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import LogoutIcon from '@mui/icons-material/Logout'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { useAuth } from '../../context/AuthContext'
+import logoSrc from '../../assets/COU-Logo-Boundary_Favicon.png'
 
 interface TopbarProps {
   onMenuOpen: () => void
   showMenuButton?: boolean
   title?: string
+  onToggleSidebarCollapse?: () => void
+  sidebarCollapsed?: boolean
 }
 
-const Topbar: React.FC<TopbarProps> = ({ onMenuOpen, showMenuButton = true, title }) => {
+const Topbar: React.FC<TopbarProps> = ({ onMenuOpen, showMenuButton = true, title, onToggleSidebarCollapse, sidebarCollapsed }) => {
   const { user, logout } = useAuth()
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
   const theme = useTheme()
@@ -59,18 +65,32 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuOpen, showMenuButton = true, titl
     <>
       <AppBar position="static" sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', minHeight: '64px' }}>
-          {/* Left: Menu icon + Title */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {/* Left: Menu icon + Logo + Title */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {showMenuButton && isMobile && (
               <IconButton
                 color="inherit"
                 aria-label="open menu"
                 onClick={onMenuOpen}
-                sx={{ mr: 1 }}
+                sx={{ mr: 0.5 }}
               >
                 <MenuIcon />
               </IconButton>
             )}
+
+            {/* Logo */}
+            <Box
+              component="img"
+              src={logoSrc}
+              alt="Church of Uganda Logo"
+              sx={{
+                width: 40,
+                height: 40,
+                display: { xs: 'none', sm: 'block' },
+              }}
+            />
+
+            {/* Title section */}
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
                 Mukono Diocese
@@ -81,6 +101,25 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuOpen, showMenuButton = true, titl
                 </Typography>
               )}
             </Box>
+
+            {/* Sidebar collapse button - desktop only */}
+            {!isMobile && onToggleSidebarCollapse && (
+              <Tooltip title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} placement="bottom">
+                <IconButton
+                  size="small"
+                  onClick={onToggleSidebarCollapse}
+                  sx={{
+                    color: 'text.secondary',
+                    ml: 1,
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                    },
+                  }}
+                >
+                  {sidebarCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+                </IconButton>
+              </Tooltip>
+            )}
           </Box>
 
           {/* Right: User info + Actions */}

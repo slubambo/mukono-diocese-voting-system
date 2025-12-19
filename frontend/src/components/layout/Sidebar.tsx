@@ -11,8 +11,12 @@ import {
   useMediaQuery,
   Divider,
   Avatar,
+  IconButton,
+  Tooltip,
 } from '@mui/material'
 import { useNavigate, useLocation } from 'react-router-dom'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { useAuth } from '../../context/AuthContext'
 import { LOGOUT_MENU_ITEM, getMenuItemsByRole } from '../../routes/menu'
 
@@ -20,9 +24,11 @@ interface SidebarProps {
   open: boolean
   onClose: () => void
   onNavigate?: () => void
+  collapsed?: boolean
+  onToggleCollapse?: () => void
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate }) => {
+const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed = false, onToggleCollapse }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
@@ -53,9 +59,9 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate }) => {
 
   const sidebarContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Header with branding */}
-      <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+      {/* Header with branding and avatar */}
+      <Box sx={{ p: collapsed ? 1 : 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: collapsed ? 0 : 2 }}>
           <Avatar
             sx={{
               bgcolor: 'primary.main',
@@ -66,18 +72,20 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate }) => {
           >
             M
           </Avatar>
-          <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main' }}>
-              Mukono Diocese
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              Voting System
-            </Typography>
-          </Box>
+          {!collapsed && (
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                Mukono Diocese
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                Voting System
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* User role info */}
-        {user?.roles && user.roles.length > 0 && (
+        {!collapsed && user?.roles && user.roles.length > 0 && (
           <Box sx={{ bgcolor: 'action.hover', p: 1, borderRadius: 1 }}>
             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
               Role
@@ -99,46 +107,55 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate }) => {
           const Icon = item.icon
           const active = isActive(item.path)
           return (
-            <ListItemButton
+            <Tooltip
               key={item.id}
-              onClick={() => handleMenuItemClick(item.path, item.id)}
-              selected={active}
-              sx={{
-                mx: 1,
-                mb: 0.5,
-                borderRadius: 1,
-                bgcolor: active ? 'rgba(143, 52, 147, 0.12)' : 'transparent',
-                color: active ? 'primary.main' : 'text.primary',
-                fontWeight: active ? 600 : 500,
-                '&:hover': {
-                  bgcolor: 'rgba(143, 52, 147, 0.08)',
-                },
-                '&.Mui-selected': {
-                  bgcolor: 'rgba(143, 52, 147, 0.12)',
-                  borderLeft: `4px solid ${theme.palette.primary.main}`,
-                  paddingLeft: 'calc(16px - 4px)',
-                  '&:hover': {
-                    bgcolor: 'rgba(143, 52, 147, 0.16)',
-                  },
-                },
-              }}
+              title={collapsed ? item.label : ''}
+              placement="right"
             >
-              <ListItemIcon
+              <ListItemButton
+                onClick={() => handleMenuItemClick(item.path, item.id)}
+                selected={active}
                 sx={{
-                  color: active ? 'primary.main' : 'inherit',
-                  minWidth: 40,
+                  mx: collapsed ? 0.5 : 1,
+                  mb: 0.5,
+                  borderRadius: 1,
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  bgcolor: active ? 'rgba(143, 52, 147, 0.12)' : 'transparent',
+                  color: active ? 'primary.main' : 'text.primary',
+                  fontWeight: active ? 600 : 500,
+                  '&:hover': {
+                    bgcolor: 'rgba(143, 52, 147, 0.08)',
+                  },
+                  '&.Mui-selected': {
+                    bgcolor: 'rgba(143, 52, 147, 0.12)',
+                    borderLeft: `4px solid ${theme.palette.primary.main}`,
+                    paddingLeft: collapsed ? 'calc(16px - 4px)' : 'calc(16px - 4px)',
+                    '&:hover': {
+                      bgcolor: 'rgba(143, 52, 147, 0.16)',
+                    },
+                  },
                 }}
               >
-                <Icon />
-              </ListItemIcon>
-              <ListItemText
-                primary={item.label}
-                primaryTypographyProps={{
-                  variant: 'body2',
-                  fontWeight: active ? 600 : 500,
-                }}
-              />
-            </ListItemButton>
+                <ListItemIcon
+                  sx={{
+                    color: active ? 'primary.main' : 'inherit',
+                    minWidth: collapsed ? 'auto' : 40,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Icon />
+                </ListItemIcon>
+                {!collapsed && (
+                  <ListItemText
+                    primary={item.label}
+                    primaryTypographyProps={{
+                      variant: 'body2',
+                      fontWeight: active ? 600 : 500,
+                    }}
+                  />
+                )}
+              </ListItemButton>
+            </Tooltip>
           )
         })}
       </List>
@@ -146,26 +163,55 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate }) => {
       {/* Divider + Logout */}
       <Divider sx={{ my: 1 }} />
       <List>
-        <ListItemButton
-          onClick={() => handleMenuItemClick(LOGOUT_MENU_ITEM.path, LOGOUT_MENU_ITEM.id)}
-          sx={{
-            mx: 1,
-            borderRadius: 1,
-            color: 'error.main',
-            '&:hover': {
-              bgcolor: 'rgba(229, 57, 53, 0.08)',
-            },
-          }}
+        <Tooltip
+          title={collapsed ? LOGOUT_MENU_ITEM.label : ''}
+          placement="right"
         >
-          <ListItemIcon sx={{ color: 'error.main', minWidth: 40 }}>
-            <LOGOUT_MENU_ITEM.icon />
-          </ListItemIcon>
-          <ListItemText
-            primary={LOGOUT_MENU_ITEM.label}
-            primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
-          />
-        </ListItemButton>
+          <ListItemButton
+            onClick={() => handleMenuItemClick(LOGOUT_MENU_ITEM.path, LOGOUT_MENU_ITEM.id)}
+            sx={{
+              mx: collapsed ? 0.5 : 1,
+              borderRadius: 1,
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              color: 'error.main',
+              '&:hover': {
+                bgcolor: 'rgba(229, 57, 53, 0.08)',
+              },
+            }}
+          >
+            <ListItemIcon sx={{ color: 'error.main', minWidth: collapsed ? 'auto' : 40, justifyContent: 'center' }}>
+              <LOGOUT_MENU_ITEM.icon />
+            </ListItemIcon>
+            {!collapsed && (
+              <ListItemText
+                primary={LOGOUT_MENU_ITEM.label}
+                primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
+              />
+            )}
+          </ListItemButton>
+        </Tooltip>
       </List>
+
+      {/* Collapse toggle button - desktop only */}
+      {!isMobile && onToggleCollapse && (
+        <Box sx={{ p: 1, borderTop: `1px solid ${theme.palette.divider}` }}>
+          <Tooltip title={collapsed ? 'Expand' : 'Collapse'} placement="right">
+            <IconButton
+              onClick={onToggleCollapse}
+              sx={{
+                width: '100%',
+                color: 'text.secondary',
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                },
+              }}
+              size="small"
+            >
+              {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+            </IconButton>
+          </Tooltip>
+        </Box>
+      )}
     </Box>
   )
 
@@ -176,13 +222,22 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate }) => {
         variant="permanent"
         sx={{
           display: { xs: 'none', md: 'block' },
-          width: 280,
+          width: collapsed ? 80 : 280,
           flexShrink: 0,
+          transition: theme.transitions.create('width', {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
           '& .MuiDrawer-paper': {
-            width: 280,
+            width: collapsed ? 80 : 280,
             boxSizing: 'border-box',
             top: 'auto',
             borderRight: `1px solid ${theme.palette.divider}`,
+            transition: theme.transitions.create('width', {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.enteringScreen,
+            }),
+            overflowX: 'hidden',
           },
         }}
       >
