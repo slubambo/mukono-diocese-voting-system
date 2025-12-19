@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Drawer,
   List,
@@ -13,12 +13,15 @@ import {
   Avatar,
   IconButton,
   Tooltip,
+  Collapse,
 } from '@mui/material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import ExpandLess from '@mui/icons-material/ExpandLess'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 import { useAuth } from '../../context/AuthContext'
-import { LOGOUT_MENU_ITEM, getMenuItemsByRole } from '../../routes/menu'
+import { LOGOUT_MENU_ITEM, getMenuItemsByRole, type MenuItem } from '../../routes/menu'
 
 interface SidebarProps {
   open: boolean
@@ -34,11 +37,23 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
   const { user, logout } = useAuth()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  
+  // Track expanded menu items
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({})
 
   // Get menu items based on user roles
   const visibleMenuItems = user?.roles ? getMenuItemsByRole(user.roles) : []
 
-  const handleMenuItemClick = (path: string, id?: string) => {
+  const handleMenuItemClick = (path: string, id?: string, hasChildren?: boolean) => {
+    if (hasChildren) {
+      // Toggle expand/collapse for items with children
+      setExpandedItems(prev => ({
+        ...prev,
+        [id!]: !prev[id!],
+      }))
+      return
+    }
+
     if (id === 'logout') {
       logout()
       return
@@ -55,6 +70,87 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
 
   const isActive = (path: string) => {
     return location.pathname.startsWith(path)
+  }
+  
+  const isParentActive = (item: MenuItem) => {
+    if (!item.children) return false
+    return item.children.some(child => isActive(child.path))
+  }
+
+  const renderMenuItem = (item: MenuItem, level: number = 0) => {
+    const Icon = item.icon
+    const active = isActive(item.path)
+    const hasChildren = item.children && item.children.length > 0
+    const isExpanded = expandedItems[item.id] || false
+    const parentActive = isParentActive(item)
+
+    return (
+      <React.Fragment key={item.id}>
+        <Tooltip
+          title={collapsed && !hasChildren ? item.label : ''}
+          placement="right"
+        >
+          <ListItemButton
+            onClick={() => handleMenuItemClick(item.path, item.id, hasChildren)}
+            selected={active || parentActive}
+            sx={{
+              mx: collapsed ? 0.5 : 1,
+              mb: 0.5,
+              pl: collapsed ? 1 : level > 0 ? 4 : 2,
+              borderRadius: 1,
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              bgcolor: active || parentActive ? 'rgba(143, 52, 147, 0.12)' : 'transparent',
+              color: active || parentActive ? 'primary.main' : 'text.primary',
+              fontWeight: active || parentActive ? 600 : 500,
+              '&:hover': {
+                bgcolor: 'rgba(143, 52, 147, 0.08)',
+              },
+              '&.Mui-selected': {
+                bgcolor: 'rgba(143, 52, 147, 0.12)',
+                borderLeft: `4px solid ${theme.palette.primary.main}`,
+                paddingLeft: collapsed ? 'calc(16px - 4px)' : level > 0 ? 'calc(32px - 4px)' : 'calc(16px - 4px)',
+                '&:hover': {
+                  bgcolor: 'rgba(143, 52, 147, 0.16)',
+                },
+              },
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                color: active || parentActive ? 'primary.main' : 'inherit',
+                minWidth: collapsed ? 'auto' : 40,
+                justifyContent: 'center',
+              }}
+            >
+              <Icon />
+            </ListItemIcon>
+            {!collapsed && (
+              <>
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    variant: 'body2',
+                    fontWeight: active || parentActive ? 600 : 500,
+                  }}
+                />
+                {hasChildren && (
+                  isExpanded ? <ExpandLess /> : <ExpandMore />
+                )}
+              </>
+            )}
+          </ListItemButton>
+        </Tooltip>
+        
+        {/* Render children if they exist */}
+        {hasChildren && !collapsed && (
+          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              {item.children!.map(child => renderMenuItem(child, level + 1))}
+            </List>
+          </Collapse>
+        )}
+      </React.Fragment>
+    )
   }
 
   const sidebarContent = (
@@ -103,61 +199,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
 
       {/* Menu items */}
       <List sx={{ flex: 1, pt: 1 }}>
-        {visibleMenuItems.map(item => {
-          const Icon = item.icon
-          const active = isActive(item.path)
-          return (
-            <Tooltip
-              key={item.id}
-              title={collapsed ? item.label : ''}
-              placement="right"
-            >
-              <ListItemButton
-                onClick={() => handleMenuItemClick(item.path, item.id)}
-                selected={active}
-                sx={{
-                  mx: collapsed ? 0.5 : 1,
-                  mb: 0.5,
-                  borderRadius: 1,
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  bgcolor: active ? 'rgba(143, 52, 147, 0.12)' : 'transparent',
-                  color: active ? 'primary.main' : 'text.primary',
-                  fontWeight: active ? 600 : 500,
-                  '&:hover': {
-                    bgcolor: 'rgba(143, 52, 147, 0.08)',
-                  },
-                  '&.Mui-selected': {
-                    bgcolor: 'rgba(143, 52, 147, 0.12)',
-                    borderLeft: `4px solid ${theme.palette.primary.main}`,
-                    paddingLeft: collapsed ? 'calc(16px - 4px)' : 'calc(16px - 4px)',
-                    '&:hover': {
-                      bgcolor: 'rgba(143, 52, 147, 0.16)',
-                    },
-                  },
-                }}
-              >
-                <ListItemIcon
-                  sx={{
-                    color: active ? 'primary.main' : 'inherit',
-                    minWidth: collapsed ? 'auto' : 40,
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Icon />
-                </ListItemIcon>
-                {!collapsed && (
-                  <ListItemText
-                    primary={item.label}
-                    primaryTypographyProps={{
-                      variant: 'body2',
-                      fontWeight: active ? 600 : 500,
-                    }}
-                  />
-                )}
-              </ListItemButton>
-            </Tooltip>
-          )
-        })}
+        {visibleMenuItems.map(item => renderMenuItem(item))}
       </List>
 
       {/* Divider + Logout */}

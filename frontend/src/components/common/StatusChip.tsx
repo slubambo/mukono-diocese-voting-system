@@ -2,7 +2,7 @@ import React from 'react'
 import { Chip } from '@mui/material'
 import type { ChipProps } from '@mui/material'
 
-type StatusType = 'active' | 'used' | 'revoked' | 'expired' | 'pending' | 'completed'
+type StatusType = 'active' | 'inactive' | 'used' | 'revoked' | 'expired' | 'pending' | 'completed' | 'ACTIVE' | 'INACTIVE'
 
 interface StatusChipProps extends Omit<ChipProps, 'label' | 'variant'> {
   status: StatusType
@@ -16,6 +16,9 @@ interface StatusChipProps extends Omit<ChipProps, 'label' | 'variant'> {
 const StatusChip: React.FC<StatusChipProps> = ({ status, label, ...props }) => {
   const statusConfig: Record<StatusType, { color: ChipProps['color']; label: string }> = {
     active: { color: 'success', label: 'Active' },
+    ACTIVE: { color: 'success', label: 'Active' },
+    inactive: { color: 'default', label: 'Inactive' },
+    INACTIVE: { color: 'default', label: 'Inactive' },
     used: { color: 'info', label: 'Used' },
     revoked: { color: 'error', label: 'Revoked' },
     expired: { color: 'warning', label: 'Expired' },

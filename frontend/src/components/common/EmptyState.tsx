@@ -5,10 +5,7 @@ interface EmptyStateProps {
   icon?: React.ReactNode
   title: string
   description?: string
-  action?: {
-    label: string
-    onClick: () => void
-  }
+  action?: React.ReactNode
 }
 
 /**
@@ -50,11 +47,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description, actio
         </Typography>
       )}
 
-      {action && (
-        <Button variant="contained" color="primary" onClick={action.onClick}>
-          {action.label}
-        </Button>
-      )}
+      {action && <Box>{action}</Box>}
     </Box>
   )
 }
