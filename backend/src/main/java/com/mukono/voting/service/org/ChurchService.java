@@ -134,8 +134,10 @@ public class ChurchService {
         }
 
         if (q == null || q.isBlank()) {
-            return churchRepository.findAll(pageable).map(c -> c); // Filter by archdeaconryId after
+            // When no search query, return all churches for the archdeaconry
+            return churchRepository.findByArchdeaconryId(archdeaconryId, pageable);
         } else {
+            // When search query is provided, filter by archdeaconry AND name
             return churchRepository.findByArchdeaconryIdAndNameContainingIgnoreCase(archdeaconryId, q.trim(), pageable);
         }
     }
