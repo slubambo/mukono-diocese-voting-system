@@ -113,7 +113,9 @@ const LeadershipAssignmentsPage: React.FC = () => {
       return
     }
     try {
-      const resp = await fellowshipPositionApi.list({ fellowshipId: selectedFellowshipId, page: 0, size: 1000 })
+      const params: any = { fellowshipId: selectedFellowshipId, page: 0, size: 1000 }
+      if (selectedLevelForm) params.scope = selectedLevelForm
+      const resp = await fellowshipPositionApi.list(params)
       setPositions(resp.content)
     } catch (e) {
       // ignore
@@ -188,6 +190,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
   useEffect(() => { fetchAssignments() }, [page, rowsPerPage, filters, selectedFellowshipId, selectedDioceseId, selectedArchdeaconryId, selectedChurchId])
   useEffect(() => { loadFellowships(); loadPeople(); loadDioceses(); loadLevels() }, [])
   useEffect(() => { loadPositions() }, [selectedFellowshipId])
+  useEffect(() => { loadPositions() }, [selectedLevelForm])
   useEffect(() => { if (selectedDioceseId) { loadArchdeaconries(selectedDioceseId) } else { setArchdeaconries([]); setSelectedArchdeaconryId(null); setSelectedChurchId(null) } }, [selectedDioceseId])
   useEffect(() => { if (selectedArchdeaconryId) { loadChurches(selectedArchdeaconryId) } else { setChurches([]); setSelectedChurchId(null) } }, [selectedArchdeaconryId])
 
@@ -218,8 +221,8 @@ const LeadershipAssignmentsPage: React.FC = () => {
   const openCreate = () => {
     setEditing(null)
     reset({ personId: 0, fellowshipPositionId: 0, termStartDate: '', termEndDate: '', notes: '' })
-    setSelectedLevelForm(null)
-    if (!dioceseFixed) setSelectedDioceseId(null)
+    setSelectedLevelForm(filterLevel ?? null)
+    if (!dioceseFixed) setSelectedDioceseId(filterDioceseId ?? null)
     setSelectedArchdeaconryId(null)
     setSelectedChurchId(null)
     setDialogOpen(true)
@@ -246,17 +249,29 @@ const LeadershipAssignmentsPage: React.FC = () => {
       // determine scope from selected fellowship position
       const posId = data.fellowshipPositionId || editing?.fellowshipPositionId
       const pos = positions.find((p) => p.id === posId)
-      // allow form-selected level to override if set, otherwise use position scope
-      const scope = selectedLevelForm ?? pos?.scope
+      if (!pos) {
+        showToast('Please select a valid position for the selected fellowship/level', 'error')
+        return
+      }
+      // enforce that selected level matches the position scope (avoid backend validation errors)
+      if (selectedLevelForm && pos.scope !== selectedLevelForm) {
+        showToast('Selected position does not match chosen level. Please choose a position for the selected level.', 'error')
+        return
+      }
+      const scope = pos.scope
       if (scope === 'DIOCESE') {
         payload.dioceseId = selectedDioceseId
         payload.archdeaconryId = undefined
         payload.churchId = undefined
       } else if (scope === 'ARCHDEACONRY') {
+        // archdeaconry required
+        if (!selectedArchdeaconryId) { showToast('Archdeaconry is required for this position', 'error'); return }
         payload.archdeaconryId = selectedArchdeaconryId
+        // include diocese if available, backend may ignore it, but safe to include
         payload.dioceseId = selectedDioceseId ?? undefined
         payload.churchId = undefined
       } else if (scope === 'CHURCH') {
+        if (!selectedChurchId) { showToast('Church is required for this position', 'error'); return }
         payload.churchId = selectedChurchId
         payload.archdeaconryId = selectedArchdeaconryId ?? undefined
         payload.dioceseId = selectedDioceseId ?? undefined
@@ -299,7 +314,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
           onAddClick={isAdmin ? openCreate : undefined}
           addButtonLabel="Create Assignment"
           isAdmin={isAdmin}
-          actions={[{ id: 'clear', label: 'Clear Filters', onClick: () => { setFilterDioceseId(null); setFilterLevel(null); setFilterArchdeaconryId(null); setFilterChurchId(null); setFilterFellowshipId(null); setPage(0); fetchAssignments() } } ]}
+          actions={[{ id: 'clear', label: 'Clear Filters', onClick: () => { setFilterDioceseId(dioceseFixed ? filterDioceseId : null); setFilterLevel(null); setFilterArchdeaconryId(null); setFilterChurchId(null); setFilterFellowshipId(null); setPage(0); fetchAssignments() } } ]}
           filters={[
             {
               id: 'diocese',
@@ -433,7 +448,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
               </FormControl>
 
               <Controller name="fellowshipPositionId" control={control} render={({ field }) => (
-                <Autocomplete options={positions} getOptionLabel={(p) => `${p.title.name} — ${p.fellowship.name}`} onChange={(_, v) => field.onChange(v?.id || 0)} renderInput={(params) => <TextField {...params} label="Position" required />} />
+                <Autocomplete options={positions.filter((p) => !selectedLevelForm || p.scope === selectedLevelForm)} getOptionLabel={(p) => ((p.title && p.title.name) || p.titleName) + ' — ' + ((p.fellowship && p.fellowship.name) || p.fellowshipName)} onChange={(_, v) => field.onChange(v?.id || 0)} renderInput={(params) => <TextField {...params} label="Position" required />} />
               )} />
 
               {(selectedLevelForm === 'ARCHDEACONRY' || selectedLevelForm === 'CHURCH' || selectedLevelForm === null) && (
