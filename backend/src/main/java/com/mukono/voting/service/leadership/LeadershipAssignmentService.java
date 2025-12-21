@@ -107,45 +107,11 @@ public class LeadershipAssignmentService {
         Church church = null;
 
         PositionScope scope = position.getScope();
-        switch (scope) {
-            case DIOCESE:
-                if (dioceseId == null) {
-                    throw new IllegalArgumentException("Diocese ID is required for DIOCESE scope positions");
-                }
-                if (archdeaconryId != null || churchId != null) {
-                    throw new IllegalArgumentException(
-                        "Only diocese should be specified for DIOCESE scope positions");
-                }
-                diocese = dioceseRepository.findById(dioceseId)
-                    .orElseThrow(() -> new IllegalArgumentException("Diocese with ID " + dioceseId + " not found"));
-                break;
-
-            case ARCHDEACONRY:
-                if (archdeaconryId == null) {
-                    throw new IllegalArgumentException(
-                        "Archdeaconry ID is required for ARCHDEACONRY scope positions");
-                }
-                if (dioceseId != null || churchId != null) {
-                    throw new IllegalArgumentException(
-                        "Only archdeaconry should be specified for ARCHDEACONRY scope positions");
-                }
-                archdeaconry = archdeaconryRepository.findById(archdeaconryId)
-                    .orElseThrow(() -> new IllegalArgumentException(
-                        "Archdeaconry with ID " + archdeaconryId + " not found"));
-                break;
-
-            case CHURCH:
-                if (churchId == null) {
-                    throw new IllegalArgumentException("Church ID is required for CHURCH scope positions");
-                }
-                if (dioceseId != null || archdeaconryId != null) {
-                    throw new IllegalArgumentException(
-                        "Only church should be specified for CHURCH scope positions");
-                }
-                church = churchRepository.findById(churchId)
-                    .orElseThrow(() -> new IllegalArgumentException("Church with ID " + churchId + " not found"));
-                break;
-        }
+        boolean dioceseProvided = dioceseId != null;
+        boolean archdeaconryProvided = archdeaconryId != null;
+        boolean churchProvided = churchId != null;
+        TargetEntities targets = resolveTargets(scope, dioceseId, archdeaconryId, churchId,
+                dioceseProvided, archdeaconryProvided, churchProvided);
 
         // Check for duplicate active assignment (same person + position + target)
         checkDuplicateAssignment(personId, fellowshipPositionId, dioceseId, archdeaconryId, churchId, scope);
@@ -157,9 +123,9 @@ public class LeadershipAssignmentService {
         LeadershipAssignment assignment = new LeadershipAssignment();
         assignment.setPerson(person);
         assignment.setFellowshipPosition(position);
-        assignment.setDiocese(diocese);
-        assignment.setArchdeaconry(archdeaconry);
-        assignment.setChurch(church);
+        assignment.setDiocese(targets.diocese);
+        assignment.setArchdeaconry(targets.archdeaconry);
+        assignment.setChurch(targets.church);
         assignment.setTermStartDate(termStartDate);
         assignment.setTermEndDate(termEndDate);
         assignment.setStatus(RecordStatus.ACTIVE);
@@ -230,78 +196,52 @@ public class LeadershipAssignmentService {
         // Determine final scope
         PositionScope finalScope = newPosition.getScope();
 
-        // Update target entities based on scope
-        Long finalDioceseId = dioceseId;
-        Long finalArchdeaconryId = archdeaconryId;
-        Long finalChurchId = churchId;
+        boolean dioceseProvided = dioceseId != null;
+        boolean archdeaconryProvided = archdeaconryId != null;
+        boolean churchProvided = churchId != null;
 
-        // If target fields are explicitly provided, validate and update
-        if (dioceseId != null || archdeaconryId != null || churchId != null) {
-            switch (finalScope) {
-                case DIOCESE:
-                    if (dioceseId == null) {
-                        throw new IllegalArgumentException("Diocese ID is required for DIOCESE scope positions");
-                    }
-                    if (archdeaconryId != null || churchId != null) {
-                        throw new IllegalArgumentException(
-                            "Only diocese should be specified for DIOCESE scope positions");
-                    }
-                    if (assignment.getDiocese() == null || !dioceseId.equals(assignment.getDiocese().getId())) {
-                        newDiocese = dioceseRepository.findById(dioceseId)
-                            .orElseThrow(() -> new IllegalArgumentException(
-                                "Diocese with ID " + dioceseId + " not found"));
-                        assignment.setDiocese(newDiocese);
-                        assignment.setArchdeaconry(null);
-                        assignment.setChurch(null);
-                        targetChanged = true;
-                    }
-                    break;
+        Long finalDioceseId = dioceseProvided ? dioceseId : (finalScope == PositionScope.DIOCESE && assignment.getDiocese() != null ? assignment.getDiocese().getId() : null);
+        Long finalArchdeaconryId = archdeaconryProvided ? archdeaconryId : (finalScope == PositionScope.ARCHDEACONRY && assignment.getArchdeaconry() != null ? assignment.getArchdeaconry().getId() : null);
+        Long finalChurchId = churchProvided ? churchId : (finalScope == PositionScope.CHURCH && assignment.getChurch() != null ? assignment.getChurch().getId() : null);
 
-                case ARCHDEACONRY:
-                    if (archdeaconryId == null) {
-                        throw new IllegalArgumentException(
-                            "Archdeaconry ID is required for ARCHDEACONRY scope positions");
-                    }
-                    if (dioceseId != null || churchId != null) {
-                        throw new IllegalArgumentException(
-                            "Only archdeaconry should be specified for ARCHDEACONRY scope positions");
-                    }
-                    if (assignment.getArchdeaconry() == null || 
-                        !archdeaconryId.equals(assignment.getArchdeaconry().getId())) {
-                        newArchdeaconry = archdeaconryRepository.findById(archdeaconryId)
-                            .orElseThrow(() -> new IllegalArgumentException(
-                                "Archdeaconry with ID " + archdeaconryId + " not found"));
-                        assignment.setArchdeaconry(newArchdeaconry);
-                        assignment.setDiocese(null);
-                        assignment.setChurch(null);
-                        targetChanged = true;
-                    }
-                    break;
+        TargetEntities targets = resolveTargets(finalScope, finalDioceseId, finalArchdeaconryId, finalChurchId,
+                dioceseProvided, archdeaconryProvided, churchProvided);
 
-                case CHURCH:
-                    if (churchId == null) {
-                        throw new IllegalArgumentException("Church ID is required for CHURCH scope positions");
-                    }
-                    if (dioceseId != null || archdeaconryId != null) {
-                        throw new IllegalArgumentException(
-                            "Only church should be specified for CHURCH scope positions");
-                    }
-                    if (assignment.getChurch() == null || !churchId.equals(assignment.getChurch().getId())) {
-                        newChurch = churchRepository.findById(churchId)
-                            .orElseThrow(() -> new IllegalArgumentException(
-                                "Church with ID " + churchId + " not found"));
-                        assignment.setChurch(newChurch);
-                        assignment.setDiocese(null);
-                        assignment.setArchdeaconry(null);
-                        targetChanged = true;
-                    }
-                    break;
+        // Apply target changes and track mutations
+        LeadershipAssignment original = assignment;
+        if (finalScope == PositionScope.DIOCESE) {
+            targetChanged = targetChanged || original.getDiocese() == null || !original.getDiocese().getId().equals(targets.diocese.getId());
+            assignment.setDiocese(targets.diocese);
+            if (original.getArchdeaconry() != null) {
+                targetChanged = true;
             }
-        } else {
-            // No target fields provided, use existing ones
-            finalDioceseId = assignment.getDiocese() != null ? assignment.getDiocese().getId() : null;
-            finalArchdeaconryId = assignment.getArchdeaconry() != null ? assignment.getArchdeaconry().getId() : null;
-            finalChurchId = assignment.getChurch() != null ? assignment.getChurch().getId() : null;
+            assignment.setArchdeaconry(null);
+            if (original.getChurch() != null) {
+                targetChanged = true;
+            }
+            assignment.setChurch(null);
+        } else if (finalScope == PositionScope.ARCHDEACONRY) {
+            targetChanged = targetChanged || original.getArchdeaconry() == null || !original.getArchdeaconry().getId().equals(targets.archdeaconry.getId());
+            assignment.setArchdeaconry(targets.archdeaconry);
+            if (original.getDiocese() != null) {
+                targetChanged = true;
+            }
+            assignment.setDiocese(null);
+            if (original.getChurch() != null) {
+                targetChanged = true;
+            }
+            assignment.setChurch(null);
+        } else if (finalScope == PositionScope.CHURCH) {
+            targetChanged = targetChanged || original.getChurch() == null || !original.getChurch().getId().equals(targets.church.getId());
+            assignment.setChurch(targets.church);
+            if (original.getDiocese() != null) {
+                targetChanged = true;
+            }
+            assignment.setDiocese(null);
+            if (original.getArchdeaconry() != null) {
+                targetChanged = true;
+            }
+            assignment.setArchdeaconry(null);
         }
 
         // Update term dates
@@ -333,15 +273,20 @@ public class LeadershipAssignmentService {
 
         // Re-validate if critical fields changed and status is ACTIVE
         if (finalStatus == RecordStatus.ACTIVE && (personChanged || positionChanged || targetChanged)) {
-            // Check for duplicate active assignment (excluding current assignment)
             checkDuplicateAssignmentForUpdate(
-                id, newPerson.getId(), newPosition.getId(), 
-                finalDioceseId, finalArchdeaconryId, finalChurchId, finalScope);
+                id, newPerson.getId(), newPosition.getId(),
+                assignment.getDiocese() != null ? assignment.getDiocese().getId() : null,
+                assignment.getArchdeaconry() != null ? assignment.getArchdeaconry().getId() : null,
+                assignment.getChurch() != null ? assignment.getChurch().getId() : null,
+                finalScope);
 
-            // Re-check seat availability if position or target changed
             if (positionChanged || targetChanged) {
                 checkSeatAvailabilityForUpdate(
-                    id, newPosition, finalDioceseId, finalArchdeaconryId, finalChurchId, finalScope);
+                    id, newPosition,
+                    assignment.getDiocese() != null ? assignment.getDiocese().getId() : null,
+                    assignment.getArchdeaconry() != null ? assignment.getArchdeaconry().getId() : null,
+                    assignment.getChurch() != null ? assignment.getChurch().getId() : null,
+                    finalScope);
             }
         }
 
@@ -548,5 +493,68 @@ public class LeadershipAssignmentService {
             throw new IllegalArgumentException(
                 "All seats (" + position.getSeats() + ") for this position are already filled");
         }
+    }
+
+    private TargetEntities resolveTargets(PositionScope scope,
+                                          Long dioceseId,
+                                          Long archdeaconryId,
+                                          Long churchId,
+                                          boolean dioceseProvided,
+                                          boolean archdeaconryProvided,
+                                          boolean churchProvided) {
+        validateScopeConstraints(scope, dioceseId, archdeaconryId, churchId,
+                dioceseProvided, archdeaconryProvided, churchProvided);
+
+        TargetEntities targets = new TargetEntities();
+        switch (scope) {
+            case DIOCESE -> targets.diocese = dioceseRepository.findById(dioceseId)
+                    .orElseThrow(() -> new IllegalArgumentException("Diocese with ID " + dioceseId + " not found"));
+            case ARCHDEACONRY -> targets.archdeaconry = archdeaconryRepository.findById(archdeaconryId)
+                    .orElseThrow(() -> new IllegalArgumentException("Archdeaconry with ID " + archdeaconryId + " not found"));
+            case CHURCH -> targets.church = churchRepository.findById(churchId)
+                    .orElseThrow(() -> new IllegalArgumentException("Church with ID " + churchId + " not found"));
+        }
+        return targets;
+    }
+
+    private void validateScopeConstraints(PositionScope scope,
+                                          Long dioceseId,
+                                          Long archdeaconryId,
+                                          Long churchId,
+                                          boolean dioceseProvided,
+                                          boolean archdeaconryProvided,
+                                          boolean churchProvided) {
+        switch (scope) {
+            case DIOCESE -> {
+                if (dioceseId == null) {
+                    throw new IllegalArgumentException("Diocese ID is required for DIOCESE scope positions");
+                }
+                if (archdeaconryProvided || churchProvided) {
+                    throw new IllegalArgumentException("Archdeaconry ID and Church ID are not allowed for DIOCESE scope positions");
+                }
+            }
+            case ARCHDEACONRY -> {
+                if (archdeaconryId == null) {
+                    throw new IllegalArgumentException("Archdeaconry ID is required for ARCHDEACONRY scope positions");
+                }
+                if (dioceseProvided || churchProvided) {
+                    throw new IllegalArgumentException("Diocese ID and Church ID are not allowed for ARCHDEACONRY scope positions");
+                }
+            }
+            case CHURCH -> {
+                if (churchId == null) {
+                    throw new IllegalArgumentException("Church ID is required for CHURCH scope positions");
+                }
+                if (dioceseProvided || archdeaconryProvided) {
+                    throw new IllegalArgumentException("Diocese ID and Archdeaconry ID are not allowed for CHURCH scope positions");
+                }
+            }
+        }
+    }
+
+    private static class TargetEntities {
+        Diocese diocese;
+        Archdeaconry archdeaconry;
+        Church church;
     }
 }
