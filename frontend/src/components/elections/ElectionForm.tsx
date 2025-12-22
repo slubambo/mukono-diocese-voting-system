@@ -13,32 +13,70 @@ interface Props {
 }
 
 const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => {
-  const { control, handleSubmit, reset } = useForm<Partial<Election>>({ defaultValues: {} })
+  const { control, handleSubmit, reset } = useForm<Partial<Election>>({
+    defaultValues: {
+      name: '',
+      description: '',
+      termStartDate: '',
+      termEndDate: '',
+      nominationStartAt: '',
+      nominationEndAt: '',
+      votingStartAt: '',
+      votingEndAt: '',
+    },
+  })
   const toast = useToast()
+
+  const formatLocalDateTime = (value?: string | null) => {
+    if (!value) return ''
+    const dt = new Date(value)
+    if (Number.isNaN(dt.getTime())) return ''
+    const pad = (num: number) => String(num).padStart(2, '0')
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+  }
 
   useEffect(() => {
     if (election) {
-      // prefill and convert ISO date strings to datetime-local value (yyyy-MM-ddTHH:mm)
-      const mapDate = (d?: string | null) => {
-        if (!d) return undefined
-        const dt = new Date(d)
-        if (Number.isNaN(dt.getTime())) return undefined
-        return dt.toISOString().slice(0, 16)
+      const values: Partial<Election> = {
+        name: election.name,
+        description: election.description ?? '',
+        termStartDate: election.termStartDate ?? '',
+        termEndDate: election.termEndDate ?? '',
+        nominationStartAt: formatLocalDateTime(election.nominationStartAt),
+        nominationEndAt: formatLocalDateTime(election.nominationEndAt),
+        votingStartAt: formatLocalDateTime(election.votingStartAt),
+        votingEndAt: formatLocalDateTime(election.votingEndAt),
       }
-      const values: Partial<Election> = { ...election, startDate: mapDate(election.startDate as string | undefined), endDate: mapDate(election.endDate as string | undefined) }
       reset(values)
     } else {
-      reset({})
+      reset()
     }
   }, [election, reset])
 
   const onSubmit = async (data: Partial<Election>) => {
+    const toDateOrUndefined = (value?: string) => (value?.trim() ? value : undefined)
+    const toIsoOrUndefined = (value?: string) => {
+      if (!value?.trim()) return undefined
+      const dt = new Date(value)
+      if (Number.isNaN(dt.getTime())) return undefined
+      return dt.toISOString()
+    }
     try {
+      const payload: Partial<Election> = {
+        name: data.name?.trim(),
+        description: data.description?.trim() || undefined,
+        termStartDate: toDateOrUndefined(data.termStartDate as string | undefined),
+        termEndDate: toDateOrUndefined(data.termEndDate as string | undefined),
+        nominationStartAt: toIsoOrUndefined(data.nominationStartAt as string | undefined),
+        nominationEndAt: toIsoOrUndefined(data.nominationEndAt as string | undefined),
+        votingStartAt: toIsoOrUndefined(data.votingStartAt as string | undefined),
+        votingEndAt: toIsoOrUndefined(data.votingEndAt as string | undefined),
+      }
       if (election?.id) {
-        await electionApi.update(election.id, data)
+        await electionApi.update(String(election.id), payload)
         toast.success('Election updated')
       } else {
-        await electionApi.create(data)
+        await electionApi.create(payload)
         toast.success('Election created')
       }
       onSaved && onSaved()
@@ -61,12 +99,28 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
               <TextField {...field} label="Description" multiline minRows={3} />
             )} />
 
-            <Controller name="startDate" control={control} render={({ field }) => (
-              <TextField {...field} label="Start Date" type="datetime-local" InputLabelProps={{ shrink: true }} />
+            <Controller name="termStartDate" control={control} render={({ field }) => (
+              <TextField {...field} label="Term Start Date" type="date" InputLabelProps={{ shrink: true }} />
             )} />
 
-            <Controller name="endDate" control={control} render={({ field }) => (
-              <TextField {...field} label="End Date" type="datetime-local" InputLabelProps={{ shrink: true }} />
+            <Controller name="termEndDate" control={control} render={({ field }) => (
+              <TextField {...field} label="Term End Date" type="date" InputLabelProps={{ shrink: true }} />
+            )} />
+
+            <Controller name="nominationStartAt" control={control} render={({ field }) => (
+              <TextField {...field} label="Nomination Start" type="datetime-local" InputLabelProps={{ shrink: true }} />
+            )} />
+
+            <Controller name="nominationEndAt" control={control} render={({ field }) => (
+              <TextField {...field} label="Nomination End" type="datetime-local" InputLabelProps={{ shrink: true }} />
+            )} />
+
+            <Controller name="votingStartAt" control={control} render={({ field }) => (
+              <TextField {...field} label="Voting Start" type="datetime-local" InputLabelProps={{ shrink: true }} />
+            )} />
+
+            <Controller name="votingEndAt" control={control} render={({ field }) => (
+              <TextField {...field} label="Voting End" type="datetime-local" InputLabelProps={{ shrink: true }} />
             )} />
           </Box>
         </DialogContent>

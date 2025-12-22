@@ -70,8 +70,16 @@ const ElectionsPage: React.FC = () => {
   }
 
   const handleEdit = (e: Election) => {
-    setEditing(e)
-    setShowForm(true)
+    const loadElection = async () => {
+      try {
+        const res = await electionApi.get(String(e.id))
+        setEditing(res)
+        setShowForm(true)
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to load election')
+      }
+    }
+    loadElection()
   }
 
   const handleCancel = async (e: Election) => {
@@ -124,10 +132,10 @@ const ElectionsPage: React.FC = () => {
                       <TableCell>
                         {(() => {
                           // Prefer voting period if available, else term dates
-                          const vs = (e as any).votingStartAt || (e as any).votingStart || (e as any).votingStartAt
-                          const ve = (e as any).votingEndAt || (e as any).votingEnd || (e as any).votingEndAt
-                          const ts = (e as any).termStartDate || (e as any).termStart
-                          const te = (e as any).termEndDate || (e as any).termEnd
+                          const vs = e.votingStartAt
+                          const ve = e.votingEndAt
+                          const ts = e.termStartDate
+                          const te = e.termEndDate
 
                           const start = vs || ts
                           const end = ve || te

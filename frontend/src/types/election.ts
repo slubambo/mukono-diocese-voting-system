@@ -1,12 +1,26 @@
 export type ElectionStatus = 'DRAFT' | 'SCHEDULED' | 'ONGOING' | 'CANCELLED' | 'COMPLETED' | string
 
 export interface Election {
-  id: string
+  id: string | number
   name: string
   description?: string
   status?: ElectionStatus
-  startDate?: string | null
-  endDate?: string | null
+  scope?: 'DIOCESE' | 'ARCHDEACONRY' | 'CHURCH' | string
+  fellowshipId?: number
+  fellowshipName?: string
+  fellowship?: { id: number; name?: string }
+  dioceseId?: number | null
+  archdeaconryId?: number | null
+  churchId?: number | null
+  diocese?: { id: number; name?: string }
+  archdeaconry?: { id: number; name?: string }
+  church?: { id: number; name?: string }
+  termStartDate?: string | null
+  termEndDate?: string | null
+  nominationStartAt?: string | null
+  nominationEndAt?: string | null
+  votingStartAt?: string | null
+  votingEndAt?: string | null
   createdAt?: string
   updatedAt?: string
 }

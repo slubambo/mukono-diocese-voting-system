@@ -93,8 +93,10 @@ const ElectionDetailPage: React.FC = () => {
       >
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
           <StatusChip status={election.status || 'pending'} />
-          {election.startDate && <Typography>Start: {new Date(election.startDate).toLocaleString()}</Typography>}
-          {election.endDate && <Typography>End: {new Date(election.endDate).toLocaleString()}</Typography>}
+          {election.termStartDate && <Typography>Term Start: {new Date(election.termStartDate).toLocaleDateString()}</Typography>}
+          {election.termEndDate && <Typography>Term End: {new Date(election.termEndDate).toLocaleDateString()}</Typography>}
+          {election.votingStartAt && <Typography>Voting Start: {new Date(election.votingStartAt).toLocaleString()}</Typography>}
+          {election.votingEndAt && <Typography>Voting End: {new Date(election.votingEndAt).toLocaleString()}</Typography>}
         </Box>
 
         <Paper sx={{ mb: 2 }}>
