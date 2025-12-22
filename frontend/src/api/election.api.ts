@@ -19,6 +19,8 @@ export const electionApi = {
   listPositions: (electionId: string) => api.get<import('../types/election').PagedResponse<Position>>(`${BASE}/${electionId}/positions`),
   createPosition: (electionId: string, payload: Partial<Position>) =>
     api.post<Position>(`${BASE}/${electionId}/positions`, payload),
+  deletePosition: (electionId: string, positionId: string | number) =>
+    api.delete(`${BASE}/${electionId}/positions/${positionId}`),
   // Applicants
   listApplicants: (electionId: string, params: Record<string, unknown> = {}) =>
     api.get<import('../types/election').PagedResponse<any>>(`${BASE}/${electionId}/applicants`, { params }),

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Button, Paper, Table, TableBody, TableCell, TableHead, TableRow, TableContainer } from '@mui/material'
+import { Box, Button, Paper, Table, TableBody, TableCell, TableHead, TableRow, TableContainer, IconButton } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import { electionApi } from '../../api/election.api'
 import type { Position } from '../../types/election'
@@ -7,11 +7,14 @@ import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
 import PositionForm from './PositionForm'
 import { useToast } from '../feedback/ToastProvider'
+import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
 
 const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ electionId, isAdmin = false }) => {
   const [loading, setLoading] = useState(true)
   const [positions, setPositions] = useState<Position[]>([])
   const [showAdd, setShowAdd] = useState(false)
+  const [editing, setEditing] = useState<Position | undefined>(undefined)
   const toast = useToast()
 
   const fetch = async () => {
@@ -34,7 +37,7 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
 
   return (
     <Box>
-      {isAdmin && <Button startIcon={<AddIcon />} sx={{ mb: 2 }} variant="contained" onClick={() => setShowAdd(true)}>Add Position</Button>}
+          {isAdmin && <Button startIcon={<AddIcon />} sx={{ mb: 2 }} variant="contained" onClick={() => { setEditing(undefined); setShowAdd(true) }}>Add Position</Button>}
 
       {positions.length === 0 ? (
         <EmptyState title="No positions" description="No positions have been configured for this election." action={isAdmin ? <Button onClick={() => setShowAdd(true)}>Add Position</Button> : undefined} />
@@ -45,7 +48,8 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
               <TableHead>
                 <TableRow>
                   <TableCell>Title</TableCell>
-                  <TableCell>Description</TableCell>
+                  <TableCell>Fellowship</TableCell>
+                  <TableCell>Seats</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -53,8 +57,25 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
                 {positions.map(p => (
                   <TableRow key={p.id} hover>
                     <TableCell>{p.fellowshipPosition?.titleName || p.title || p.positionId}</TableCell>
-                    <TableCell>{p.fellowshipPosition?.fellowshipName || p.description}</TableCell>
-                    <TableCell align="right">{p.seats ?? '-'}</TableCell>
+                    <TableCell>{p.fellowshipPosition?.fellowshipName ?? '-'}</TableCell>
+                    <TableCell>{p.seats ?? '-'}</TableCell>
+                    <TableCell align="right">
+                      {isAdmin && (
+                        <>
+                          <IconButton size="small" onClick={() => { setEditing(p); setShowAdd(true) }}><EditIcon fontSize="small" /></IconButton>
+                          <IconButton size="small" onClick={async () => {
+                            if (!confirm('Remove this position from the election?')) return
+                            try {
+                              await electionApi.deletePosition(electionId, p.id!)
+                              toast.success('Position removed')
+                              fetch()
+                            } catch (err: any) {
+                              toast.error(err?.response?.data?.message || err?.message || 'Failed to remove position')
+                            }
+                          }}><DeleteIcon fontSize="small" /></IconButton>
+                        </>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -63,7 +84,7 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
         </Paper>
       )}
 
-      <PositionForm open={showAdd} onClose={() => setShowAdd(false)} electionId={electionId} onSaved={() => { setShowAdd(false); fetch() }} />
+      <PositionForm open={showAdd} onClose={() => setShowAdd(false)} electionId={electionId} onSaved={() => { setShowAdd(false); fetch() }} position={editing} />
     </Box>
   )
 }

@@ -18,7 +18,15 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
 
   useEffect(() => {
     if (election) {
-      reset(election)
+      // prefill and convert ISO date strings to datetime-local value (yyyy-MM-ddTHH:mm)
+      const mapDate = (d?: string | null) => {
+        if (!d) return undefined
+        const dt = new Date(d)
+        if (Number.isNaN(dt.getTime())) return undefined
+        return dt.toISOString().slice(0, 16)
+      }
+      const values: Partial<Election> = { ...election, startDate: mapDate(election.startDate as string | undefined), endDate: mapDate(election.endDate as string | undefined) }
+      reset(values)
     } else {
       reset({})
     }

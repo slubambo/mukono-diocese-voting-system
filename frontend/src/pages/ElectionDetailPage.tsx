@@ -116,25 +116,11 @@ const ElectionDetailPage: React.FC = () => {
             </Box>
           )}
 
-          {tab === 1 && (
-            <PositionsTab electionId={electionId!} isAdmin={isAdmin} />
-          )}
-
-          {tab === 2 && (
-            <VotingPeriodsTab electionId={electionId!} />
-          )}
-
-          {tab === 2 && (
-            <ApplicantsTab electionId={electionId!} />
-          )}
-
-          {tab === 3 && (
-            <CandidatesTab electionId={electionId!} />
-          )}
-
-          {tab === 4 && (
-            <BallotPreviewTab electionId={electionId!} />
-          )}
+          {tab === 1 && <PositionsTab electionId={electionId!} isAdmin={isAdmin} />}
+          {tab === 2 && <VotingPeriodsTab electionId={electionId!} />}
+          {tab === 3 && <ApplicantsTab electionId={electionId!} />}
+          {tab === 4 && <CandidatesTab electionId={electionId!} />}
+          {tab === 5 && <BallotPreviewTab electionId={electionId!} />}
         </Paper>
       </PageLayout>
     </AppShell>
