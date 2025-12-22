@@ -121,17 +121,22 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
       const pos = positions.find(p => p.id === payload.fellowshipPositionId)
       if (!pos) { addToast('Select a valid position', 'error'); return }
       const scope = pos.scope
+      // Backend expects only the single target id for the scope:
+      // - DIOCESE => send only dioceseId
+      // - ARCHDEACONRY => send only archdeaconryId
+      // - CHURCH => send only churchId
       if (scope === 'DIOCESE') {
-        // only diocese should be sent
+        if (!payload.dioceseId) { addToast('Diocese is required for this position', 'error'); return }
         payload.archdeaconryId = undefined
         payload.churchId = undefined
-        if (!payload.dioceseId) { addToast('Diocese is required for this position', 'error'); return }
       } else if (scope === 'ARCHDEACONRY') {
-        // archdeaconry required
-        payload.churchId = undefined
         if (!payload.archdeaconryId) { addToast('Archdeaconry is required for this position', 'error'); return }
+        payload.dioceseId = undefined
+        payload.churchId = undefined
       } else if (scope === 'CHURCH') {
-        if (!payload.archdeaconryId || !payload.churchId) { addToast('Archdeaconry and Church are required for this position', 'error'); return }
+        if (!payload.churchId) { addToast('Church is required for this position', 'error'); return }
+        payload.dioceseId = undefined
+        payload.archdeaconryId = undefined
       }
       // notify parent of level selection if provided
       if (onLevelChange) onLevelChange(selectedLevel)
