@@ -13,6 +13,9 @@ import { electionApi } from '../api/election.api'
 import { useToast } from '../components/feedback/ToastProvider'
 import { useAuth } from '../context/AuthContext'
 import PositionsTab from '../components/elections/PositionsTab'
+import ApplicantsTab from '../components/elections/ApplicantsTab'
+import CandidatesTab from '../components/elections/CandidatesTab'
+import BallotPreviewTab from '../components/elections/BallotPreviewTab'
 
 const ElectionDetailPage: React.FC = () => {
   const { electionId } = useParams()
@@ -97,6 +100,9 @@ const ElectionDetailPage: React.FC = () => {
           <Tabs value={tab} onChange={(_, v) => setTab(v)}>
             <Tab label="Overview" />
             <Tab label="Positions" />
+            <Tab label="Applicants" />
+            <Tab label="Candidates" />
+            <Tab label="Ballot Preview" />
           </Tabs>
         </Paper>
 
@@ -110,6 +116,18 @@ const ElectionDetailPage: React.FC = () => {
 
           {tab === 1 && (
             <PositionsTab electionId={electionId!} isAdmin={isAdmin} />
+          )}
+
+          {tab === 2 && (
+            <ApplicantsTab electionId={electionId!} />
+          )}
+
+          {tab === 3 && (
+            <CandidatesTab electionId={electionId!} />
+          )}
+
+          {tab === 4 && (
+            <BallotPreviewTab electionId={electionId!} />
           )}
         </Paper>
       </PageLayout>
