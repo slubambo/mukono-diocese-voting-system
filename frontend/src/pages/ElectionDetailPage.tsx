@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Box, Paper, Tab, Tabs, Typography, IconButton } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import CancelIcon from '@mui/icons-material/Cancel'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import { Button } from '@mui/material'
 import AppShell from '../components/layout/AppShell'
 import PageLayout from '../components/layout/PageLayout'
 import LoadingState from '../components/common/LoadingState'
@@ -73,10 +75,17 @@ const ElectionDetailPage: React.FC = () => {
       <PageLayout
         title={election.name}
         subtitle={election.description}
-        actions={isAdmin ? (<>
-          <IconButton onClick={handleEdit}><EditIcon /></IconButton>
-          <IconButton onClick={handleCancel}><CancelIcon /></IconButton>
-        </>) : undefined}
+        actions={(
+          <>
+            <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(isAdmin ? '/admin/elections' : '/ds/elections')}>Back</Button>
+            {isAdmin ? (
+              <>
+                <IconButton onClick={handleEdit}><EditIcon /></IconButton>
+                <IconButton onClick={handleCancel}><CancelIcon /></IconButton>
+              </>
+            ) : null}
+          </>
+        )}
       >
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
           <StatusChip status={election.status || 'pending'} />

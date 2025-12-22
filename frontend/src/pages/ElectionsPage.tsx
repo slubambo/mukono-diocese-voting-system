@@ -121,7 +121,29 @@ const ElectionsPage: React.FC = () => {
                     <TableRow key={e.id} hover>
                       <TableCell>{e.name}</TableCell>
                       <TableCell><StatusChip status={(e.status || 'pending') as any} /></TableCell>
-                      <TableCell>{e.startDate ? `${new Date(e.startDate).toLocaleDateString()} — ${e.endDate ? new Date(e.endDate).toLocaleDateString() : ''}` : '—'}</TableCell>
+                      <TableCell>
+                        {(() => {
+                          // Prefer voting period if available, else term dates
+                          const vs = (e as any).votingStartAt || (e as any).votingStart || (e as any).votingStartAt
+                          const ve = (e as any).votingEndAt || (e as any).votingEnd || (e as any).votingEndAt
+                          const ts = (e as any).termStartDate || (e as any).termStart
+                          const te = (e as any).termEndDate || (e as any).termEnd
+
+                          const start = vs || ts
+                          const end = ve || te
+
+                          if (start && end) {
+                            try {
+                              return `${new Date(start).toLocaleDateString()} — ${new Date(end).toLocaleDateString()}`
+                            } catch (err) {
+                              return `${start} — ${end}`
+                            }
+                          }
+
+                          if (start) return new Date(start).toLocaleDateString()
+                          return '—'
+                        })()}
+                      </TableCell>
                       <TableCell>{e.createdAt ? new Date(e.createdAt).toLocaleString() : '—'}</TableCell>
                       <TableCell align="right">
                         <IconButton onClick={() => handleView(e.id)} size="small"><VisibilityIcon /></IconButton>
