@@ -185,7 +185,7 @@ export const PositionPage: React.FC = () => {
 
   return (
     <AppShell>
-      <PageLayout>
+      <PageLayout title="Positions">
         {/* Modern Header with Filters */}
         <MasterDataHeader
           title="Positions"

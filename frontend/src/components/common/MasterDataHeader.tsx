@@ -7,6 +7,7 @@ import {
   Box,
   Typography,
   Button,
+  TextField,
   FormControl,
   InputLabel,
   Select,
@@ -21,7 +22,7 @@ interface FilterOption {
   id: string
   label: string
   value: string | number | null
-  options: Array<{ id: string | number; name: string }>
+  options?: Array<{ id: string | number; name: string }>
   onChange: (value: string | number | null) => void
   disabled?: boolean
   placeholder?: string
@@ -35,6 +36,7 @@ interface MasterDataHeaderProps {
   filters?: FilterOption[]
   stats?: Array<{ label: string; value: string | number }>
   isAdmin?: boolean
+  actions?: Array<{ id: string; label: string; onClick: () => void }>
 }
 
 export const MasterDataHeader: React.FC<MasterDataHeaderProps> = ({
@@ -45,6 +47,7 @@ export const MasterDataHeader: React.FC<MasterDataHeaderProps> = ({
   filters,
   stats,
   isAdmin = false,
+  actions,
 }) => {
   return (
     <Paper
@@ -80,29 +83,34 @@ export const MasterDataHeader: React.FC<MasterDataHeaderProps> = ({
           </Typography>
         </Box>
 
-        {/* Action Button */}
-        {isAdmin && onAddClick && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={onAddClick}
-            sx={{
-              background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-              textTransform: 'none',
-              fontWeight: 600,
-              px: 2.5,
-              py: 1,
-              borderRadius: 1.5,
-              boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%)',
-                boxShadow: '0 6px 20px rgba(124, 58, 237, 0.4)',
-              },
-            }}
-          >
-            {addButtonLabel}
-          </Button>
-        )}
+        {/* Actions */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {actions && actions.map((a) => (
+            <Button key={a.id} variant="outlined" onClick={a.onClick} sx={{ textTransform: 'none' }}>{a.label}</Button>
+          ))}
+          {isAdmin && onAddClick && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={onAddClick}
+              sx={{
+                background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 2.5,
+                py: 1,
+                borderRadius: 1.5,
+                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%)',
+                  boxShadow: '0 6px 20px rgba(124, 58, 237, 0.4)',
+                },
+              }}
+            >
+              {addButtonLabel}
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {/* Stats Row */}
@@ -139,35 +147,47 @@ export const MasterDataHeader: React.FC<MasterDataHeaderProps> = ({
           <Divider sx={{ my: 2 }} />
           <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 2 }}>
             {filters.map((filter) => (
-              <FormControl key={filter.id} sx={{ minWidth: 220 }} size="small">
-                <InputLabel>{filter.label}</InputLabel>
-                <Select
-                  value={filter.value ?? ''}
-                  label={filter.label}
-                  onChange={(e) => filter.onChange(e.target.value === '' ? null : e.target.value)}
-                  disabled={filter.disabled}
-                  sx={{
-                    borderRadius: 1,
-                    '& .MuiOutlinedInput-root': {
-                      '&:hover fieldset': {
-                        borderColor: '#7c3aed',
+              filter.options && filter.options.length > 0 ? (
+                <FormControl key={filter.id} sx={{ minWidth: 220 }} size="small">
+                  <InputLabel>{filter.label}</InputLabel>
+                  <Select
+                    value={filter.value ?? ''}
+                    label={filter.label}
+                    onChange={(e) => filter.onChange(e.target.value === '' ? null : e.target.value)}
+                    disabled={filter.disabled}
+                    sx={{
+                      borderRadius: 1,
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': {
+                          borderColor: '#7c3aed',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#7c3aed',
+                        },
                       },
-                      '&.Mui-focused fieldset': {
-                        borderColor: '#7c3aed',
-                      },
-                    },
-                  }}
-                >
-                  <MenuItem value="" disabled>
-                    -- {filter.placeholder || 'Select'} --
-                  </MenuItem>
-                  {filter.options.map((opt) => (
-                    <MenuItem key={opt.id} value={opt.id}>
-                      {opt.name}
+                    }}
+                  >
+                    <MenuItem value="" disabled>
+                      -- {filter.placeholder || 'Select'} --
                     </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                    {filter.options.map((opt) => (
+                      <MenuItem key={opt.id} value={opt.id}>
+                        {opt.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              ) : (
+                <TextField
+                  key={filter.id}
+                  label={filter.label}
+                  size="small"
+                  value={filter.value ?? ''}
+                  onChange={(e) => filter.onChange(e.target.value === '' ? null : e.target.value)}
+                  placeholder={filter.placeholder}
+                  sx={{ minWidth: 220 }}
+                />
+              )
             ))}
           </Stack>
         </>

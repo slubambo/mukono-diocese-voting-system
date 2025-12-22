@@ -11,6 +11,9 @@ import com.mukono.voting.model.user.Role;
 import com.mukono.voting.repository.user.RoleRepository;
 import com.mukono.voting.model.user.User;
 import com.mukono.voting.repository.user.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,10 +46,14 @@ public class UserService {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new IllegalArgumentException("Username already exists");
         }
+        if (request.getEmail() != null && userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email already in use");
+        }
         User user = new User();
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setEmail(request.getEmail());
+        user.setDisplayName(request.getDisplayName());
         user.setStatus(User.Status.ACTIVE);
 
         Person linkedPerson = null;
@@ -96,6 +103,12 @@ public class UserService {
             }
             user.setEmail(request.getEmail());
         }
+        if (request.getDisplayName() != null) {
+            user.setDisplayName(request.getDisplayName());
+        }
+        if (request.getActive() != null) {
+            user.setStatus(request.getActive() ? User.Status.ACTIVE : User.Status.DISABLED);
+        }
         if (request.getStatus() != null && !request.getStatus().isBlank()) {
             user.setStatus(User.Status.valueOf(request.getStatus().toUpperCase()));
         }
@@ -134,6 +147,10 @@ public class UserService {
         response.setEmail(user.getEmail());
         response.setStatus(user.getStatus().toString());
         response.setRoles(user.getRoles().stream().map(role -> role.getName().toString()).collect(Collectors.toSet()));
+        response.setDisplayName(user.getDisplayName());
+        response.setActive(user.getStatus() == User.Status.ACTIVE);
+        response.setCreatedAt(user.getCreatedAt());
+        response.setUpdatedAt(user.getUpdatedAt());
         if (user.getPerson() != null) {
             response.setPerson(toPersonResponse(user.getPerson()));
         }
@@ -160,5 +177,20 @@ public class UserService {
         User user = userRepository.findById(currentUser.getId())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         return toUserResponse(user);
+    }
+
+    // Optional: filtered search by username/email/active
+    public Page<User> search(String username, String email, Boolean active, Pageable pageable) {
+        Specification<User> spec = Specification.where(null);
+        if (username != null && !username.isBlank()) {
+            spec = spec.and((root, q, cb) -> cb.like(cb.lower(root.get("username")), "%" + username.toLowerCase() + "%"));
+        }
+        if (email != null && !email.isBlank()) {
+            spec = spec.and((root, q, cb) -> cb.like(cb.lower(root.get("email")), "%" + email.toLowerCase() + "%"));
+        }
+        if (active != null) {
+            spec = spec.and((root, q, cb) -> cb.equal(root.get("status"), active ? User.Status.ACTIVE : User.Status.DISABLED));
+        }
+        return userRepository.findAll(spec, pageable);
     }
 }

@@ -118,7 +118,7 @@ export const PositionTitlePage: React.FC = () => {
 
   return (
     <AppShell>
-      <PageLayout>
+      <PageLayout title="Position Titles">
         {/* Modern Header */}
         <MasterDataHeader
           title="Position Titles"

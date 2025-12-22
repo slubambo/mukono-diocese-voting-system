@@ -58,7 +58,7 @@ export const ChurchPage: React.FC = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
-  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 })
+  const [, setStats] = useState({ total: 0, active: 0, inactive: 0 })
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selectedChurch, setSelectedChurch] = useState<Church | null>(null)
@@ -204,7 +204,7 @@ export const ChurchPage: React.FC = () => {
 
   return (
     <AppShell>
-      <PageLayout>
+      <PageLayout title="Church Management">
         {/* Modern Header with Filters */}
         <MasterDataHeader
           title="Church Management"

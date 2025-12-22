@@ -225,7 +225,7 @@ export const ArchdeaconryPage: React.FC = () => {
 
   return (
     <AppShell>
-      <PageLayout>
+      <PageLayout title="Archdeaconries">
         {/* Modern Header with Filters */}
         <MasterDataHeader
           title="Archdeaconry Management"
