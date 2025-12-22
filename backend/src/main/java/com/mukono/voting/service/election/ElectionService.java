@@ -52,7 +52,7 @@ public class ElectionService {
      * 
      * @param name election name (required, max 255)
      * @param description election description (optional, max 1000)
-     * @param fellowshipId fellowship ID (required)
+     * @param fellowshipId fellowship ID (optional, deprecated - fellowships inferred from positions)
      * @param scope position scope (required)
      * @param dioceseId diocese ID (required if scope is DIOCESE)
      * @param archdeaconryId archdeaconry ID (required if scope is ARCHDEACONRY)
@@ -94,12 +94,12 @@ public class ElectionService {
             throw new IllegalArgumentException("Election description must not exceed 1000 characters");
         }
 
-        // Validate fellowship
-        if (fellowshipId == null) {
-            throw new IllegalArgumentException("Fellowship ID is required");
+        // Validate fellowship (optional for backward compatibility, not used for new elections)
+        Fellowship fellowship = null;
+        if (fellowshipId != null) {
+            fellowship = fellowshipRepository.findById(fellowshipId)
+                    .orElseThrow(() -> new IllegalArgumentException("Fellowship with ID " + fellowshipId + " not found"));
         }
-        Fellowship fellowship = fellowshipRepository.findById(fellowshipId)
-                .orElseThrow(() -> new IllegalArgumentException("Fellowship with ID " + fellowshipId + " not found"));
 
         // Validate scope
         if (scope == null) {
@@ -191,26 +191,27 @@ public class ElectionService {
             }
         }
 
-        // Check for duplicate election (same fellowship + scope + target + term)
+        // Check for duplicate election (same scope + target + term)
+        // Note: fellowship is no longer part of uniqueness; positions define fellowships
         boolean exists = false;
         switch (scope) {
             case DIOCESE:
-                exists = electionRepository.existsByFellowshipIdAndScopeAndDioceseIdAndTermStartDateAndTermEndDate(
-                        fellowshipId, scope, dioceseId, termStartDate, termEndDate);
+                exists = electionRepository.existsByScopeAndDioceseIdAndTermStartDateAndTermEndDate(
+                        scope, dioceseId, termStartDate, termEndDate);
                 break;
             case ARCHDEACONRY:
-                exists = electionRepository.existsByFellowshipIdAndScopeAndArchdeaconryIdAndTermStartDateAndTermEndDate(
-                        fellowshipId, scope, archdeaconryId, termStartDate, termEndDate);
+                exists = electionRepository.existsByScopeAndArchdeaconryIdAndTermStartDateAndTermEndDate(
+                        scope, archdeaconryId, termStartDate, termEndDate);
                 break;
             case CHURCH:
-                exists = electionRepository.existsByFellowshipIdAndScopeAndChurchIdAndTermStartDateAndTermEndDate(
-                        fellowshipId, scope, churchId, termStartDate, termEndDate);
+                exists = electionRepository.existsByScopeAndChurchIdAndTermStartDateAndTermEndDate(
+                        scope, churchId, termStartDate, termEndDate);
                 break;
         }
 
         if (exists) {
             throw new IllegalArgumentException(
-                    "An election already exists for this fellowship, scope, target, and term period");
+                    "An election already exists for this scope, target, and term period");
         }
 
         // Create election

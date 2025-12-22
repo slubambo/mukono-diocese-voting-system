@@ -108,7 +108,7 @@ public class TestDataBuilder {
      */
     public static ElectionPosition buildElectionPosition(String positionTitle, Election election, Fellowship fellowship, PositionScope scope) {
         FellowshipPosition fellowshipPosition = buildFellowshipPosition(positionTitle, fellowship, scope);
-        ElectionPosition position = new ElectionPosition(election, fellowshipPosition, 1);
+        ElectionPosition position = new ElectionPosition(election, fellowship, fellowshipPosition, 1);
         return position;
     }
 

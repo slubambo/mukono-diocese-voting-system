@@ -68,10 +68,9 @@ public class ElectionPositionService {
                     ") does not match election scope (" + election.getScope() + ")");
         }
 
-        // Validate fellowship match
-        if (!fellowshipPosition.getFellowship().getId().equals(election.getFellowship().getId())) {
-            throw new IllegalArgumentException(
-                    "Fellowship position belongs to a different fellowship than the election");
+        // Extract fellowship from fellowship position (elections can now have multiple fellowships)
+        if (fellowshipPosition.getFellowship() == null) {
+            throw new IllegalArgumentException("Fellowship position must have an associated fellowship");
         }
 
         // Validate seats (default to fellowshipPosition.seats if not provided)
@@ -80,17 +79,20 @@ public class ElectionPositionService {
             throw new IllegalArgumentException("Number of seats must be at least 1");
         }
 
-        // Check for duplicates
-        if (electionPositionRepository.existsByElectionIdAndFellowshipPositionId(electionId, fellowshipPositionId)) {
+        // Check for duplicates (now includes fellowship in uniqueness check)
+        if (electionPositionRepository.existsByElectionIdAndFellowshipIdAndFellowshipPositionId(
+                electionId, fellowshipPosition.getFellowship().getId(), fellowshipPositionId)) {
             throw new IllegalArgumentException(
-                    "Position is already added to this election");
+                    "Position is already added to this election for this fellowship");
         }
 
-        // Create and save
+        // Create and save with fellowship
         ElectionPosition electionPosition = new ElectionPosition();
         electionPosition.setElection(election);
+        electionPosition.setFellowship(fellowshipPosition.getFellowship());
         electionPosition.setFellowshipPosition(fellowshipPosition);
         electionPosition.setSeats(finalSeats);
+        electionPosition.setMaxVotesPerVoter(finalSeats); // Default max votes = seats
 
         return electionPositionRepository.save(electionPosition);
     }

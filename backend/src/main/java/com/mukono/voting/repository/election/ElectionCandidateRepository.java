@@ -42,6 +42,19 @@ public interface ElectionCandidateRepository extends JpaRepository<ElectionCandi
     Page<ElectionCandidate> findByElectionPositionId(Long electionPositionId, Pageable pageable);
 
     /**
+     * Find candidates for multiple election positions.
+     * Used by ballot service to load candidates only for assigned positions.
+     * 
+     * @param electionPositionIds list of election position IDs
+     * @return list of candidates for the specified positions
+     */
+    @Query("SELECT ec FROM ElectionCandidate ec " +
+           "JOIN FETCH ec.person " +
+           "WHERE ec.electionPosition.id IN :electionPositionIds " +
+           "ORDER BY ec.person.fullName ASC")
+    List<ElectionCandidate> findByElectionPositionIdIn(@Param("electionPositionIds") List<Long> electionPositionIds);
+
+    /**
      * Find a specific candidate by election, position, and person.
      * 
      * @param electionId the election ID

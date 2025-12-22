@@ -1,6 +1,7 @@
 package com.mukono.voting.model.election;
 
 import com.mukono.voting.model.leadership.FellowshipPosition;
+import com.mukono.voting.model.org.Fellowship;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -14,11 +15,12 @@ import jakarta.validation.constraints.NotNull;
     uniqueConstraints = {
         @UniqueConstraint(
             name = "uk_election_fellowship_position",
-            columnNames = {"election_id", "fellowship_position_id"}
+            columnNames = {"election_id", "fellowship_id", "fellowship_position_id"}
         )
     },
     indexes = {
         @Index(name = "idx_election_positions_election", columnList = "election_id"),
+        @Index(name = "idx_election_positions_fellowship", columnList = "fellowship_id"),
         @Index(name = "idx_election_positions_fellowship_position", columnList = "fellowship_position_id")
     }
 )
@@ -34,6 +36,11 @@ public class ElectionPosition {
     private Election election;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fellowship_id", nullable = false)
+    @NotNull(message = "Fellowship is required")
+    private Fellowship fellowship;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fellowship_position_id", nullable = false)
     @NotNull(message = "Fellowship position is required")
     private FellowshipPosition fellowshipPosition;
@@ -43,14 +50,21 @@ public class ElectionPosition {
     @Min(value = 1, message = "Number of seats must be at least 1")
     private Integer seats;
 
+    @Column(nullable = false)
+    @NotNull(message = "Max votes per voter is required")
+    @Min(value = 1, message = "Max votes per voter must be at least 1")
+    private Integer maxVotesPerVoter = 1;
+
     // Constructors
     public ElectionPosition() {
     }
 
-    public ElectionPosition(Election election, FellowshipPosition fellowshipPosition, Integer seats) {
+    public ElectionPosition(Election election, Fellowship fellowship, FellowshipPosition fellowshipPosition, Integer seats) {
         this.election = election;
+        this.fellowship = fellowship;
         this.fellowshipPosition = fellowshipPosition;
         this.seats = seats;
+        this.maxVotesPerVoter = 1;
     }
 
     // Getters and Setters
@@ -70,6 +84,14 @@ public class ElectionPosition {
         this.election = election;
     }
 
+    public Fellowship getFellowship() {
+        return fellowship;
+    }
+
+    public void setFellowship(Fellowship fellowship) {
+        this.fellowship = fellowship;
+    }
+
     public FellowshipPosition getFellowshipPosition() {
         return fellowshipPosition;
     }
@@ -84,6 +106,14 @@ public class ElectionPosition {
 
     public void setSeats(Integer seats) {
         this.seats = seats;
+    }
+
+    public Integer getMaxVotesPerVoter() {
+        return maxVotesPerVoter;
+    }
+
+    public void setMaxVotesPerVoter(Integer maxVotesPerVoter) {
+        this.maxVotesPerVoter = maxVotesPerVoter;
     }
 
     @Override
