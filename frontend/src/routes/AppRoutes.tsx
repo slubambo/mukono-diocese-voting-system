@@ -15,6 +15,7 @@ import { PositionTitlePage } from '../pages/configuration/PositionTitlePage'
 import { PositionPage } from '../pages/configuration/PositionPage'
 import PeopleRegistryPage from '../pages/PeopleRegistryPage'
 import LeadershipAssignmentsPage from '../pages/LeadershipAssignmentsPage'
+import UserManagementPage from '../pages/UserManagementPage'
 
 const DS_ROLES = ['ROLE_DS', 'ROLE_BISHOP', 'ROLE_SENIOR_STAFF', 'ROLE_POLLING_OFFICER']
 const CONFIG_ROLES = ['ROLE_ADMIN', ...DS_ROLES] // Admin has full CRUD, DS roles have read-only
@@ -137,10 +138,26 @@ const AppRoutes = () => (
       }
     />
     <Route
+      path="/admin/users"
+      element={
+        <RequireRole roles={['ROLE_ADMIN']}>
+          <UserManagementPage />
+        </RequireRole>
+      }
+    />
+    <Route
       path="/ds/leadership/assignments"
       element={
         <RequireRole roles={DS_ROLES}>
           <LeadershipAssignmentsPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="/ds/users"
+      element={
+        <RequireRole roles={DS_ROLES}>
+          <UserManagementPage />
         </RequireRole>
       }
     />

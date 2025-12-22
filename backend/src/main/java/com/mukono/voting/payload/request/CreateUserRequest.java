@@ -17,8 +17,9 @@ public class CreateUserRequest {
 
     private String email;
 
-    @NotEmpty(message = "Roles are required")
-    private Set<String> roles; // e.g., ["ROLE_DS", "ROLE_ADMIN"]
+    private String displayName; // optional
+
+    private Set<String> roles; // optional: will default to empty and validated in service
 
     private Long personId; // Optional: link to existing person
 
@@ -49,6 +50,14 @@ public class CreateUserRequest {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
     }
 
     public Set<String> getRoles() {

@@ -53,6 +53,9 @@ public class User extends DateAudit {
     )
     private Set<Role> roles = new HashSet<>();
 
+    @Column(length = 150)
+    private String displayName; // optional
+
     public enum Status {
         ACTIVE, DISABLED
     }
@@ -115,5 +118,13 @@ public class User extends DateAudit {
 
     public void setRoles(Set<Role> roles) {
         this.roles = roles;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
     }
 }

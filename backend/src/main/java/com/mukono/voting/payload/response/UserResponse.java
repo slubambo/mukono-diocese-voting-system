@@ -16,6 +16,14 @@ public class UserResponse {
 
     private PersonResponse person; // Optional: linked person
 
+    private String displayName;
+
+    private boolean active;
+
+    private java.time.Instant createdAt;
+
+    private java.time.Instant updatedAt;
+
     public UserResponse() {
     }
 
@@ -73,5 +81,37 @@ public class UserResponse {
 
     public void setPerson(PersonResponse person) {
         this.person = person;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public java.time.Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(java.time.Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public java.time.Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(java.time.Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

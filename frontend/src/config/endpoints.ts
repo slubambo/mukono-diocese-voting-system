@@ -82,3 +82,16 @@ export const LEADERSHIP_ASSIGNMENT_ENDPOINTS = {
 export const LEADERSHIP_META_ENDPOINTS = {
   LEVELS: `${API_ENV.API_V1}/ds/leadership/levels`,
 } as const
+
+// User management endpoints
+export const USER_ENDPOINTS = {
+  LIST: `${API_ENV.API_V1}/users`,
+  CREATE: `${API_ENV.API_V1}/users`,
+  GET: (id: number) => `${API_ENV.API_V1}/users/${id}`,
+  UPDATE: (id: number) => `${API_ENV.API_V1}/users/${id}`,
+  DELETE: (id: number) => `${API_ENV.API_V1}/users/${id}`,
+  DEACTIVATE: (id: number) => `${API_ENV.API_V1}/users/${id}/deactivate`,
+  ACTIVATE: (id: number) => `${API_ENV.API_V1}/users/${id}/activate`,
+  RESET_PASSWORD: (id: number) => `${API_ENV.API_V1}/users/${id}/reset-password`,
+  ROLES: `${API_ENV.API_V1}/users/roles`,
+} as const

@@ -14,6 +14,10 @@ public class UpdateUserRequest {
 
     private String password; // Optional: update password
 
+    private String displayName; // optional
+
+    private Boolean active; // optional: true/false maps to status
+
     public UpdateUserRequest() {
     }
 
@@ -55,5 +59,21 @@ public class UpdateUserRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
     }
 }
