@@ -138,13 +138,25 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
         payload.dioceseId = undefined
         payload.archdeaconryId = undefined
       }
+      // construct final payload with only allowed fields per backend expectations
+      const finalPayload: any = {
+        personId: Number(payload.personId),
+        fellowshipPositionId: Number(payload.fellowshipPositionId),
+        termStartDate: payload.termStartDate,
+        termEndDate: payload.termEndDate,
+        notes: payload.notes ?? undefined,
+      }
+      if (scope === 'DIOCESE') finalPayload.dioceseId = Number(payload.dioceseId)
+      if (scope === 'ARCHDEACONRY') finalPayload.archdeaconryId = Number(payload.archdeaconryId)
+      if (scope === 'CHURCH') finalPayload.churchId = Number(payload.churchId)
+
       // notify parent of level selection if provided
       if (onLevelChange) onLevelChange(selectedLevel)
       if (assignment) {
-        await leadershipApi.update(assignment.id, payload)
+        await leadershipApi.update(assignment.id, finalPayload)
         addToast('Assignment updated', 'success')
       } else {
-        await leadershipApi.create(payload)
+        await leadershipApi.create(finalPayload)
         addToast('Assignment created', 'success')
       }
       if (onSaved) onSaved()
