@@ -16,6 +16,7 @@ import PositionsTab from '../components/elections/PositionsTab'
 import ApplicantsTab from '../components/elections/ApplicantsTab'
 import CandidatesTab from '../components/elections/CandidatesTab'
 import BallotPreviewTab from '../components/elections/BallotPreviewTab'
+import VotingPeriodsTab from '../components/elections/VotingPeriodsTab'
 
 const ElectionDetailPage: React.FC = () => {
   const { electionId } = useParams()
@@ -100,6 +101,7 @@ const ElectionDetailPage: React.FC = () => {
           <Tabs value={tab} onChange={(_, v) => setTab(v)}>
             <Tab label="Overview" />
             <Tab label="Positions" />
+            <Tab label="Voting Periods" />
             <Tab label="Applicants" />
             <Tab label="Candidates" />
             <Tab label="Ballot Preview" />
@@ -116,6 +118,10 @@ const ElectionDetailPage: React.FC = () => {
 
           {tab === 1 && (
             <PositionsTab electionId={electionId!} isAdmin={isAdmin} />
+          )}
+
+          {tab === 2 && (
+            <VotingPeriodsTab electionId={electionId!} />
           )}
 
           {tab === 2 && (

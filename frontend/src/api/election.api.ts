@@ -44,10 +44,21 @@ export const electionApi = {
   listCandidates: (electionId: string, params: Record<string, unknown> = {}) =>
     api.get<import('../types/election').PagedResponse<any>>(`${BASE}/${electionId}/candidates`, { params }),
   listCandidatesBallot: (electionId: string) => api.get<any>(`${BASE}/${electionId}/candidates/ballot`),
+  // ballot with optional params (e.g., electionPositionId)
+  listCandidatesBallotWithParams: (electionId: string, params: Record<string, unknown> = {}) =>
+    api.get<any>(`${BASE}/${electionId}/candidates/ballot`, { params }),
   createCandidateDirect: (electionId: string, payload: unknown) => api.post(`${BASE}/${electionId}/candidates/direct`, payload),
   createCandidateFromApplicant: (electionId: string, payload: unknown) => api.post(`${BASE}/${electionId}/candidates/from-applicant`, payload),
   generateCandidates: (electionId: string) => api.post(`${BASE}/${electionId}/candidates/generate`),
   deleteCandidatesBulk: (electionId: string, payload: unknown) => api.delete(`${BASE}/${electionId}/candidates`, { data: payload }),
+  // Admin voting periods
+  listVotingPeriods: (electionId: string) => api.get<import('../types/election').PagedResponse<any>>(`/api/v1/admin/elections/${electionId}/voting-periods`),
+  createVotingPeriod: (electionId: string, payload: unknown) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods`, payload),
+  getVotingPeriod: (electionId: string, votingPeriodId: string | number) => api.get(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}`),
+  updateVotingPeriod: (electionId: string, votingPeriodId: string | number, payload: unknown) => api.put(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}`, payload),
+  openVotingPeriod: (electionId: string, votingPeriodId: string | number) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/open`),
+  closeVotingPeriod: (electionId: string, votingPeriodId: string | number) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/close`),
+  cancelVotingPeriod: (electionId: string, votingPeriodId: string | number) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/cancel`),
 }
 
 export type { Election, Position }

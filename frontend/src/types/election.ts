@@ -68,3 +68,14 @@ export interface BallotEntry {
   positionId?: number | string
   candidateId?: number | string
 }
+
+export interface VotingPeriod {
+  id: number | string
+  name?: string
+  label?: string
+  startAt?: string
+  endAt?: string
+  status?: string
+  createdAt?: string
+  updatedAt?: string
+}
