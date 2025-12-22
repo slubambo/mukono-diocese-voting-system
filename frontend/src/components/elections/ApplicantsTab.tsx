@@ -39,7 +39,9 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
     setLoading(true)
     try {
       const res = await electionApi.listPendingApplicants(electionId)
-      setApplicants(res || [])
+      // normalize paged or array responses
+      const data = (res as any)?.content ?? res
+      setApplicants(Array.isArray(data) ? data : [])
     } catch (err: any) {
       toast.error(err?.message || 'Failed to load pending applicants')
     } finally {
