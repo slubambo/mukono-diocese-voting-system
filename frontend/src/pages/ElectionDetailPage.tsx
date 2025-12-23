@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Box, Paper, Tab, Tabs, Typography, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material'
+import { Box, Paper, Tab, Tabs, Typography, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Chip, Stack } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import CancelIcon from '@mui/icons-material/Cancel'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -31,6 +31,7 @@ const ElectionDetailPage: React.FC = () => {
   const [tab, setTab] = useState(0)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
+  const [periodSummaries, setPeriodSummaries] = useState<Array<{ id: number | string; name: string; positionsCount: number }>>([])
 
   const fetch = async () => {
     if (!electionId) return
@@ -46,6 +47,39 @@ const ElectionDetailPage: React.FC = () => {
   }
 
   useEffect(() => { fetch() }, [electionId])
+
+  useEffect(() => {
+    const loadSummaries = async () => {
+      if (!electionId || !isAdmin) return
+      try {
+        const res = await electionApi.listVotingPeriods(electionId)
+        const periods = (res as any)?.content ?? res ?? []
+        const summaries = await Promise.all(
+          (periods as any[]).map(async (p) => {
+            try {
+              const positions = await electionApi.getVotingPeriodPositions(electionId, p.id)
+              const count = positions.electionPositionIds?.length ?? 0
+              return { id: p.id, name: p.name || p.label || `Period ${p.id}`, positionsCount: count }
+            } catch (err) {
+              return { id: p.id, name: p.name || p.label || `Period ${p.id}`, positionsCount: 0 }
+            }
+          })
+        )
+        setPeriodSummaries(summaries)
+      } catch (err) {
+        setPeriodSummaries([])
+      }
+    }
+    loadSummaries()
+  }, [electionId, isAdmin])
+
+  const getTargetLabel = () => {
+    if (!election?.scope) return '—'
+    if (election.scope === 'DIOCESE') return election.dioceseId ? `Diocese #${election.dioceseId}` : '—'
+    if (election.scope === 'ARCHDEACONRY') return election.archdeaconryId ? `Archdeaconry #${election.archdeaconryId}` : '—'
+    if (election.scope === 'CHURCH') return election.churchId ? `Church #${election.churchId}` : '—'
+    return '—'
+  }
 
   const handleEdit = () => {
     // navigate to admin edit route - reuse list edit dialog would be better; for now redirect to list and open edit
@@ -100,6 +134,11 @@ const ElectionDetailPage: React.FC = () => {
       >
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
           <StatusChip status={election.status || 'pending'} />
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Chip label={`Scope: ${election.scope || '—'}`} size="small" />
+            <Chip label={`Target: ${getTargetLabel()}`} size="small" />
+            <Chip label={`Fellowship: ${election.fellowship?.name || election.fellowshipName || 'All fellowships'}`} size="small" />
+          </Stack>
           {election.termStartDate && <Typography>Term Start: {new Date(election.termStartDate).toLocaleDateString()}</Typography>}
           {election.termEndDate && <Typography>Term End: {new Date(election.termEndDate).toLocaleDateString()}</Typography>}
           {election.votingStartAt && <Typography>Voting Start: {new Date(election.votingStartAt).toLocaleString()}</Typography>}
@@ -122,6 +161,16 @@ const ElectionDetailPage: React.FC = () => {
             <Box>
               <Typography variant="h6">Overview</Typography>
               <Typography>{election.description}</Typography>
+              {isAdmin && periodSummaries.length > 0 && (
+                <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
+                  <Typography variant="subtitle2">Voting period positions</Typography>
+                  {periodSummaries.map((p) => (
+                    <Typography key={String(p.id)} variant="body2">
+                      {p.name}: {p.positionsCount} position{p.positionsCount === 1 ? '' : 's'}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
             </Box>
           )}
 

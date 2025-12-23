@@ -16,6 +16,7 @@ import {
   TableContainer,
   TablePagination,
   TextField,
+  Tooltip,
 } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import VisibilityIcon from '@mui/icons-material/Visibility'
@@ -174,11 +175,23 @@ const ElectionsPage: React.FC = () => {
                             : '—'}
                       </TableCell>
                       <TableCell align="right">
-                        <IconButton onClick={() => handleView(e.id)} size="small"><VisibilityIcon /></IconButton>
+                        <Tooltip title="View details">
+                          <span>
+                            <IconButton onClick={() => handleView(e.id)} size="small"><VisibilityIcon /></IconButton>
+                          </span>
+                        </Tooltip>
                         {isAdmin && (
                           <>
-                            <IconButton onClick={() => handleEdit(e)} size="small"><EditIcon /></IconButton>
-                            <IconButton onClick={() => handleCancel(e)} size="small"><CancelIcon /></IconButton>
+                            <Tooltip title={e.status !== 'DRAFT' ? 'Only draft elections can be edited' : 'Edit'}>
+                              <span>
+                                <IconButton onClick={() => handleEdit(e)} size="small" disabled={e.status !== 'DRAFT'}><EditIcon /></IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title={e.status !== 'DRAFT' ? 'Only draft elections can be cancelled' : 'Cancel'}>
+                              <span>
+                                <IconButton onClick={() => handleCancel(e)} size="small" disabled={e.status !== 'DRAFT'}><CancelIcon /></IconButton>
+                              </span>
+                            </Tooltip>
                           </>
                         )}
                       </TableCell>

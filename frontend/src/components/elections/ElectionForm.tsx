@@ -18,7 +18,7 @@ interface Props {
 }
 
 const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => {
-  const { control, handleSubmit, reset, watch, setValue } = useForm<Partial<Election>>({
+  const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<Partial<Election>>({
     defaultValues: {
       name: '',
       description: '',
@@ -45,6 +45,11 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
   const scope = watch('scope') as string | undefined
   const selectedDioceseId = watch('dioceseId') as number | undefined
   const selectedArchdeaconryId = watch('archdeaconryId') as number | undefined
+  const termStartDate = watch('termStartDate') as string | undefined
+  const nominationStartAt = watch('nominationStartAt') as string | undefined
+  const votingStartAt = watch('votingStartAt') as string | undefined
+  const votingEndAt = watch('votingEndAt') as string | undefined
+  const isEditing = Boolean(election?.id)
 
   const formatLocalDateTime = (value?: string | null) => {
     if (!value) return ''
@@ -233,8 +238,17 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
               <TextField {...field} label="Description" multiline minRows={3} />
             )} />
 
-            <Controller name="scope" control={control} rules={{ required: true }} render={({ field }) => (
-              <TextField {...field} select label="Scope" required value={field.value ?? ''}>
+            <Controller name="scope" control={control} rules={{ required: 'Scope is required' }} render={({ field }) => (
+              <TextField
+                {...field}
+                select
+                label="Scope"
+                required
+                value={field.value ?? ''}
+                disabled={isEditing}
+                error={Boolean(errors.scope)}
+                helperText={errors.scope?.message as string | undefined}
+              >
                 <MenuItem value="DIOCESE">DIOCESE</MenuItem>
                 <MenuItem value="ARCHDEACONRY">ARCHDEACONRY</MenuItem>
                 <MenuItem value="CHURCH">CHURCH</MenuItem>
@@ -257,7 +271,7 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
             )} />
 
             {scope === 'DIOCESE' && (
-              <Controller name="dioceseId" control={control} rules={{ required: true }} render={({ field }) => (
+              <Controller name="dioceseId" control={control} rules={{ required: 'Diocese is required' }} render={({ field }) => (
                 <TextField
                   {...field}
                   select
@@ -265,6 +279,9 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                   required
                   value={field.value ?? ''}
                   onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                  disabled={isEditing}
+                  error={Boolean(errors.dioceseId)}
+                  helperText={errors.dioceseId?.message as string | undefined}
                 >
                   {dioceses.map((d) => (
                     <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
@@ -274,7 +291,7 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
             )}
 
             {(scope === 'ARCHDEACONRY' || scope === 'CHURCH') && (
-              <Controller name="dioceseId" control={control} render={({ field }) => (
+              <Controller name="dioceseId" control={control} rules={{ required: 'Diocese is required' }} render={({ field }) => (
                 <TextField
                   {...field}
                   select
@@ -282,7 +299,9 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                   required
                   value={field.value ?? ''}
                   onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                  helperText="Used to filter archdeaconries"
+                  disabled={isEditing}
+                  error={Boolean(errors.dioceseId)}
+                  helperText={errors.dioceseId?.message as string | undefined || 'Used to filter archdeaconries'}
                 >
                   {dioceses.map((d) => (
                     <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
@@ -292,7 +311,7 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
             )}
 
             {scope === 'ARCHDEACONRY' && (
-              <Controller name="archdeaconryId" control={control} rules={{ required: true }} render={({ field }) => (
+              <Controller name="archdeaconryId" control={control} rules={{ required: 'Archdeaconry is required' }} render={({ field }) => (
                 <TextField
                   {...field}
                   select
@@ -300,6 +319,9 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                   required
                   value={field.value ?? ''}
                   onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                  disabled={isEditing}
+                  error={Boolean(errors.archdeaconryId)}
+                  helperText={errors.archdeaconryId?.message as string | undefined}
                 >
                   {archdeaconries.map((a) => (
                     <MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>
@@ -310,7 +332,7 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
 
             {scope === 'CHURCH' && (
               <>
-                <Controller name="archdeaconryId" control={control} rules={{ required: true }} render={({ field }) => (
+                <Controller name="archdeaconryId" control={control} rules={{ required: 'Archdeaconry is required' }} render={({ field }) => (
                   <TextField
                     {...field}
                     select
@@ -318,6 +340,9 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                     required
                     value={field.value ?? ''}
                     onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                    disabled={isEditing}
+                    error={Boolean(errors.archdeaconryId)}
+                    helperText={errors.archdeaconryId?.message as string | undefined}
                   >
                     {archdeaconries.map((a) => (
                       <MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>
@@ -325,7 +350,7 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                   </TextField>
                 )} />
 
-                <Controller name="churchId" control={control} rules={{ required: true }} render={({ field }) => (
+                <Controller name="churchId" control={control} rules={{ required: 'Church is required' }} render={({ field }) => (
                   <TextField
                     {...field}
                     select
@@ -333,6 +358,9 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                     required
                     value={field.value ?? ''}
                     onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                    disabled={isEditing}
+                    error={Boolean(errors.churchId)}
+                    helperText={errors.churchId?.message as string | undefined}
                   >
                     {churches.map((c) => (
                       <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
@@ -342,28 +370,99 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
               </>
             )}
 
-            <Controller name="termStartDate" control={control} rules={{ required: true }} render={({ field }) => (
-              <TextField {...field} label="Term Start Date" type="date" required InputLabelProps={{ shrink: true }} />
+            <Controller name="termStartDate" control={control} rules={{ required: 'Term start date is required' }} render={({ field }) => (
+              <TextField
+                {...field}
+                label="Term Start Date"
+                type="date"
+                required
+                InputLabelProps={{ shrink: true }}
+                error={Boolean(errors.termStartDate)}
+                helperText={errors.termStartDate?.message as string | undefined}
+              />
             )} />
 
-            <Controller name="termEndDate" control={control} rules={{ required: true }} render={({ field }) => (
-              <TextField {...field} label="Term End Date" type="date" required InputLabelProps={{ shrink: true }} />
+            <Controller name="termEndDate" control={control} rules={{
+              required: 'Term end date is required',
+              validate: (value) => {
+                if (!value || !termStartDate) return true
+                return new Date(value) > new Date(termStartDate) || 'Term end date must be after start date'
+              },
+            }} render={({ field }) => (
+              <TextField
+                {...field}
+                label="Term End Date"
+                type="date"
+                required
+                InputLabelProps={{ shrink: true }}
+                error={Boolean(errors.termEndDate)}
+                helperText={errors.termEndDate?.message as string | undefined}
+              />
             )} />
 
             <Controller name="nominationStartAt" control={control} render={({ field }) => (
-              <TextField {...field} label="Nomination Start" type="datetime-local" InputLabelProps={{ shrink: true }} />
+              <TextField
+                {...field}
+                label="Nomination Start"
+                type="datetime-local"
+                InputLabelProps={{ shrink: true }}
+                error={Boolean(errors.nominationStartAt)}
+                helperText={errors.nominationStartAt?.message as string | undefined}
+              />
             )} />
 
-            <Controller name="nominationEndAt" control={control} render={({ field }) => (
-              <TextField {...field} label="Nomination End" type="datetime-local" InputLabelProps={{ shrink: true }} />
+            <Controller name="nominationEndAt" control={control} rules={{
+              validate: (value) => {
+                if (!nominationStartAt && !value) return true
+                if (!nominationStartAt && value) return 'Nomination start time is required'
+                if (nominationStartAt && !value) return 'Nomination end time is required'
+                if (nominationStartAt && value && new Date(value) <= new Date(nominationStartAt)) {
+                  return 'Nomination end must be after start'
+                }
+                if (votingEndAt && value && new Date(value) > new Date(votingEndAt)) {
+                  return 'Nomination end must not be after voting end'
+                }
+                return true
+              },
+            }} render={({ field }) => (
+              <TextField
+                {...field}
+                label="Nomination End"
+                type="datetime-local"
+                InputLabelProps={{ shrink: true }}
+                error={Boolean(errors.nominationEndAt)}
+                helperText={errors.nominationEndAt?.message as string | undefined}
+              />
             )} />
 
-            <Controller name="votingStartAt" control={control} rules={{ required: true }} render={({ field }) => (
-              <TextField {...field} label="Voting Start" type="datetime-local" required InputLabelProps={{ shrink: true }} />
+            <Controller name="votingStartAt" control={control} rules={{ required: 'Voting start time is required' }} render={({ field }) => (
+              <TextField
+                {...field}
+                label="Voting Start"
+                type="datetime-local"
+                required
+                InputLabelProps={{ shrink: true }}
+                error={Boolean(errors.votingStartAt)}
+                helperText={errors.votingStartAt?.message as string | undefined}
+              />
             )} />
 
-            <Controller name="votingEndAt" control={control} rules={{ required: true }} render={({ field }) => (
-              <TextField {...field} label="Voting End" type="datetime-local" required InputLabelProps={{ shrink: true }} />
+            <Controller name="votingEndAt" control={control} rules={{
+              required: 'Voting end time is required',
+              validate: (value) => {
+                if (!value || !votingStartAt) return true
+                return new Date(value) > new Date(votingStartAt) || 'Voting end must be after start'
+              },
+            }} render={({ field }) => (
+              <TextField
+                {...field}
+                label="Voting End"
+                type="datetime-local"
+                required
+                InputLabelProps={{ shrink: true }}
+                error={Boolean(errors.votingEndAt)}
+                helperText={errors.votingEndAt?.message as string | undefined}
+              />
             )} />
           </Box>
         </DialogContent>
