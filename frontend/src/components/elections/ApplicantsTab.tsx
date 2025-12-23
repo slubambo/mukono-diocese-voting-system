@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Tabs, Tab, IconButton, MenuItem, Tooltip } from '@mui/material'
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Tabs, Tab, IconButton, MenuItem, Tooltip, Autocomplete, CircularProgress } from '@mui/material'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import RotateLeftIcon from '@mui/icons-material/RotateLeft'
@@ -7,9 +7,11 @@ import UndoIcon from '@mui/icons-material/Undo'
 import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
 import { electionApi } from '../../api/election.api'
+import { peopleApi } from '../../api/people.api'
 import { useToast } from '../feedback/ToastProvider'
 import { useAuth } from '../../context/AuthContext'
 import type { Applicant, Position } from '../../types/election'
+import type { PersonResponse } from '../../types/leadership'
 
 const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const [tab, setTab] = useState(0)
@@ -21,6 +23,10 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const [manualPositionId, setManualPositionId] = useState('')
   const [manualNotes, setManualNotes] = useState('')
   const [positions, setPositions] = useState<Position[]>([])
+  const [peopleOptions, setPeopleOptions] = useState<PersonResponse[]>([])
+  const [peopleQuery, setPeopleQuery] = useState('')
+  const [peopleLoading, setPeopleLoading] = useState(false)
+  const [selectedPerson, setSelectedPerson] = useState<PersonResponse | null>(null)
   const [decisionOpen, setDecisionOpen] = useState(false)
   const [decisionAction, setDecisionAction] = useState<'approve' | 'reject' | 'revert' | 'withdraw' | null>(null)
   const [decisionApplicant, setDecisionApplicant] = useState<Applicant | null>(null)
@@ -83,6 +89,22 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
     loadPositions()
   }, [electionId])
 
+  useEffect(() => {
+    if (!showManual) return
+    const handle = setTimeout(async () => {
+      setPeopleLoading(true)
+      try {
+        const res = await peopleApi.list({ q: peopleQuery, page: 0, size: 20 })
+        setPeopleOptions(res.content || [])
+      } catch (err) {
+        setPeopleOptions([])
+      } finally {
+        setPeopleLoading(false)
+      }
+    }, 300)
+    return () => clearTimeout(handle)
+  }, [peopleQuery, showManual])
+
   const openDecision = (action: 'approve' | 'reject' | 'revert' | 'withdraw', applicant: Applicant) => {
     if (!isAdmin) return
     setDecisionAction(action)
@@ -115,10 +137,10 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   }
 
   const submitManual = async () => {
-    const personId = Number(manualPersonId)
+    const personId = selectedPerson?.id || Number(manualPersonId)
     const electionPositionId = Number(manualPositionId)
     if (!personId || !electionPositionId) {
-      toast.error('Person ID and Position are required')
+      toast.error('Person and position are required')
       return
     }
     try {
@@ -147,11 +169,11 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
           <Tab label={`Pending`} />
           <Tab label={`All${count !== null ? ` (${count})` : ''}`} />
         </Tabs>
-        {isAdmin && <Button variant="contained" onClick={() => setShowManual(true)}>Manual Applicant</Button>}
+        {isAdmin && <Button variant="contained" onClick={() => { setSelectedPerson(null); setManualPersonId(''); setManualPositionId(''); setManualNotes(''); setShowManual(true) }}>Direct Applicant</Button>}
       </Box>
 
       {applicants.length === 0 ? (
-        <EmptyState title="No applicants" description="There are no applicants to display." action={isAdmin ? <Button onClick={() => setShowManual(true)}>Manual Applicant</Button> : undefined} />
+        <EmptyState title="No applicants" description="There are no applicants to display." action={isAdmin ? <Button onClick={() => setShowManual(true)}>Direct Applicant</Button> : undefined} />
       ) : (
         <Paper>
           <TableContainer>
@@ -168,7 +190,7 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
               <TableBody>
                 {applicants.map(a => (
                   <TableRow key={a.id} hover>
-                    <TableCell>{a.personName || a.fellowshipPosition?.titleName || '—'}</TableCell>
+                    <TableCell>{a.personName || (a as any)?.person?.fullName || '—'}</TableCell>
                     <TableCell>{a.positionTitle || a.fellowshipPosition?.titleName || '—'}</TableCell>
                     <TableCell>{a.status}</TableCell>
                     <TableCell>{a.submittedAt ? new Date(a.submittedAt).toLocaleString() : '—'}</TableCell>
@@ -199,10 +221,41 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       )}
 
       <Dialog open={showManual} onClose={() => setShowManual(false)}>
-        <DialogTitle>Manual Applicant</DialogTitle>
+        <DialogTitle>Direct Applicant</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'grid', gap: 2, mt: 1 }}>
-            <TextField label="Person ID" type="number" fullWidth value={manualPersonId} onChange={(e) => setManualPersonId(e.target.value)} />
+            <Autocomplete
+              options={peopleOptions}
+              loading={peopleLoading}
+              value={selectedPerson}
+              onChange={(_, val) => { setSelectedPerson(val); if (val) setManualPersonId(String(val.id)) }}
+              getOptionLabel={(option) => option.fullName}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Person"
+                  placeholder="Search people"
+                  onChange={(e) => setPeopleQuery(e.target.value)}
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {peopleLoading ? <CircularProgress color="inherit" size={16} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
+            <TextField
+              label="Person ID (optional)"
+              type="number"
+              fullWidth
+              value={manualPersonId}
+              onChange={(e) => setManualPersonId(e.target.value)}
+              helperText="Use this only if you cannot find the person in search."
+            />
             <TextField
               select
               label="Election Position"
@@ -212,7 +265,8 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
             >
               {positions.map((p) => (
                 <MenuItem key={p.id} value={p.id}>
-                  {p.fellowshipPosition?.titleName || p.title || p.positionId}
+                  {(p.fellowshipPosition?.titleName || p.title || p.positionId)}
+                  {p.fellowshipPosition?.fellowshipName ? ` — ${p.fellowshipPosition.fellowshipName}` : ''}
                 </MenuItem>
               ))}
             </TextField>
@@ -226,7 +280,10 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       </Dialog>
 
       <Dialog open={decisionOpen} onClose={() => setDecisionOpen(false)}>
-        <DialogTitle>{decisionAction ? decisionAction.toUpperCase() : 'Decision'}</DialogTitle>
+        <DialogTitle>
+          {decisionAction ? decisionAction.toUpperCase() : 'Decision'}
+          {decisionApplicant?.personName || (decisionApplicant as any)?.person?.fullName ? ` — ${decisionApplicant?.personName || (decisionApplicant as any)?.person?.fullName}` : ''}
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'grid', gap: 2, mt: 1 }}>
             <TextField label="Decision By" fullWidth required value={decisionBy} onChange={(e) => setDecisionBy(e.target.value)} />

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, IconButton, Checkbox, FormControlLabel, Typography, Divider, Tooltip } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
@@ -7,6 +7,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import CancelIcon from '@mui/icons-material/Cancel'
 import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
+import StatusChip from '../common/StatusChip'
 import { electionApi } from '../../api/election.api'
 import { useToast } from '../feedback/ToastProvider'
 import { useAuth } from '../../context/AuthContext'
@@ -28,6 +29,8 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const [lifecycleAction, setLifecycleAction] = useState<'open' | 'close' | 'cancel' | null>(null)
   const [lifecyclePeriod, setLifecyclePeriod] = useState<VotingPeriod | null>(null)
   const [electionWindow, setElectionWindow] = useState<{ start?: string; end?: string }>({})
+  const originalValuesRef = useRef<{ name?: string; start?: string; end?: string }>({})
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; startTime?: string; endTime?: string }>({})
   const toast = useToast()
   const { user } = useAuth()
   const isAdmin = Boolean(user?.roles?.includes('ROLE_ADMIN'))
@@ -91,6 +94,8 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
     setName(p?.name ?? '')
     setStartTime(p?.startTime ?? '')
     setEndTime(p?.endTime ?? '')
+    setFieldErrors({})
+    if (!p) setAssigned([])
     setShowDialog(true)
   }
 
@@ -140,11 +145,22 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
 
   useEffect(() => {
     if (!showDialog || !editing) return
-    setStartTime(formatLocalDateTime(editing.startTime))
-    setEndTime(formatLocalDateTime(editing.endTime))
+    const startLocal = formatLocalDateTime(editing.startTime)
+    const endLocal = formatLocalDateTime(editing.endTime)
+    setStartTime(startLocal)
+    setEndTime(endLocal)
+    originalValuesRef.current = { name: editing.name ?? '', start: startLocal, end: endLocal }
   }, [editing, showDialog])
 
   const submit = async () => {
+    const nextErrors: { name?: string; startTime?: string; endTime?: string } = {}
+    if (!name.trim()) nextErrors.name = 'Name is required'
+    if (!startTime.trim()) nextErrors.startTime = 'Start time is required'
+    if (!endTime.trim()) nextErrors.endTime = 'End time is required'
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors)
+      return
+    }
     const toIsoOrUndefined = (value?: string) => {
       if (!value?.trim()) return undefined
       const dt = new Date(value)
@@ -173,14 +189,18 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       }
       let targetId = editing?.id
       if (editing?.id) {
-        await electionApi.updateVotingPeriod(electionId, editing.id, payload)
-        toast.success('Voting period updated')
+        const original = originalValuesRef.current
+        const hasChanges = original.name !== name || original.start !== startTime || original.end !== endTime
+        if (hasChanges) {
+          await electionApi.updateVotingPeriod(electionId, editing.id, payload)
+          toast.success('Voting period updated')
+        }
       } else {
         const created = await electionApi.createVotingPeriod(electionId, payload)
         targetId = (created as any)?.id
         toast.success('Voting period created')
       }
-      if (targetId) {
+      if (targetId !== undefined && targetId !== null) {
         await electionApi.assignVotingPeriodPositions(electionId, targetId, { electionPositionIds: assigned })
       }
       setShowDialog(false)
@@ -237,7 +257,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                     <TableCell>{p.name || p.label}</TableCell>
                     <TableCell>{p.startTime ? new Date(p.startTime).toLocaleString() : '—'}</TableCell>
                     <TableCell>{p.endTime ? new Date(p.endTime).toLocaleString() : '—'}</TableCell>
-                    <TableCell>{p.status || '—'}</TableCell>
+                    <TableCell><StatusChip status={(p.status || 'pending') as any} /></TableCell>
                     <TableCell align="right">{p.positionsCount ?? assignedByPeriod[String(p.id)]?.length ?? 0}</TableCell>
                     <TableCell align="right">
                       {isAdmin && (
@@ -269,23 +289,36 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
         <DialogTitle>{editing ? 'Edit Voting Period' : 'Create Voting Period'}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'grid', gap: 2 }}>
-            <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} fullWidth />
+            <TextField
+              label="Name"
+              value={name}
+              onChange={(e) => { setName(e.target.value); setFieldErrors((prev) => ({ ...prev, name: undefined })) }}
+              fullWidth
+              required
+              error={Boolean(fieldErrors.name)}
+              helperText={fieldErrors.name}
+            />
             <TextField
               label="Start Time"
               type="datetime-local"
               value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
+              onChange={(e) => { setStartTime(e.target.value); setFieldErrors((prev) => ({ ...prev, startTime: undefined })) }}
               InputLabelProps={{ shrink: true }}
               inputProps={{ min: electionWindow.start ? formatLocalDateTime(electionWindow.start) : undefined, max: electionWindow.end ? formatLocalDateTime(electionWindow.end) : undefined }}
-              helperText={electionWindow.start && electionWindow.end ? `Must be within ${new Date(electionWindow.start).toLocaleString()} — ${new Date(electionWindow.end).toLocaleString()}` : undefined}
+              required
+              error={Boolean(fieldErrors.startTime)}
+              helperText={fieldErrors.startTime || (electionWindow.start && electionWindow.end ? `Must be within ${new Date(electionWindow.start).toLocaleString()} — ${new Date(electionWindow.end).toLocaleString()}` : undefined)}
             />
             <TextField
               label="End Time"
               type="datetime-local"
               value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
+              onChange={(e) => { setEndTime(e.target.value); setFieldErrors((prev) => ({ ...prev, endTime: undefined })) }}
               InputLabelProps={{ shrink: true }}
               inputProps={{ min: electionWindow.start ? formatLocalDateTime(electionWindow.start) : undefined, max: electionWindow.end ? formatLocalDateTime(electionWindow.end) : undefined }}
+              required
+              error={Boolean(fieldErrors.endTime)}
+              helperText={fieldErrors.endTime}
             />
             <Divider />
             <Typography variant="subtitle2">Positions for this voting period</Typography>
@@ -312,19 +345,24 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                       const fellowshipLabel = pos.fellowshipPosition?.fellowshipName ? ` — ${pos.fellowshipPosition.fellowshipName}` : ''
                       const label = `${pos.fellowshipPosition?.titleName || pos.title || 'Position'}${fellowshipLabel} (${pos.seats ?? 1} seat${(pos.seats ?? 1) === 1 ? '' : 's'})`
                       return (
-                        <FormControlLabel
+                        <Tooltip
                           key={id}
-                          control={<Checkbox
-                            checked={checked}
-                            disabled={assignedElsewhere}
-                            onChange={() => {
-                              setAssigned((prev) => (
-                                prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
-                              ))
-                            }}
-                          />}
-                          label={label}
-                        />
+                          title={assignedElsewhere ? `Assigned to period #${positionToPeriod[id]}` : ''}
+                          disableHoverListener={!assignedElsewhere}
+                        >
+                          <FormControlLabel
+                            control={<Checkbox
+                              checked={checked}
+                              disabled={assignedElsewhere}
+                              onChange={() => {
+                                setAssigned((prev) => (
+                                  prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
+                                ))
+                              }}
+                            />}
+                            label={label}
+                          />
+                        </Tooltip>
                       )
                     })}
                   </Box>
