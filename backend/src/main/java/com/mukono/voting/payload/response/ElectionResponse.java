@@ -17,6 +17,12 @@ public class ElectionResponse {
     private ElectionStatus status;
     private PositionScope scope;
 
+    // IDs for quick reference (data used to save)
+    private Long fellowshipId;
+    private Long dioceseId;
+    private Long archdeaconryId;
+    private Long churchId;
+
     // Fellowship summary
     private FellowshipSummary fellowship;
 
@@ -54,6 +60,18 @@ public class ElectionResponse {
 
     public PositionScope getScope() { return scope; }
     public void setScope(PositionScope scope) { this.scope = scope; }
+
+    public Long getFellowshipId() { return fellowshipId; }
+    public void setFellowshipId(Long fellowshipId) { this.fellowshipId = fellowshipId; }
+
+    public Long getDioceseId() { return dioceseId; }
+    public void setDioceseId(Long dioceseId) { this.dioceseId = dioceseId; }
+
+    public Long getArchdeaconryId() { return archdeaconryId; }
+    public void setArchdeaconryId(Long archdeaconryId) { this.archdeaconryId = archdeaconryId; }
+
+    public Long getChurchId() { return churchId; }
+    public void setChurchId(Long churchId) { this.churchId = churchId; }
 
     public FellowshipSummary getFellowship() { return fellowship; }
     public void setFellowship(FellowshipSummary fellowship) { this.fellowship = fellowship; }
@@ -99,8 +117,16 @@ public class ElectionResponse {
         response.setStatus(election.getStatus());
         response.setScope(election.getScope());
 
+        // IDs
+        response.setFellowshipId(election.getFellowship() != null ? election.getFellowship().getId() : null);
+        response.setDioceseId(election.getDiocese() != null ? election.getDiocese().getId() : null);
+        response.setArchdeaconryId(election.getArchdeaconry() != null ? election.getArchdeaconry().getId() : null);
+        response.setChurchId(election.getChurch() != null ? election.getChurch().getId() : null);
+
         // Fellowship summary
-        response.setFellowship(FellowshipSummary.fromEntity(election.getFellowship()));
+        if (election.getFellowship() != null) {
+            response.setFellowship(FellowshipSummary.fromEntity(election.getFellowship()));
+        }
 
         // Target organization
         if (election.getDiocese() != null) {
@@ -128,29 +154,5 @@ public class ElectionResponse {
         response.setUpdatedAt(election.getUpdatedAt());
 
         return response;
-    }
-
-    /**
-     * Fellowship summary DTO (nested in election response).
-     */
-    public static class FellowshipSummary {
-        private Long id;
-        private String name;
-        private String code;
-
-        public Long getId() { return id; }
-        public void setId(Long id) { this.id = id; }
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
-        public String getCode() { return code; }
-        public void setCode(String code) { this.code = code; }
-
-        public static FellowshipSummary fromEntity(com.mukono.voting.model.org.Fellowship f) {
-            FellowshipSummary s = new FellowshipSummary();
-            s.setId(f.getId());
-            s.setName(f.getName());
-            s.setCode(f.getCode());
-            return s;
-        }
     }
 }

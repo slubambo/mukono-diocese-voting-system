@@ -17,6 +17,9 @@ public class ElectionSummary {
     private PositionScope scope;
     private Long fellowshipId;
     private String fellowshipName;
+    private Long dioceseId;
+    private Long archdeaconryId;
+    private Long churchId;
     private LocalDate termStartDate;
     private LocalDate termEndDate;
     private Instant votingStartAt;
@@ -41,6 +44,15 @@ public class ElectionSummary {
     public String getFellowshipName() { return fellowshipName; }
     public void setFellowshipName(String fellowshipName) { this.fellowshipName = fellowshipName; }
 
+    public Long getDioceseId() { return dioceseId; }
+    public void setDioceseId(Long dioceseId) { this.dioceseId = dioceseId; }
+
+    public Long getArchdeaconryId() { return archdeaconryId; }
+    public void setArchdeaconryId(Long archdeaconryId) { this.archdeaconryId = archdeaconryId; }
+
+    public Long getChurchId() { return churchId; }
+    public void setChurchId(Long churchId) { this.churchId = churchId; }
+
     public LocalDate getTermStartDate() { return termStartDate; }
     public void setTermStartDate(LocalDate termStartDate) { this.termStartDate = termStartDate; }
 
@@ -59,8 +71,11 @@ public class ElectionSummary {
         summary.setName(election.getName());
         summary.setStatus(election.getStatus());
         summary.setScope(election.getScope());
-        summary.setFellowshipId(election.getFellowship().getId());
-        summary.setFellowshipName(election.getFellowship().getName());
+        summary.setFellowshipId(election.getFellowship() != null ? election.getFellowship().getId() : null);
+        summary.setFellowshipName(election.getFellowship() != null ? election.getFellowship().getName() : null);
+        summary.setDioceseId(election.getDiocese() != null ? election.getDiocese().getId() : null);
+        summary.setArchdeaconryId(election.getArchdeaconry() != null ? election.getArchdeaconry().getId() : null);
+        summary.setChurchId(election.getChurch() != null ? election.getChurch().getId() : null);
         summary.setTermStartDate(election.getTermStartDate());
         summary.setTermEndDate(election.getTermEndDate());
         summary.setVotingStartAt(election.getVotingStartAt());

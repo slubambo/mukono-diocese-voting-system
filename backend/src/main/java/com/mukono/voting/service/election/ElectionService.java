@@ -236,12 +236,17 @@ public class ElectionService {
 
     /**
      * Update an existing election (partial update).
-     * Does NOT allow changing fellowship, scope, or targets (election identity remains stable).
+     * Allows changing fellowship, scope, and targets with the same validations used on create.
      * 
      * @param electionId election ID (required)
      * @param name new name (optional)
      * @param description new description (optional)
      * @param status new status (optional, validated for transitions)
+     * @param fellowshipId new fellowship id (optional)
+     * @param scope new scope (optional)
+     * @param dioceseId new diocese id (optional)
+     * @param archdeaconryId new archdeaconry id (optional)
+     * @param churchId new church id (optional)
      * @param termStartDate new term start date (optional)
      * @param termEndDate new term end date (optional)
      * @param nominationStartAt new nomination start time (optional)
@@ -256,6 +261,11 @@ public class ElectionService {
             String name,
             String description,
             ElectionStatus status,
+            Long fellowshipId,
+            PositionScope scope,
+            Long dioceseId,
+            Long archdeaconryId,
+            Long churchId,
             LocalDate termStartDate,
             LocalDate termEndDate,
             Instant nominationStartAt,
@@ -289,10 +299,92 @@ public class ElectionService {
             election.setDescription(description);
         }
 
-        // Update status if provided (with transition validation)
-        if (status != null) {
-            validateStatusTransition(election.getStatus(), status);
-            election.setStatus(status);
+        // Update fellowship if provided (nullable fellowship supported only when explicitly set via domain rules)
+        if (fellowshipId != null) {
+            Fellowship fellowship = fellowshipRepository.findById(fellowshipId)
+                    .orElseThrow(() -> new IllegalArgumentException("Fellowship with ID " + fellowshipId + " not found"));
+            election.setFellowship(fellowship);
+        }
+
+        // Determine final scope/targets considering inputs and current entity
+        PositionScope finalScope = scope != null ? scope : election.getScope();
+
+        Long currentDioceseId = election.getDiocese() != null ? election.getDiocese().getId() : null;
+        Long currentArchdeaconryId = election.getArchdeaconry() != null ? election.getArchdeaconry().getId() : null;
+        Long currentChurchId = election.getChurch() != null ? election.getChurch().getId() : null;
+
+        Long finalDioceseId = dioceseId != null ? dioceseId : currentDioceseId;
+        Long finalArchdeaconryId = archdeaconryId != null ? archdeaconryId : currentArchdeaconryId;
+        Long finalChurchId = churchId != null ? churchId : currentChurchId;
+
+        // If scope is changing, require the appropriate target ID to be provided
+        if (scope != null) {
+            switch (finalScope) {
+                case DIOCESE:
+                    if (dioceseId == null) {
+                        throw new IllegalArgumentException("Diocese ID is required when changing scope to DIOCESE");
+                    }
+                    finalArchdeaconryId = null;
+                    finalChurchId = null;
+                    break;
+                case ARCHDEACONRY:
+                    if (archdeaconryId == null) {
+                        throw new IllegalArgumentException("Archdeaconry ID is required when changing scope to ARCHDEACONRY");
+                    }
+                    finalDioceseId = null;
+                    finalChurchId = null;
+                    break;
+                case CHURCH:
+                    if (churchId == null) {
+                        throw new IllegalArgumentException("Church ID is required when changing scope to CHURCH");
+                    }
+                    finalDioceseId = null;
+                    finalArchdeaconryId = null;
+                    break;
+            }
+        }
+
+        // Create effectively-final copies for lambda usage
+        final Long dioceseIdForLookup = finalDioceseId;
+        final Long archdeaconryIdForLookup = finalArchdeaconryId;
+        final Long churchIdForLookup = finalChurchId;
+
+        // Load and set target entities based on final scope/ids
+        Diocese finalDiocese = null;
+        Archdeaconry finalArchdeaconry = null;
+        Church finalChurch = null;
+
+        switch (finalScope) {
+            case DIOCESE:
+                if (dioceseIdForLookup == null) {
+                    throw new IllegalArgumentException("Diocese ID is required for DIOCESE scope");
+                }
+                if (archdeaconryIdForLookup != null || churchIdForLookup != null) {
+                    throw new IllegalArgumentException("For DIOCESE scope, only dioceseId should be provided");
+                }
+                finalDiocese = dioceseRepository.findById(dioceseIdForLookup)
+                        .orElseThrow(() -> new IllegalArgumentException("Diocese with ID " + dioceseIdForLookup + " not found"));
+                break;
+            case ARCHDEACONRY:
+                if (archdeaconryIdForLookup == null) {
+                    throw new IllegalArgumentException("Archdeaconry ID is required for ARCHDEACONRY scope");
+                }
+                if (dioceseIdForLookup != null || churchIdForLookup != null) {
+                    throw new IllegalArgumentException("For ARCHDEACONRY scope, only archdeaconryId should be provided");
+                }
+                finalArchdeaconry = archdeaconryRepository.findById(archdeaconryIdForLookup)
+                        .orElseThrow(() -> new IllegalArgumentException("Archdeaconry with ID " + archdeaconryIdForLookup + " not found"));
+                break;
+            case CHURCH:
+                if (churchIdForLookup == null) {
+                    throw new IllegalArgumentException("Church ID is required for CHURCH scope");
+                }
+                if (dioceseIdForLookup != null || archdeaconryIdForLookup != null) {
+                    throw new IllegalArgumentException("For CHURCH scope, only churchId should be provided");
+                }
+                finalChurch = churchRepository.findById(churchIdForLookup)
+                        .orElseThrow(() -> new IllegalArgumentException("Church with ID " + churchIdForLookup + " not found"));
+                break;
         }
 
         // Update term dates if provided
@@ -303,12 +395,6 @@ public class ElectionService {
             if (!finalTermEndDate.isAfter(finalTermStartDate)) {
                 throw new IllegalArgumentException("Term end date must be after term start date");
             }
-            if (termStartDate != null) {
-                election.setTermStartDate(termStartDate);
-            }
-            if (termEndDate != null) {
-                election.setTermEndDate(termEndDate);
-            }
         }
 
         // Update voting window if provided
@@ -318,12 +404,6 @@ public class ElectionService {
         if (votingStartAt != null || votingEndAt != null) {
             if (!finalVotingEndAt.isAfter(finalVotingStartAt)) {
                 throw new IllegalArgumentException("Voting end time must be after voting start time");
-            }
-            if (votingStartAt != null) {
-                election.setVotingStartAt(votingStartAt);
-            }
-            if (votingEndAt != null) {
-                election.setVotingEndAt(votingEndAt);
             }
         }
 
@@ -340,14 +420,57 @@ public class ElectionService {
                     throw new IllegalArgumentException("Nomination end time must not be after voting end time");
                 }
             }
+        }
 
-            if (nominationStartAt != null) {
-                election.setNominationStartAt(nominationStartAt);
+        // Uniqueness check when scope/target/term changes (using multi-fellowship uniqueness rules)
+        boolean uniquenessCheckNeeded = scope != null || dioceseId != null || archdeaconryId != null || churchId != null
+                || termStartDate != null || termEndDate != null;
+        if (uniquenessCheckNeeded) {
+            boolean exists = false;
+            switch (finalScope) {
+                case DIOCESE:
+                    exists = electionRepository.existsByScopeAndDioceseIdAndTermStartDateAndTermEndDate(
+                            finalScope, dioceseIdForLookup, finalTermStartDate, finalTermEndDate);
+                    break;
+                case ARCHDEACONRY:
+                    exists = electionRepository.existsByScopeAndArchdeaconryIdAndTermStartDateAndTermEndDate(
+                            finalScope, archdeaconryIdForLookup, finalTermStartDate, finalTermEndDate);
+                    break;
+                case CHURCH:
+                    exists = electionRepository.existsByScopeAndChurchIdAndTermStartDateAndTermEndDate(
+                            finalScope, churchIdForLookup, finalTermStartDate, finalTermEndDate);
+                    break;
             }
-            if (nominationEndAt != null) {
-                election.setNominationEndAt(nominationEndAt);
+            if (exists) {
+                if (!(finalScope == election.getScope()
+                        && ((dioceseIdForLookup != null && election.getDiocese() != null && dioceseIdForLookup.equals(election.getDiocese().getId()))
+                            || (archdeaconryIdForLookup != null && election.getArchdeaconry() != null && archdeaconryIdForLookup.equals(election.getArchdeaconry().getId()))
+                            || (churchIdForLookup != null && election.getChurch() != null && churchIdForLookup.equals(election.getChurch().getId())))
+                        && finalTermStartDate.equals(election.getTermStartDate())
+                        && finalTermEndDate.equals(election.getTermEndDate()))) {
+                    throw new IllegalArgumentException("An election already exists for this scope, target, and term period");
+                }
             }
         }
+
+        // Apply status change last (validates lifecycle)
+        if (status != null) {
+            validateStatusTransition(election.getStatus(), status);
+            election.setStatus(status);
+        }
+
+        // Persist the calculated scope/targets and dates/windows
+        election.setScope(finalScope);
+        election.setDiocese(finalDiocese);
+        election.setArchdeaconry(finalArchdeaconry);
+        election.setChurch(finalChurch);
+
+        if (termStartDate != null) election.setTermStartDate(termStartDate);
+        if (termEndDate != null) election.setTermEndDate(termEndDate);
+        if (votingStartAt != null) election.setVotingStartAt(votingStartAt);
+        if (votingEndAt != null) election.setVotingEndAt(votingEndAt);
+        if (nominationStartAt != null) election.setNominationStartAt(nominationStartAt);
+        if (nominationEndAt != null) election.setNominationEndAt(nominationEndAt);
 
         return electionRepository.save(election);
     }

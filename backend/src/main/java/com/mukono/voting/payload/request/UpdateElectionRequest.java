@@ -18,6 +18,12 @@ public class UpdateElectionRequest {
 
     private String status;
 
+    private Long fellowshipId;
+    private String scope; // DIOCESE, ARCHDEACONRY, CHURCH
+    private Long dioceseId;
+    private Long archdeaconryId;
+    private Long churchId;
+
     private LocalDate termStartDate;
     private LocalDate termEndDate;
 
@@ -36,6 +42,21 @@ public class UpdateElectionRequest {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public Long getFellowshipId() { return fellowshipId; }
+    public void setFellowshipId(Long fellowshipId) { this.fellowshipId = fellowshipId; }
+
+    public String getScope() { return scope; }
+    public void setScope(String scope) { this.scope = scope; }
+
+    public Long getDioceseId() { return dioceseId; }
+    public void setDioceseId(Long dioceseId) { this.dioceseId = dioceseId; }
+
+    public Long getArchdeaconryId() { return archdeaconryId; }
+    public void setArchdeaconryId(Long archdeaconryId) { this.archdeaconryId = archdeaconryId; }
+
+    public Long getChurchId() { return churchId; }
+    public void setChurchId(Long churchId) { this.churchId = churchId; }
 
     public LocalDate getTermStartDate() { return termStartDate; }
     public void setTermStartDate(LocalDate termStartDate) { this.termStartDate = termStartDate; }

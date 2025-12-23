@@ -64,9 +64,27 @@ public class DsElectionController {
 			status = ElectionStatus.valueOf(request.getStatus());
 		}
 
-		var election = electionService.update(id, request.getName(), request.getDescription(), status,
-				request.getTermStartDate(), request.getTermEndDate(), request.getNominationStartAt(),
-				request.getNominationEndAt(), request.getVotingStartAt(), request.getVotingEndAt());
+		PositionScope scope = null;
+		if (request.getScope() != null) {
+			scope = PositionScope.valueOf(request.getScope());
+		}
+
+		var election = electionService.update(
+				id,
+				request.getName(),
+				request.getDescription(),
+				status,
+				request.getFellowshipId(),
+				scope,
+				request.getDioceseId(),
+				request.getArchdeaconryId(),
+				request.getChurchId(),
+				request.getTermStartDate(),
+				request.getTermEndDate(),
+				request.getNominationStartAt(),
+				request.getNominationEndAt(),
+				request.getVotingStartAt(),
+				request.getVotingEndAt());
 		return ResponseEntity.ok(ElectionResponse.fromEntity(election));
 	}
 
