@@ -73,9 +73,28 @@ public class ElectionSummary {
         summary.setScope(election.getScope());
         summary.setFellowshipId(election.getFellowship() != null ? election.getFellowship().getId() : null);
         summary.setFellowshipName(election.getFellowship() != null ? election.getFellowship().getName() : null);
-        summary.setDioceseId(election.getDiocese() != null ? election.getDiocese().getId() : null);
-        summary.setArchdeaconryId(election.getArchdeaconry() != null ? election.getArchdeaconry().getId() : null);
-        summary.setChurchId(election.getChurch() != null ? election.getChurch().getId() : null);
+        
+        // Populate IDs based on scope and traverse hierarchy for full context
+        if (election.getChurch() != null) {
+            // Church scope: church -> archdeaconry -> diocese
+            summary.setChurchId(election.getChurch().getId());
+            if (election.getChurch().getArchdeaconry() != null) {
+                summary.setArchdeaconryId(election.getChurch().getArchdeaconry().getId());
+                if (election.getChurch().getArchdeaconry().getDiocese() != null) {
+                    summary.setDioceseId(election.getChurch().getArchdeaconry().getDiocese().getId());
+                }
+            }
+        } else if (election.getArchdeaconry() != null) {
+            // Archdeaconry scope: archdeaconry -> diocese
+            summary.setArchdeaconryId(election.getArchdeaconry().getId());
+            if (election.getArchdeaconry().getDiocese() != null) {
+                summary.setDioceseId(election.getArchdeaconry().getDiocese().getId());
+            }
+        } else if (election.getDiocese() != null) {
+            // Diocese scope: just diocese
+            summary.setDioceseId(election.getDiocese().getId());
+        }
+        
         summary.setTermStartDate(election.getTermStartDate());
         summary.setTermEndDate(election.getTermEndDate());
         summary.setVotingStartAt(election.getVotingStartAt());

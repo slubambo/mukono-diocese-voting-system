@@ -17,7 +17,6 @@ public class CreateElectionRequest {
     @Size(max = 1000, message = "Description must not exceed 1000 characters")
     private String description;
 
-    @NotNull(message = "Fellowship ID is required")
     private Long fellowshipId;
 
     @NotNull(message = "Scope is required")

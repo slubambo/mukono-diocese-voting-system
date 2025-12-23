@@ -110,7 +110,7 @@ const ElectionsPage: React.FC = () => {
         {loading ? (
           <LoadingState />
         ) : elections.length === 0 ? (
-          <EmptyState title="No elections" description="There are no elections to display." action={isAdmin ? <Button onClick={() => setShowForm(true)}>Create Election</Button> : undefined} />
+          <EmptyState title="No elections" description="There are no elections to display." action={isAdmin ? <Button onClick={() => { setEditing(null); setShowForm(true) }}>Create Election</Button> : undefined} />
         ) : (
           <Paper>
             <TableContainer>

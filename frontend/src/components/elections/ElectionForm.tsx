@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, MenuItem } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
 import { electionApi } from '../../api/election.api'
@@ -40,6 +40,7 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
   const [dioceses, setDioceses] = useState<Diocese[]>([])
   const [archdeaconries, setArchdeaconries] = useState<Archdeaconry[]>([])
   const [churches, setChurches] = useState<Church[]>([])
+  const baseListsLoaded = useRef(false)
 
   const scope = watch('scope') as string | undefined
   const selectedDioceseId = watch('dioceseId') as number | undefined
@@ -82,7 +83,11 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
   }, [election, open, reset])
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      baseListsLoaded.current = false
+      return
+    }
+    if (baseListsLoaded.current) return
     const loadBaseLists = async () => {
       try {
         const [fellowshipRes, dioceseRes] = await Promise.all([
@@ -91,6 +96,7 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
         ])
         setFellowships(fellowshipRes.content || [])
         setDioceses(dioceseRes.content || [])
+        baseListsLoaded.current = true
       } catch (err: any) {
         toast.error(err?.message || 'Failed to load election setup data')
       }
@@ -155,24 +161,24 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
     const scopeValue = data.scope
     const normalizeTargets = (payload: Partial<Election>) => {
       if (scopeValue === 'DIOCESE') {
-        payload.dioceseId = data.dioceseId ? Number(data.dioceseId) : undefined
-        payload.archdeaconryId = undefined
-        payload.churchId = undefined
+        payload.dioceseId = data.dioceseId ? Number(data.dioceseId) : null
+        payload.archdeaconryId = null
+        payload.churchId = null
       } else if (scopeValue === 'ARCHDEACONRY') {
-        payload.dioceseId = undefined
-        payload.archdeaconryId = data.archdeaconryId ? Number(data.archdeaconryId) : undefined
-        payload.churchId = undefined
+        payload.dioceseId = null
+        payload.archdeaconryId = data.archdeaconryId ? Number(data.archdeaconryId) : null
+        payload.churchId = null
       } else if (scopeValue === 'CHURCH') {
-        payload.dioceseId = undefined
-        payload.archdeaconryId = undefined
-        payload.churchId = data.churchId ? Number(data.churchId) : undefined
+        payload.dioceseId = null
+        payload.archdeaconryId = null
+        payload.churchId = data.churchId ? Number(data.churchId) : null
       }
     }
     try {
       const payload: Partial<Election> = {
         name: data.name?.trim(),
         description: data.description?.trim() || undefined,
-        fellowshipId: data.fellowshipId ? Number(data.fellowshipId) : undefined,
+        fellowshipId: data.fellowshipId ? Number(data.fellowshipId) : null,
         scope: scopeValue || undefined,
         termStartDate: toDateOrUndefined(data.termStartDate as string | undefined),
         termEndDate: toDateOrUndefined(data.termEndDate as string | undefined),
@@ -183,10 +189,6 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
       }
       normalizeTargets(payload)
       if (!election?.id) {
-        if (!payload.fellowshipId) {
-          toast.error('Fellowship is required')
-          return
-        }
         if (!payload.scope) {
           toast.error('Scope is required')
           return
@@ -231,26 +233,26 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
               <TextField {...field} label="Description" multiline minRows={3} />
             )} />
 
-            <Controller name="fellowshipId" control={control} rules={{ required: true }} render={({ field }) => (
-              <TextField
-                {...field}
-                select
-                label="Fellowship"
-                required
-                value={field.value ?? ''}
-                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-              >
-                {fellowships.map((f) => (
-                  <MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>
-                ))}
-              </TextField>
-            )} />
-
             <Controller name="scope" control={control} rules={{ required: true }} render={({ field }) => (
               <TextField {...field} select label="Scope" required value={field.value ?? ''}>
                 <MenuItem value="DIOCESE">DIOCESE</MenuItem>
                 <MenuItem value="ARCHDEACONRY">ARCHDEACONRY</MenuItem>
                 <MenuItem value="CHURCH">CHURCH</MenuItem>
+              </TextField>
+            )} />
+
+            <Controller name="fellowshipId" control={control} render={({ field }) => (
+              <TextField
+                {...field}
+                select
+                label="Fellowship"
+                value={field.value ?? ''}
+                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                helperText="Optional. Set only if the election is for one fellowship."
+              >
+                {fellowships.map((f) => (
+                  <MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>
+                ))}
               </TextField>
             )} />
 
