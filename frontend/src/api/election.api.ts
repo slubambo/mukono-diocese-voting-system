@@ -9,58 +9,62 @@ export const electionApi = {
 
   create: (payload: Partial<Election>) => api.post<Election>(BASE, payload),
 
-  get: (id: string) => api.get<Election>(`${BASE}/${id}`),
+  get: (id: string | number) => api.get<Election>(`${BASE}/${id}`),
 
-  update: (id: string, payload: Partial<Election>) => api.put<Election>(`${BASE}/${id}`, payload),
+  update: (id: string | number, payload: Partial<Election>) => api.put<Election>(`${BASE}/${id}`, payload),
 
-  cancel: (id: string) => api.post<void>(`${BASE}/${id}/cancel`),
+  cancel: (id: string | number) => api.post<void>(`${BASE}/${id}/cancel`),
 
   // Positions within an election
-  listPositions: (electionId: string) => api.get<import('../types/election').PagedResponse<Position>>(`${BASE}/${electionId}/positions`),
-  createPosition: (electionId: string, payload: Partial<Position>) =>
+  listPositions: (electionId: string | number) => api.get<import('../types/election').PagedResponse<Position>>(`${BASE}/${electionId}/positions`),
+  createPosition: (electionId: string | number, payload: Partial<Position>) =>
     api.post<Position>(`${BASE}/${electionId}/positions`, payload),
-  deletePosition: (electionId: string, positionId: string | number) =>
+  deletePosition: (electionId: string | number, positionId: string | number) =>
     api.delete(`${BASE}/${electionId}/positions/${positionId}`),
   // Applicants
-  listApplicants: (electionId: string, params: Record<string, unknown> = {}) =>
+  listApplicants: (electionId: string | number, params: Record<string, unknown> = {}) =>
     api.get<import('../types/election').PagedResponse<any>>(`${BASE}/${electionId}/applicants`, { params }),
-  listPendingApplicants: (electionId: string) =>
+  listPendingApplicants: (electionId: string | number) =>
     api.get<any>(`${BASE}/${electionId}/applicants/pending`),
-  countApplicants: (electionId: string) => api.get<number>(`${BASE}/${electionId}/applicants/count`),
-  getApplicant: (electionId: string, applicantId: string | number) =>
+  countApplicants: (electionId: string | number) => api.get<number>(`${BASE}/${electionId}/applicants/count`),
+  getApplicant: (electionId: string | number, applicantId: string | number) =>
     api.get<any>(`${BASE}/${electionId}/applicants/${applicantId}`),
-  manualApplicant: (electionId: string, payload: unknown) =>
+  manualApplicant: (electionId: string | number, payload: unknown) =>
     api.post(`${BASE}/${electionId}/applicants/manual`, payload),
-  nominateApplicant: (electionId: string, payload: unknown) =>
+  nominateApplicant: (electionId: string | number, payload: unknown) =>
     api.post(`${BASE}/${electionId}/applicants/nominate`, payload),
-  approveApplicant: (electionId: string, applicantId: string | number) =>
+  approveApplicant: (electionId: string | number, applicantId: string | number) =>
     api.post(`${BASE}/${electionId}/applicants/${applicantId}/approve`),
-  rejectApplicant: (electionId: string, applicantId: string | number) =>
+  rejectApplicant: (electionId: string | number, applicantId: string | number) =>
     api.post(`${BASE}/${electionId}/applicants/${applicantId}/reject`),
-  revertApplicant: (electionId: string, applicantId: string | number) =>
+  revertApplicant: (electionId: string | number, applicantId: string | number) =>
     api.post(`${BASE}/${electionId}/applicants/${applicantId}/revert`),
-  withdrawApplicant: (electionId: string, applicantId: string | number) =>
+  withdrawApplicant: (electionId: string | number, applicantId: string | number) =>
     api.post(`${BASE}/${electionId}/applicants/${applicantId}/withdraw`),
   
   // Candidates
-  listCandidates: (electionId: string, params: Record<string, unknown> = {}) =>
+  listCandidates: (electionId: string | number, params: Record<string, unknown> = {}) =>
     api.get<import('../types/election').PagedResponse<any>>(`${BASE}/${electionId}/candidates`, { params }),
-  listCandidatesBallot: (electionId: string) => api.get<any>(`${BASE}/${electionId}/candidates/ballot`),
+  listCandidatesBallot: (electionId: string | number) => api.get<any>(`${BASE}/${electionId}/candidates/ballot`),
   // ballot with optional params (e.g., electionPositionId)
-  listCandidatesBallotWithParams: (electionId: string, params: Record<string, unknown> = {}) =>
+  listCandidatesBallotWithParams: (electionId: string | number, params: Record<string, unknown> = {}) =>
     api.get<any>(`${BASE}/${electionId}/candidates/ballot`, { params }),
-  createCandidateDirect: (electionId: string, payload: unknown) => api.post(`${BASE}/${electionId}/candidates/direct`, payload),
-  createCandidateFromApplicant: (electionId: string, payload: unknown) => api.post(`${BASE}/${electionId}/candidates/from-applicant`, payload),
-  generateCandidates: (electionId: string) => api.post(`${BASE}/${electionId}/candidates/generate`),
-  deleteCandidatesBulk: (electionId: string, payload: unknown) => api.delete(`${BASE}/${electionId}/candidates`, { data: payload }),
+  createCandidateDirect: (electionId: string | number, payload: unknown) => api.post(`${BASE}/${electionId}/candidates/direct`, payload),
+  createCandidateFromApplicant: (electionId: string | number, payload: unknown) => api.post(`${BASE}/${electionId}/candidates/from-applicant`, payload),
+  generateCandidates: (electionId: string | number) => api.post(`${BASE}/${electionId}/candidates/generate`),
+  deleteCandidatesBulk: (electionId: string | number, payload: unknown) => api.delete(`${BASE}/${electionId}/candidates`, { data: payload }),
   // Admin voting periods
-  listVotingPeriods: (electionId: string) => api.get<import('../types/election').PagedResponse<any>>(`/api/v1/admin/elections/${electionId}/voting-periods`),
-  createVotingPeriod: (electionId: string, payload: unknown) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods`, payload),
-  getVotingPeriod: (electionId: string, votingPeriodId: string | number) => api.get(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}`),
-  updateVotingPeriod: (electionId: string, votingPeriodId: string | number, payload: unknown) => api.put(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}`, payload),
-  openVotingPeriod: (electionId: string, votingPeriodId: string | number) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/open`),
-  closeVotingPeriod: (electionId: string, votingPeriodId: string | number) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/close`),
-  cancelVotingPeriod: (electionId: string, votingPeriodId: string | number) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/cancel`),
+  listVotingPeriods: (electionId: string | number) => api.get<import('../types/election').PagedResponse<any>>(`/api/v1/admin/elections/${electionId}/voting-periods`),
+  createVotingPeriod: (electionId: string | number, payload: unknown) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods`, payload),
+  getVotingPeriod: (electionId: string | number, votingPeriodId: string | number) => api.get(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}`),
+  updateVotingPeriod: (electionId: string | number, votingPeriodId: string | number, payload: unknown) => api.put(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}`, payload),
+  getVotingPeriodPositions: (electionId: string | number, votingPeriodId: string | number) =>
+    api.get<import('../types/election').VotingPeriodPositionsResponse>(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/positions`),
+  assignVotingPeriodPositions: (electionId: string | number, votingPeriodId: string | number, payload: { electionPositionIds: number[] }) =>
+    api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/positions`, payload),
+  openVotingPeriod: (electionId: string | number, votingPeriodId: string | number) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/open`),
+  closeVotingPeriod: (electionId: string | number, votingPeriodId: string | number) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/close`),
+  cancelVotingPeriod: (electionId: string | number, votingPeriodId: string | number) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/cancel`),
 }
 
 export type { Election, Position }

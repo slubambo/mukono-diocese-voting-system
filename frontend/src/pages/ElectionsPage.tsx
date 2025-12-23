@@ -64,9 +64,9 @@ const ElectionsPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, size, sort])
 
-  const handleView = (id: string) => {
+  const handleView = (id: string | number) => {
     const base = isAdmin ? '/admin' : '/ds'
-    navigate(`${base}/elections/${id}`)
+    navigate(`${base}/elections/${String(id)}`)
   }
 
   const handleEdit = (e: Election) => {

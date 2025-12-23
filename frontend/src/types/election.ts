@@ -87,9 +87,30 @@ export interface VotingPeriod {
   id: number | string
   name?: string
   label?: string
-  startAt?: string
-  endAt?: string
+  startTime?: string
+  endTime?: string
   status?: string
   createdAt?: string
   updatedAt?: string
+}
+
+export interface PositionSummary {
+  electionPositionId?: number
+  fellowshipPositionId?: number
+  positionTitle?: string
+  seats?: number
+  maxVotesPerVoter?: number
+}
+
+export interface FellowshipPositionsGroup {
+  fellowshipId?: number
+  fellowshipName?: string
+  positions?: PositionSummary[]
+}
+
+export interface VotingPeriodPositionsResponse {
+  votingPeriodId?: number
+  electionId?: number
+  electionPositionIds?: number[]
+  byFellowship?: FellowshipPositionsGroup[]
 }

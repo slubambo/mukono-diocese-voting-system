@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, IconButton } from '@mui/material'
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, IconButton, Checkbox, FormControlLabel, Typography, Divider } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser'
@@ -10,7 +10,7 @@ import EmptyState from '../common/EmptyState'
 import { electionApi } from '../../api/election.api'
 import { useToast } from '../feedback/ToastProvider'
 import { useAuth } from '../../context/AuthContext'
-import type { VotingPeriod } from '../../types/election'
+import type { Position, VotingPeriod, VotingPeriodPositionsResponse } from '../../types/election'
 
 const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const [loading, setLoading] = useState(true)
@@ -18,8 +18,11 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const [showDialog, setShowDialog] = useState(false)
   const [editing, setEditing] = useState<VotingPeriod | null>(null)
   const [name, setName] = useState('')
-  const [startAt, setStartAt] = useState('')
-  const [endAt, setEndAt] = useState('')
+  const [startTime, setStartTime] = useState('')
+  const [endTime, setEndTime] = useState('')
+  const [positions, setPositions] = useState<Position[]>([])
+  const [assigned, setAssigned] = useState<number[]>([])
+  const [loadingPositions, setLoadingPositions] = useState(false)
   const toast = useToast()
   const { user } = useAuth()
   const isAdmin = Boolean(user?.roles?.includes('ROLE_ADMIN'))
@@ -42,19 +45,85 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const openDialog = (p?: VotingPeriod) => {
     setEditing(p ?? null)
     setName(p?.name ?? '')
-    setStartAt(p?.startAt ?? '')
-    setEndAt(p?.endAt ?? '')
+    setStartTime(p?.startTime ?? '')
+    setEndTime(p?.endTime ?? '')
     setShowDialog(true)
   }
 
+  const formatLocalDateTime = (value?: string | null) => {
+    if (!value) return ''
+    const dt = new Date(value)
+    if (Number.isNaN(dt.getTime())) return ''
+    const pad = (num: number) => String(num).padStart(2, '0')
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+  }
+
+  useEffect(() => {
+    const loadPositions = async () => {
+      if (!showDialog) return
+      setLoadingPositions(true)
+      try {
+        const res = await electionApi.listPositions(electionId)
+        const data: Position[] = Array.isArray((res as any)?.content) ? (res as any).content : (res as any)
+        setPositions(data || [])
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to load election positions')
+        setPositions([])
+      } finally {
+        setLoadingPositions(false)
+      }
+    }
+    loadPositions()
+  }, [electionId, showDialog, toast])
+
+  useEffect(() => {
+    const loadAssigned = async () => {
+      if (!showDialog) return
+      if (!editing?.id) {
+        setAssigned([])
+        return
+      }
+      try {
+        const res: VotingPeriodPositionsResponse = await electionApi.getVotingPeriodPositions(electionId, editing.id)
+        setAssigned(res.electionPositionIds || [])
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to load voting period positions')
+        setAssigned([])
+      }
+    }
+    loadAssigned()
+  }, [electionId, editing, showDialog, toast])
+
+  useEffect(() => {
+    if (!showDialog || !editing) return
+    setStartTime(formatLocalDateTime(editing.startTime))
+    setEndTime(formatLocalDateTime(editing.endTime))
+  }, [editing, showDialog])
+
   const submit = async () => {
+    const toIsoOrUndefined = (value?: string) => {
+      if (!value?.trim()) return undefined
+      const dt = new Date(value)
+      if (Number.isNaN(dt.getTime())) return undefined
+      return dt.toISOString()
+    }
     try {
+      const payload = {
+        name,
+        startTime: toIsoOrUndefined(startTime),
+        endTime: toIsoOrUndefined(endTime),
+      }
+      let targetId = editing?.id
       if (editing?.id) {
-        await electionApi.updateVotingPeriod(electionId, editing.id, { name, startAt, endAt })
+        await electionApi.updateVotingPeriod(electionId, editing.id, payload)
         toast.success('Voting period updated')
       } else {
-        await electionApi.createVotingPeriod(electionId, { name, startAt, endAt })
+        const created = await electionApi.createVotingPeriod(electionId, payload)
+        targetId = (created as any)?.id
         toast.success('Voting period created')
+      }
+      if (targetId) {
+        await electionApi.assignVotingPeriodPositions(electionId, targetId, { electionPositionIds: assigned })
       }
       setShowDialog(false)
       fetch()
@@ -103,8 +172,8 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                 {periods.map(p => (
                   <TableRow key={String(p.id)} hover>
                     <TableCell>{p.name || p.label}</TableCell>
-                    <TableCell>{p.startAt ? new Date(p.startAt).toLocaleString() : '—'}</TableCell>
-                    <TableCell>{p.endAt ? new Date(p.endAt).toLocaleString() : '—'}</TableCell>
+                    <TableCell>{p.startTime ? new Date(p.startTime).toLocaleString() : '—'}</TableCell>
+                    <TableCell>{p.endTime ? new Date(p.endTime).toLocaleString() : '—'}</TableCell>
                     <TableCell>{p.status || '—'}</TableCell>
                     <TableCell align="right">
                       {isAdmin && (
@@ -129,8 +198,46 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
         <DialogContent>
           <Box sx={{ display: 'grid', gap: 2 }}>
             <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} fullWidth />
-            <TextField label="Start At" type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} InputLabelProps={{ shrink: true }} />
-            <TextField label="End At" type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} InputLabelProps={{ shrink: true }} />
+            <TextField label="Start Time" type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} InputLabelProps={{ shrink: true }} />
+            <TextField label="End Time" type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} InputLabelProps={{ shrink: true }} />
+            <Divider />
+            <Typography variant="subtitle2">Positions for this voting period</Typography>
+            {loadingPositions ? (
+              <Typography variant="body2">Loading positions...</Typography>
+            ) : positions.length === 0 ? (
+              <Typography variant="body2">No positions available for this election.</Typography>
+            ) : (
+              <Box sx={{ display: 'grid', gap: 1 }}>
+                {Object.entries(
+                  positions.reduce<Record<string, Position[]>>((acc, pos) => {
+                    const name = pos.fellowshipPosition?.fellowshipName || 'Other'
+                    acc[name] = acc[name] || []
+                    acc[name].push(pos)
+                    return acc
+                  }, {})
+                ).map(([fellowshipName, items]) => (
+                  <Box key={fellowshipName}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>{fellowshipName}</Typography>
+                    {items.map((pos) => {
+                      const id = Number(pos.id)
+                      const checked = assigned.includes(id)
+                      const label = `${pos.fellowshipPosition?.titleName || pos.title || 'Position'} (${pos.seats ?? 1} seat${(pos.seats ?? 1) === 1 ? '' : 's'})`
+                      return (
+                        <FormControlLabel
+                          key={id}
+                          control={<Checkbox checked={checked} onChange={() => {
+                            setAssigned((prev) => (
+                              prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
+                            ))
+                          }} />}
+                          label={label}
+                        />
+                      )
+                    })}
+                  </Box>
+                ))}
+              </Box>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
