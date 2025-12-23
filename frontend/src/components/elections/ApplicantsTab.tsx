@@ -170,11 +170,11 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
           <Tab label={`Pending`} />
           <Tab label={`All${count !== null ? ` (${count})` : ''}`} />
         </Tabs>
-        {isAdmin && <Button variant="contained" onClick={() => { setSelectedPerson(null); setManualPersonId(''); setManualPositionId(''); setManualNotes(''); setShowManual(true) }}>Direct Applicant</Button>}
+        {isAdmin && <Button variant="contained" onClick={() => { setSelectedPerson(null); setManualPersonId(''); setManualPositionId(''); setManualNotes(''); setShowManual(true) }}>Add Applicant</Button>}
       </Box>
 
       {applicants.length === 0 ? (
-        <EmptyState title="No applicants" description="There are no applicants to display." action={isAdmin ? <Button onClick={() => setShowManual(true)}>Direct Applicant</Button> : undefined} />
+        <EmptyState title="No applicants" description="There are no applicants to display." action={isAdmin ? <Button onClick={() => setShowManual(true)}>Add Applicant</Button> : undefined} />
       ) : (
         <Paper>
           <TableContainer>
@@ -193,8 +193,11 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
               <TableBody>
                 {applicants.map(a => (
                   <TableRow key={a.id} hover>
-                    <TableCell>{(a as any)?.person?.fullName || a.personName || '—'}</TableCell>
-                    <TableCell>{a.positionTitle || a.fellowshipPosition?.titleName || '—'}</TableCell>
+                    <TableCell>{a.person?.fullName || a.personName || '—'}</TableCell>
+                    <TableCell>
+                      {a.positionTitle || a.fellowshipPosition?.titleName || '—'}
+                      {a.fellowshipName ? ` — ${a.fellowshipName}` : ''}
+                    </TableCell>
                     <TableCell>{a.source || '—'}</TableCell>
                     <TableCell><StatusChip status={(a.status || 'pending') as any} /></TableCell>
                     <TableCell>{a.submittedAt ? new Date(a.submittedAt).toLocaleString() : '—'}</TableCell>
@@ -204,18 +207,37 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                     <TableCell align="right">
                       {isAdmin && (
                         <>
-                          <Tooltip title="Approve">
-                            <IconButton size="small" onClick={() => openDecision('approve', a)}><CheckIcon /></IconButton>
-                          </Tooltip>
-                          <Tooltip title="Reject">
-                            <IconButton size="small" onClick={() => openDecision('reject', a)}><CloseIcon /></IconButton>
-                          </Tooltip>
-                          <Tooltip title="Revert">
-                            <IconButton size="small" onClick={() => openDecision('revert', a)}><RotateLeftIcon /></IconButton>
-                          </Tooltip>
-                          <Tooltip title="Withdraw">
-                            <IconButton size="small" onClick={() => openDecision('withdraw', a)}><UndoIcon /></IconButton>
-                          </Tooltip>
+                          {(() => {
+                            const status = (a.status || '').toUpperCase()
+                            const canApprove = status === 'PENDING' || status === 'REVERTED'
+                            const canReject = status === 'PENDING' || status === 'REVERTED'
+                            const canRevert = status === 'APPROVED' || status === 'REJECTED' || status === 'WITHDRAWN'
+                            const canWithdraw = status === 'PENDING' || status === 'APPROVED'
+                            return (
+                              <>
+                                <Tooltip title={canApprove ? 'Approve' : 'Already approved'}>
+                                  <span>
+                                    <IconButton size="small" disabled={!canApprove} onClick={() => openDecision('approve', a)}><CheckIcon /></IconButton>
+                                  </span>
+                                </Tooltip>
+                                <Tooltip title={canReject ? 'Reject' : 'Already rejected'}>
+                                  <span>
+                                    <IconButton size="small" disabled={!canReject} onClick={() => openDecision('reject', a)}><CloseIcon /></IconButton>
+                                  </span>
+                                </Tooltip>
+                                <Tooltip title={canRevert ? 'Revert decision' : 'No decision to revert'}>
+                                  <span>
+                                    <IconButton size="small" disabled={!canRevert} onClick={() => openDecision('revert', a)}><RotateLeftIcon /></IconButton>
+                                  </span>
+                                </Tooltip>
+                                <Tooltip title={canWithdraw ? 'Withdraw' : 'Already withdrawn'}>
+                                  <span>
+                                    <IconButton size="small" disabled={!canWithdraw} onClick={() => openDecision('withdraw', a)}><UndoIcon /></IconButton>
+                                  </span>
+                                </Tooltip>
+                              </>
+                            )
+                          })()}
                         </>
                       )}
                     </TableCell>
@@ -228,7 +250,7 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       )}
 
       <Dialog open={showManual} onClose={() => setShowManual(false)}>
-        <DialogTitle>Direct Applicant</DialogTitle>
+        <DialogTitle>Add Applicant</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'grid', gap: 2, mt: 1 }}>
             <Autocomplete
@@ -281,7 +303,7 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       <Dialog open={decisionOpen} onClose={() => setDecisionOpen(false)}>
         <DialogTitle>
           {decisionAction ? decisionAction.toUpperCase() : 'Decision'}
-          {decisionApplicant?.personName || (decisionApplicant as any)?.person?.fullName ? ` — ${decisionApplicant?.personName || (decisionApplicant as any)?.person?.fullName}` : ''}
+          {decisionApplicant?.person?.fullName || decisionApplicant?.personName ? ` — ${decisionApplicant?.person?.fullName || decisionApplicant?.personName}` : ''}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'grid', gap: 2, mt: 1 }}>

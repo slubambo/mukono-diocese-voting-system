@@ -55,10 +55,25 @@ export interface Applicant {
   id: number | string
   personId?: number
   personName?: string
+  person?: {
+    id?: number
+    fullName?: string
+    email?: string | null
+    phoneNumber?: string | null
+  }
   positionId?: number | string
   positionTitle?: string
+  fellowshipName?: string
+  submittedBy?: {
+    id?: number
+    fullName?: string
+  }
+  source?: string
   status?: string
   submittedAt?: string
+  decisionAt?: string
+  decisionBy?: string
+  notes?: string | null
   // include fellowshipPosition if present
   fellowshipPosition?: {
     id?: number
