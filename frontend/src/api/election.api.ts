@@ -55,10 +55,12 @@ export const electionApi = {
   generateCandidates: (electionId: string | number) => api.post(`${BASE}/${electionId}/candidates/generate`),
   deleteCandidatesBulk: (electionId: string | number, payload: unknown) => api.delete(`${BASE}/${electionId}/candidates`, { data: payload }),
   // Admin voting periods
-  listVotingPeriods: (electionId: string | number) => api.get<import('../types/election').PagedResponse<any>>(`/api/v1/admin/elections/${electionId}/voting-periods`),
+  listVotingPeriods: (electionId: string | number) => api.get<import('../types/election').PagedResponse<import('../types/election').VotingPeriod>>(`/api/v1/admin/elections/${electionId}/voting-periods`),
   createVotingPeriod: (electionId: string | number, payload: unknown) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods`, payload),
   getVotingPeriod: (electionId: string | number, votingPeriodId: string | number) => api.get(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}`),
   updateVotingPeriod: (electionId: string | number, votingPeriodId: string | number, payload: unknown) => api.put(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}`, payload),
+  getVotingPeriodPositionsMap: (electionId: string | number) =>
+    api.get<import('../types/election').VotingPeriodPositionsMapResponse>(`/api/v1/admin/elections/${electionId}/voting-periods/positions-map`),
   getVotingPeriodPositions: (electionId: string | number, votingPeriodId: string | number) =>
     api.get<import('../types/election').VotingPeriodPositionsResponse>(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/positions`),
   assignVotingPeriodPositions: (electionId: string | number, votingPeriodId: string | number, payload: { electionPositionIds: number[] }) =>

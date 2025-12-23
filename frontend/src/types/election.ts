@@ -90,6 +90,7 @@ export interface VotingPeriod {
   startTime?: string
   endTime?: string
   status?: string
+  positionsCount?: number
   createdAt?: string
   updatedAt?: string
 }
@@ -113,4 +114,14 @@ export interface VotingPeriodPositionsResponse {
   electionId?: number
   electionPositionIds?: number[]
   byFellowship?: FellowshipPositionsGroup[]
+}
+
+export interface PeriodPositions {
+  votingPeriodId?: number
+  electionPositionIds?: number[]
+}
+
+export interface VotingPeriodPositionsMapResponse {
+  periods?: PeriodPositions[]
+  positionToPeriod?: Record<string, number>
 }

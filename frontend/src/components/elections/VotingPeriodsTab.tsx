@@ -10,7 +10,7 @@ import EmptyState from '../common/EmptyState'
 import { electionApi } from '../../api/election.api'
 import { useToast } from '../feedback/ToastProvider'
 import { useAuth } from '../../context/AuthContext'
-import type { Position, VotingPeriod, VotingPeriodPositionsResponse } from '../../types/election'
+import type { Position, VotingPeriod, VotingPeriodPositionsMapResponse, VotingPeriodPositionsResponse } from '../../types/election'
 
 const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const [loading, setLoading] = useState(true)
@@ -47,37 +47,28 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
 
   useEffect(() => { fetch() }, [electionId])
 
-  useEffect(() => {
-    const loadAssignments = async () => {
-      try {
-        const res = await electionApi.listVotingPeriods(electionId)
-        const data = (res as any)?.content ?? res ?? []
-        const list = Array.isArray(data) ? data : []
-        const entries = await Promise.all(
-          list.map(async (p: any) => {
-            try {
-              const positionsRes = await electionApi.getVotingPeriodPositions(electionId, p.id)
-              return { id: String(p.id), positionIds: positionsRes.electionPositionIds || [] }
-            } catch (err) {
-              return { id: String(p.id), positionIds: [] }
-            }
-          })
-        )
-        const byPeriod: Record<string, number[]> = {}
-        const posMap: Record<number, string> = {}
-        entries.forEach((entry) => {
-          byPeriod[entry.id] = entry.positionIds
-          entry.positionIds.forEach((pid) => {
-            posMap[pid] = entry.id
-          })
+  const loadAssignments = async () => {
+    try {
+      const res: VotingPeriodPositionsMapResponse = await electionApi.getVotingPeriodPositionsMap(electionId)
+      const byPeriod: Record<string, number[]> = {}
+      const posMap: Record<number, string> = {}
+      ;(res.periods || []).forEach((entry) => {
+        const id = String(entry.votingPeriodId)
+        const ids = entry.electionPositionIds || []
+        byPeriod[id] = ids
+        ids.forEach((pid) => {
+          posMap[pid] = id
         })
-        setAssignedByPeriod(byPeriod)
-        setPositionToPeriod(posMap)
-      } catch (err) {
-        setAssignedByPeriod({})
-        setPositionToPeriod({})
-      }
+      })
+      setAssignedByPeriod(byPeriod)
+      setPositionToPeriod(posMap)
+    } catch (err) {
+      setAssignedByPeriod({})
+      setPositionToPeriod({})
     }
+  }
+
+  useEffect(() => {
     loadAssignments()
   }, [electionId])
 
@@ -194,6 +185,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       }
       setShowDialog(false)
       fetch()
+      loadAssignments()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to save voting period')
     }
@@ -207,6 +199,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       if (lifecycleAction === 'cancel') await electionApi.cancelVotingPeriod(electionId, lifecyclePeriod.id)
       toast.success(`Voting period ${lifecycleAction}ed`)
       fetch()
+      loadAssignments()
       setLifecycleAction(null)
       setLifecyclePeriod(null)
     } catch (err: any) {
@@ -245,7 +238,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                     <TableCell>{p.startTime ? new Date(p.startTime).toLocaleString() : '—'}</TableCell>
                     <TableCell>{p.endTime ? new Date(p.endTime).toLocaleString() : '—'}</TableCell>
                     <TableCell>{p.status || '—'}</TableCell>
-                    <TableCell align="right">{assignedByPeriod[String(p.id)]?.length ?? 0}</TableCell>
+                    <TableCell align="right">{p.positionsCount ?? assignedByPeriod[String(p.id)]?.length ?? 0}</TableCell>
                     <TableCell align="right">
                       {isAdmin && (
                         <>
