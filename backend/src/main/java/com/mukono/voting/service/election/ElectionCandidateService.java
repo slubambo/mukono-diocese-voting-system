@@ -2,6 +2,8 @@ package com.mukono.voting.service.election;
 
 import com.mukono.voting.model.election.*;
 import com.mukono.voting.model.people.Person;
+import com.mukono.voting.payload.response.BallotGroupedByPositionResponse;
+import com.mukono.voting.payload.response.ElectionCandidateResponse;
 import com.mukono.voting.repository.election.*;
 import com.mukono.voting.repository.people.PersonRepository;
 import org.springframework.data.domain.Page;
@@ -10,7 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -21,17 +24,20 @@ public class ElectionCandidateService {
     private final ElectionCandidateRepository electionCandidateRepository;
     private final ElectionApplicantRepository electionApplicantRepository;
     private final PersonRepository personRepository;
+    private final VotingPeriodPositionRepository votingPeriodPositionRepository;
 
     public ElectionCandidateService(ElectionRepository electionRepository,
                                     ElectionPositionRepository electionPositionRepository,
                                     ElectionCandidateRepository electionCandidateRepository,
                                     ElectionApplicantRepository electionApplicantRepository,
-                                    PersonRepository personRepository) {
+                                    PersonRepository personRepository,
+                                    VotingPeriodPositionRepository votingPeriodPositionRepository) {
         this.electionRepository = electionRepository;
         this.electionPositionRepository = electionPositionRepository;
         this.electionCandidateRepository = electionCandidateRepository;
         this.electionApplicantRepository = electionApplicantRepository;
         this.personRepository = personRepository;
+        this.votingPeriodPositionRepository = votingPeriodPositionRepository;
     }
 
     // =====================================================================
@@ -186,6 +192,76 @@ public class ElectionCandidateService {
             throw new IllegalArgumentException("ElectionPosition does not belong to the specified election");
         }
         return electionCandidateRepository.findCandidatesForBallot(electionId, electionPositionId);
+    }
+
+    /**
+     * Get ballot candidates grouped by position.
+     * Optionally filter by voting period if votingPeriodId is provided.
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId optional voting period ID to filter positions
+     * @return grouped ballot response
+     */
+    @Transactional(readOnly = true)
+    public BallotGroupedByPositionResponse listBallotGroupedByPosition(Long electionId, Long votingPeriodId) {
+        if (electionId == null) {
+            throw new IllegalArgumentException("Election ID is required");
+        }
+        // Validate election exists
+        var election = electionRepository.findById(electionId)
+                .orElseThrow(() -> new IllegalArgumentException("Election with ID " + electionId + " not found"));
+
+        // Get all candidates for the election with details
+        List<ElectionCandidate> candidates = electionCandidateRepository.findAllCandidatesForElectionWithDetails(electionId);
+
+        // If votingPeriodId is provided, filter to only positions in that period
+        Set<Long> positionIds = candidates.stream()
+                .map(c -> c.getElectionPosition().getId())
+                .collect(Collectors.toSet());
+
+        if (votingPeriodId != null) {
+            List<Long> periodPositionIds = votingPeriodPositionRepository
+                    .findElectionPositionIdsByVotingPeriod(electionId, votingPeriodId);
+            positionIds.retainAll(periodPositionIds);
+        }
+
+        // Group candidates by position
+        Map<Long, List<ElectionCandidate>> byPosition = candidates.stream()
+                .filter(c -> positionIds.contains(c.getElectionPosition().getId()))
+                .collect(Collectors.groupingBy(c -> c.getElectionPosition().getId(), Collectors.toList()));
+
+        // Build grouped response
+        List<BallotGroupedByPositionResponse.PositionGroup> groups = new ArrayList<>();
+        for (Long posId : byPosition.keySet()) {
+            var position = electionPositionRepository.findById(posId).orElse(null);
+            if (position == null) continue;
+
+            var candidatesList = byPosition.get(posId).stream()
+                    .map(ElectionCandidateResponse::fromEntity)
+                    .collect(Collectors.toList());
+
+            var group = new BallotGroupedByPositionResponse.PositionGroup(
+                    position.getId(),
+                    position.getFellowshipPosition().getTitle().getName(),
+                    position.getFellowship().getName(),
+                    position.getFellowship().getId(),
+                    position.getSeats(),
+                    mapPositionScope(position.getFellowshipPosition().getScope()),
+                    candidatesList
+            );
+            groups.add(group);
+        }
+
+        // Sort by position ID for stable ordering
+        groups.sort(Comparator.comparing(BallotGroupedByPositionResponse.PositionGroup::getElectionPositionId));
+
+        return new BallotGroupedByPositionResponse(groups);
+    }
+
+    private BallotGroupedByPositionResponse.PositionScope mapPositionScope(
+            com.mukono.voting.model.leadership.PositionScope scope) {
+        if (scope == null) return null;
+        return BallotGroupedByPositionResponse.PositionScope.valueOf(scope.name());
     }
 
     public void removeCandidate(Long electionId, Long electionPositionId, Long personId, String removedBy, String notes) {
