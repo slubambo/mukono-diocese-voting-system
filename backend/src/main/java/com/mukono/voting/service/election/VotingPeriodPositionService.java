@@ -10,7 +10,8 @@ import com.mukono.voting.repository.election.VotingPeriodRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Service for managing VotingPeriodPosition mappings.
@@ -127,5 +128,35 @@ public class VotingPeriodPositionService {
     @Transactional(readOnly = true)
     public long countAssignedPositions(Long votingPeriodId) {
         return votingPeriodPositionRepository.countByVotingPeriodId(votingPeriodId);
+    }
+
+    /**
+     * Count positions for multiple voting periods in bulk.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, Long> countAssignedPositionsForPeriods(List<Long> votingPeriodIds) {
+        if (votingPeriodIds == null || votingPeriodIds.isEmpty()) return Collections.emptyMap();
+        Map<Long, Long> result = new HashMap<>();
+        for (Object[] row : votingPeriodPositionRepository.countByVotingPeriodIds(votingPeriodIds)) {
+            Long periodId = (Long) row[0];
+            Long cnt = (Long) row[1];
+            result.put(periodId, cnt);
+        }
+        return result;
+    }
+
+    /**
+     * Get mapping pairs (votingPeriodId -> electionPositionId) for an election.
+     */
+    @Transactional(readOnly = true)
+    public List<long[]> getPeriodPositionPairs(Long electionId) {
+        List<Object[]> rows = votingPeriodPositionRepository.findPairsByElectionId(electionId);
+        List<long[]> pairs = new ArrayList<>(rows.size());
+        for (Object[] row : rows) {
+            Long periodId = (Long) row[0];
+            Long positionId = (Long) row[1];
+            pairs.add(new long[] { periodId, positionId });
+        }
+        return pairs;
     }
 }

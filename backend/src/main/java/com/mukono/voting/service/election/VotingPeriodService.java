@@ -10,6 +10,7 @@ import com.mukono.voting.payload.request.UpdateVotingPeriodRequest;
 import com.mukono.voting.payload.request.AssignVotingPeriodPositionsRequest;
 import com.mukono.voting.payload.response.VotingPeriodResponse;
 import com.mukono.voting.payload.response.VotingPeriodPositionsResponse;
+import com.mukono.voting.payload.response.VotingPeriodPositionsMapResponse;
 import com.mukono.voting.repository.election.ElectionRepository;
 import com.mukono.voting.repository.election.VotingPeriodRepository;
 import com.mukono.voting.repository.election.ElectionPositionRepository;
@@ -132,6 +133,43 @@ public class VotingPeriodService {
             return votingPeriodRepository.findByElectionIdAndStatus(electionId, status, pageable);
         }
         return votingPeriodRepository.findByElectionId(electionId, pageable);
+    }
+
+    /**
+     * List voting periods and include positionsCount per item using a bulk count.
+     */
+    @Transactional(readOnly = true)
+    public Page<VotingPeriodResponse> listVotingPeriodsWithCounts(Long electionId, VotingPeriodStatus status, Pageable pageable) {
+        Page<VotingPeriod> page = listVotingPeriods(electionId, status, pageable);
+        List<Long> ids = page.getContent().stream().map(VotingPeriod::getId).toList();
+        Map<Long, Long> counts = votingPeriodPositionService.countAssignedPositionsForPeriods(ids);
+        return page.map(vp -> toResponse(vp, counts.getOrDefault(vp.getId(), 0L)));
+    }
+
+    /**
+     * Build bulk positions map response for an election.
+     */
+    @Transactional(readOnly = true)
+    public VotingPeriodPositionsMapResponse getPositionsMap(Long electionId) {
+        // Validate election exists
+        if (!electionRepository.existsById(electionId)) {
+            throw new IllegalArgumentException("Election not found");
+        }
+        // Fetch all voting periods for the election
+        List<VotingPeriod> periods = votingPeriodRepository.findByElectionId(electionId);
+        // Build periods -> positions list
+        List<VotingPeriodPositionsMapResponse.PeriodPositions> periodItems = new ArrayList<>();
+        for (VotingPeriod p : periods) {
+            List<Long> positionIds = votingPeriodPositionService.getAssignedPositionIds(electionId, p.getId());
+            periodItems.add(new VotingPeriodPositionsMapResponse.PeriodPositions(p.getId(), positionIds));
+        }
+        // Build position -> period map from pairs
+        List<long[]> pairs = votingPeriodPositionService.getPeriodPositionPairs(electionId);
+        Map<Long, Long> positionToPeriod = new HashMap<>();
+        for (long[] pair : pairs) {
+            positionToPeriod.put(pair[1], pair[0]);
+        }
+        return new VotingPeriodPositionsMapResponse(periodItems, positionToPeriod);
     }
 
     /**
@@ -362,6 +400,15 @@ public class VotingPeriodService {
                 electionPositionIds,
                 fellowshipGroups
         );
+    }
+
+    /**
+     * Convert VotingPeriod entity to VotingPeriodResponse with positionsCount.
+     */
+    public VotingPeriodResponse toResponse(VotingPeriod votingPeriod, Long positionsCount) {
+        VotingPeriodResponse r = toResponse(votingPeriod);
+        r.setPositionsCount(positionsCount);
+        return r;
     }
 
     /**

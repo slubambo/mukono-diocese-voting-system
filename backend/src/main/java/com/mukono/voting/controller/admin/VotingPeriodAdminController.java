@@ -9,6 +9,7 @@ import com.mukono.voting.payload.request.UpdateVotingPeriodRequest;
 import com.mukono.voting.payload.request.AssignVotingPeriodPositionsRequest;
 import com.mukono.voting.payload.response.VotingPeriodResponse;
 import com.mukono.voting.payload.response.VotingPeriodPositionsResponse;
+import com.mukono.voting.payload.response.VotingPeriodPositionsMapResponse;
 import com.mukono.voting.service.election.VotingPeriodService;
 import com.mukono.voting.service.election.VotingPeriodPositionService;
 import com.mukono.voting.repository.election.ElectionPositionRepository;
@@ -95,33 +96,10 @@ public class VotingPeriodAdminController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id,desc") String sort,
             @RequestParam(required = false) VotingPeriodStatus status) {
-        
         Pageable pageable = toPageable(page, size, sort);
-        Page<VotingPeriod> votingPeriods = votingPeriodService.listVotingPeriods(electionId, status, pageable);
-        Page<VotingPeriodResponse> responses = votingPeriods.map(votingPeriodService::toResponse);
-        
+        // Use optimized list with counts
+        Page<VotingPeriodResponse> responses = votingPeriodService.listVotingPeriodsWithCounts(electionId, status, pageable);
         return ResponseEntity.ok(responses);
-    }
-
-    /**
-     * Update a voting period.
-     * Allowed only when status is SCHEDULED or OPEN (and only description for OPEN).
-     * Rejects if status is CLOSED or CANCELLED.
-     *
-     * PUT /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}
-     *
-     * @param electionId the election ID
-     * @param votingPeriodId the voting period ID
-     * @param request update request with optional fields (name, description, startTime, endTime)
-     * @return updated voting period response (200 OK)
-     */
-    @PutMapping("/{votingPeriodId}")
-    public ResponseEntity<VotingPeriodResponse> updateVotingPeriod(
-            @PathVariable @NotNull Long electionId,
-            @PathVariable @NotNull Long votingPeriodId,
-            @Valid @RequestBody UpdateVotingPeriodRequest request) {
-        VotingPeriod updated = votingPeriodService.updateVotingPeriod(electionId, votingPeriodId, request);
-        return ResponseEntity.ok(votingPeriodService.toResponse(updated));
     }
 
     /**
@@ -214,6 +192,16 @@ public class VotingPeriodAdminController {
             @PathVariable @NotNull Long votingPeriodId) {
         VotingPeriodPositionsResponse positions = votingPeriodService.getVotingPeriodPositions(electionId, votingPeriodId);
         return ResponseEntity.ok(positions);
+    }
+
+    /**
+     * Bulk mapping of positions assigned to voting periods for an election.
+     * GET /api/v1/admin/elections/{electionId}/voting-periods/positions-map
+     */
+    @GetMapping("/positions-map")
+    public ResponseEntity<VotingPeriodPositionsMapResponse> getPositionsMap(
+            @PathVariable @NotNull Long electionId) {
+        return ResponseEntity.ok(votingPeriodService.getPositionsMap(electionId));
     }
 
     /**

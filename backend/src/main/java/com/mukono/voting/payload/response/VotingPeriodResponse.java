@@ -20,6 +20,7 @@ public class VotingPeriodResponse {
     private VotingPeriodStatus status;
     private Instant createdAt;
     private Instant updatedAt;
+    private Long positionsCount; // New field for number of assigned positions
 
     // Constructors
     public VotingPeriodResponse() {
@@ -110,5 +111,13 @@ public class VotingPeriodResponse {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Long getPositionsCount() {
+        return positionsCount;
+    }
+
+    public void setPositionsCount(Long positionsCount) {
+        this.positionsCount = positionsCount;
     }
 }

@@ -39,4 +39,19 @@ public interface VotingPeriodPositionRepository extends JpaRepository<VotingPeri
      * Count positions assigned to a voting period.
      */
     long countByVotingPeriodId(Long votingPeriodId);
+
+    /**
+     * Bulk count positions for multiple voting period IDs.
+     * Returns pairs (votingPeriodId, count).
+     */
+    @Query("SELECT vpp.votingPeriod.id, COUNT(vpp.id) FROM VotingPeriodPosition vpp " +
+           "WHERE vpp.votingPeriod.id IN :votingPeriodIds GROUP BY vpp.votingPeriod.id")
+    List<Object[]> countByVotingPeriodIds(@Param("votingPeriodIds") List<Long> votingPeriodIds);
+
+    /**
+     * Fetch pairs of (votingPeriodId, electionPositionId) for an election.
+     */
+    @Query("SELECT vpp.votingPeriod.id, vpp.electionPosition.id FROM VotingPeriodPosition vpp " +
+           "WHERE vpp.electionId = :electionId")
+    List<Object[]> findPairsByElectionId(@Param("electionId") Long electionId);
 }
