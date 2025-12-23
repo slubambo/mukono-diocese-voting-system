@@ -29,18 +29,18 @@ export const electionApi = {
   countApplicants: (electionId: string | number) => api.get<number>(`${BASE}/${electionId}/applicants/count`),
   getApplicant: (electionId: string | number, applicantId: string | number) =>
     api.get<any>(`${BASE}/${electionId}/applicants/${applicantId}`),
-  manualApplicant: (electionId: string | number, payload: unknown) =>
+  manualApplicant: (electionId: string | number, payload: { electionPositionId: number; personId: number; submittedByPersonId?: number; notes?: string }) =>
     api.post(`${BASE}/${electionId}/applicants/manual`, payload),
   nominateApplicant: (electionId: string | number, payload: unknown) =>
     api.post(`${BASE}/${electionId}/applicants/nominate`, payload),
-  approveApplicant: (electionId: string | number, applicantId: string | number) =>
-    api.post(`${BASE}/${electionId}/applicants/${applicantId}/approve`),
-  rejectApplicant: (electionId: string | number, applicantId: string | number) =>
-    api.post(`${BASE}/${electionId}/applicants/${applicantId}/reject`),
-  revertApplicant: (electionId: string | number, applicantId: string | number) =>
-    api.post(`${BASE}/${electionId}/applicants/${applicantId}/revert`),
-  withdrawApplicant: (electionId: string | number, applicantId: string | number) =>
-    api.post(`${BASE}/${electionId}/applicants/${applicantId}/withdraw`),
+  approveApplicant: (electionId: string | number, applicantId: string | number, payload: { decisionBy: string; notes?: string }) =>
+    api.post(`${BASE}/${electionId}/applicants/${applicantId}/approve`, payload),
+  rejectApplicant: (electionId: string | number, applicantId: string | number, payload: { decisionBy: string; notes?: string }) =>
+    api.post(`${BASE}/${electionId}/applicants/${applicantId}/reject`, payload),
+  revertApplicant: (electionId: string | number, applicantId: string | number, payload: { decisionBy: string; notes?: string }) =>
+    api.post(`${BASE}/${electionId}/applicants/${applicantId}/revert`, payload),
+  withdrawApplicant: (electionId: string | number, applicantId: string | number, payload: { decisionBy: string; notes?: string }) =>
+    api.post(`${BASE}/${electionId}/applicants/${applicantId}/withdraw`, payload),
   
   // Candidates
   listCandidates: (electionId: string | number, params: Record<string, unknown> = {}) =>
@@ -49,7 +49,8 @@ export const electionApi = {
   // ballot with optional params (e.g., electionPositionId)
   listCandidatesBallotWithParams: (electionId: string | number, params: Record<string, unknown> = {}) =>
     api.get<any>(`${BASE}/${electionId}/candidates/ballot`, { params }),
-  createCandidateDirect: (electionId: string | number, payload: unknown) => api.post(`${BASE}/${electionId}/candidates/direct`, payload),
+  createCandidateDirect: (electionId: string | number, payload: { electionPositionId: number; personId: number; decisionBy: string; notes?: string }) =>
+    api.post(`${BASE}/${electionId}/candidates/direct`, payload),
   createCandidateFromApplicant: (electionId: string | number, payload: unknown) => api.post(`${BASE}/${electionId}/candidates/from-applicant`, payload),
   generateCandidates: (electionId: string | number) => api.post(`${BASE}/${electionId}/candidates/generate`),
   deleteCandidatesBulk: (electionId: string | number, payload: unknown) => api.delete(`${BASE}/${electionId}/candidates`, { data: payload }),

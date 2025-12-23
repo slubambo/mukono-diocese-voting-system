@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Tabs, Tab, IconButton } from '@mui/material'
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Tabs, Tab, IconButton, MenuItem, Tooltip } from '@mui/material'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import RotateLeftIcon from '@mui/icons-material/RotateLeft'
@@ -9,7 +9,7 @@ import EmptyState from '../common/EmptyState'
 import { electionApi } from '../../api/election.api'
 import { useToast } from '../feedback/ToastProvider'
 import { useAuth } from '../../context/AuthContext'
-import type { Applicant } from '../../types/election'
+import type { Applicant, Position } from '../../types/election'
 
 const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const [tab, setTab] = useState(0)
@@ -17,7 +17,15 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [count, setCount] = useState<number | null>(null)
   const [showManual, setShowManual] = useState(false)
-  const [manualName, setManualName] = useState('')
+  const [manualPersonId, setManualPersonId] = useState('')
+  const [manualPositionId, setManualPositionId] = useState('')
+  const [manualNotes, setManualNotes] = useState('')
+  const [positions, setPositions] = useState<Position[]>([])
+  const [decisionOpen, setDecisionOpen] = useState(false)
+  const [decisionAction, setDecisionAction] = useState<'approve' | 'reject' | 'revert' | 'withdraw' | null>(null)
+  const [decisionApplicant, setDecisionApplicant] = useState<Applicant | null>(null)
+  const [decisionBy, setDecisionBy] = useState('')
+  const [decisionNotes, setDecisionNotes] = useState('')
   const toast = useToast()
   const { user } = useAuth()
   const isAdmin = Boolean(user?.roles?.includes('ROLE_ADMIN'))
@@ -62,17 +70,42 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
 
   useEffect(() => { if (tab === 0) fetchPending(); else fetchAll() }, [tab])
 
-  const doAction = async (action: 'approve' | 'reject' | 'revert' | 'withdraw', applicantId: number | string) => {
-    if (!isAdmin) return
-    if (action === 'reject' && !confirm('Reject this applicant?')) return
-    if (action === 'withdraw' && !confirm('Withdraw this applicant?')) return
+  useEffect(() => {
+    const loadPositions = async () => {
+      try {
+        const res = await electionApi.listPositions(electionId)
+        const data: Position[] = Array.isArray((res as any)?.content) ? (res as any).content : (res as any)
+        setPositions(data || [])
+      } catch (err) {
+        setPositions([])
+      }
+    }
+    loadPositions()
+  }, [electionId])
 
+  const openDecision = (action: 'approve' | 'reject' | 'revert' | 'withdraw', applicant: Applicant) => {
+    if (!isAdmin) return
+    setDecisionAction(action)
+    setDecisionApplicant(applicant)
+    setDecisionBy(user?.displayName || user?.username || '')
+    setDecisionNotes('')
+    setDecisionOpen(true)
+  }
+
+  const submitDecision = async () => {
+    if (!decisionAction || !decisionApplicant) return
+    if (!decisionBy.trim()) {
+      toast.error('Decision by is required')
+      return
+    }
     try {
-      if (action === 'approve') await electionApi.approveApplicant(electionId, applicantId)
-      if (action === 'reject') await electionApi.rejectApplicant(electionId, applicantId)
-      if (action === 'revert') await electionApi.revertApplicant(electionId, applicantId)
-      if (action === 'withdraw') await electionApi.withdrawApplicant(electionId, applicantId)
+      const payload = { decisionBy: decisionBy.trim(), notes: decisionNotes.trim() || undefined }
+      if (decisionAction === 'approve') await electionApi.approveApplicant(electionId, decisionApplicant.id, payload)
+      if (decisionAction === 'reject') await electionApi.rejectApplicant(electionId, decisionApplicant.id, payload)
+      if (decisionAction === 'revert') await electionApi.revertApplicant(electionId, decisionApplicant.id, payload)
+      if (decisionAction === 'withdraw') await electionApi.withdrawApplicant(electionId, decisionApplicant.id, payload)
       toast.success('Action completed')
+      setDecisionOpen(false)
       // refresh
       if (tab === 0) fetchPending(); else fetchAll()
       fetchCount()
@@ -82,12 +115,23 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   }
 
   const submitManual = async () => {
-    if (!manualName) return toast.error('Name is required')
+    const personId = Number(manualPersonId)
+    const electionPositionId = Number(manualPositionId)
+    if (!personId || !electionPositionId) {
+      toast.error('Person ID and Position are required')
+      return
+    }
     try {
-      await electionApi.manualApplicant(electionId, { name: manualName })
+      await electionApi.manualApplicant(electionId, {
+        personId,
+        electionPositionId,
+        notes: manualNotes.trim() || undefined,
+      })
       toast.success('Applicant created')
       setShowManual(false)
-      setManualName('')
+      setManualPersonId('')
+      setManualPositionId('')
+      setManualNotes('')
       fetchAll(); fetchCount()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to create applicant')
@@ -131,10 +175,18 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                     <TableCell align="right">
                       {isAdmin && (
                         <>
-                          <IconButton size="small" onClick={() => doAction('approve', a.id)} title="Approve"><CheckIcon /></IconButton>
-                          <IconButton size="small" onClick={() => doAction('reject', a.id)} title="Reject"><CloseIcon /></IconButton>
-                          <IconButton size="small" onClick={() => doAction('revert', a.id)} title="Revert"><RotateLeftIcon /></IconButton>
-                          <IconButton size="small" onClick={() => doAction('withdraw', a.id)} title="Withdraw"><UndoIcon /></IconButton>
+                          <Tooltip title="Approve">
+                            <IconButton size="small" onClick={() => openDecision('approve', a)}><CheckIcon /></IconButton>
+                          </Tooltip>
+                          <Tooltip title="Reject">
+                            <IconButton size="small" onClick={() => openDecision('reject', a)}><CloseIcon /></IconButton>
+                          </Tooltip>
+                          <Tooltip title="Revert">
+                            <IconButton size="small" onClick={() => openDecision('revert', a)}><RotateLeftIcon /></IconButton>
+                          </Tooltip>
+                          <Tooltip title="Withdraw">
+                            <IconButton size="small" onClick={() => openDecision('withdraw', a)}><UndoIcon /></IconButton>
+                          </Tooltip>
                         </>
                       )}
                     </TableCell>
@@ -149,11 +201,41 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       <Dialog open={showManual} onClose={() => setShowManual(false)}>
         <DialogTitle>Manual Applicant</DialogTitle>
         <DialogContent>
-          <TextField label="Name" fullWidth value={manualName} onChange={(e) => setManualName(e.target.value)} />
+          <Box sx={{ display: 'grid', gap: 2, mt: 1 }}>
+            <TextField label="Person ID" type="number" fullWidth value={manualPersonId} onChange={(e) => setManualPersonId(e.target.value)} />
+            <TextField
+              select
+              label="Election Position"
+              fullWidth
+              value={manualPositionId}
+              onChange={(e) => setManualPositionId(e.target.value)}
+            >
+              {positions.map((p) => (
+                <MenuItem key={p.id} value={p.id}>
+                  {p.fellowshipPosition?.titleName || p.title || p.positionId}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField label="Notes" fullWidth multiline minRows={3} value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowManual(false)}>Cancel</Button>
           <Button variant="contained" onClick={submitManual}>Create</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={decisionOpen} onClose={() => setDecisionOpen(false)}>
+        <DialogTitle>{decisionAction ? decisionAction.toUpperCase() : 'Decision'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'grid', gap: 2, mt: 1 }}>
+            <TextField label="Decision By" fullWidth required value={decisionBy} onChange={(e) => setDecisionBy(e.target.value)} />
+            <TextField label="Notes" fullWidth multiline minRows={3} value={decisionNotes} onChange={(e) => setDecisionNotes(e.target.value)} />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDecisionOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={submitDecision}>Submit</Button>
         </DialogActions>
       </Dialog>
     </Box>

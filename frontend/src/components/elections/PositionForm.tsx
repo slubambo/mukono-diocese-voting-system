@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Autocomplete } from '@mui/material'
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Autocomplete, Typography } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
 import { electionApi } from '../../api/election.api'
 import { fellowshipPositionApi } from '../../api/fellowshipPosition.api'
+import { fellowshipApi } from '../../api/fellowship.api'
 import { useToast } from '../feedback/ToastProvider'
 import type { Position } from '../../types/election'
+import type { PositionScope } from '../../types/leadership'
 
 interface Props {
   open: boolean
@@ -18,26 +20,35 @@ const PositionForm: React.FC<Props> = ({ open, onClose, electionId, onSaved, pos
   const { control, handleSubmit, reset, setValue } = useForm<{ fellowshipPositionId?: number; seats?: number }>({ defaultValues: {} })
   const toast = useToast()
   const [options, setOptions] = useState<any[]>([])
+  const [loadingOptions, setLoadingOptions] = useState(false)
 
   useEffect(() => {
-    // try to load all fellowship positions (best-effort). Fallback to fellowship positions already on this election.
     const load = async () => {
+      if (!open) return
+      setLoadingOptions(true)
       try {
-        const fp = await fellowshipPositionApi.list({ page: 0, size: 1000 } as any)
-        setOptions(fp.content || [])
-      } catch (e) {
-        // fallback: load positions already in election
-        try {
-          const res = await electionApi.listPositions(electionId)
-          const arr = (res as any)?.content || []
-          const fromElection = arr.map((p: any) => p.fellowshipPosition).filter(Boolean)
-          setOptions(fromElection)
-        } catch (err) {
-          setOptions([])
+        const election = await electionApi.get(electionId)
+        const scope = (election as any)?.scope as PositionScope | undefined
+        const fellowshipId = (election as any)?.fellowshipId ?? (election as any)?.fellowship?.id
+        if (fellowshipId) {
+          const fp = await fellowshipPositionApi.list({ fellowshipId, scope, page: 0, size: 1000 })
+          setOptions(fp.content || [])
+        } else {
+          const fellowships = await fellowshipApi.list({ page: 0, size: 200 })
+          const lists = await Promise.all(
+            (fellowships.content || []).map((f) =>
+              fellowshipPositionApi.list({ fellowshipId: f.id, scope, page: 0, size: 1000 }).then(r => r.content || [])
+            )
+          )
+          setOptions(lists.flat())
         }
+      } catch (err) {
+        setOptions([])
+      } finally {
+        setLoadingOptions(false)
       }
     }
-    if (open) load()
+    load()
   }, [electionId, open])
 
   useEffect(() => {
@@ -66,6 +77,7 @@ const PositionForm: React.FC<Props> = ({ open, onClose, electionId, onSaved, pos
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
           <Box sx={{ display: 'grid', gap: 2 }}>
+            {loadingOptions && <Typography variant="body2">Loading fellowship positions...</Typography>}
             <Controller name="fellowshipPositionId" control={control} rules={{ required: true }} render={({ field }) => (
               <Autocomplete
                 options={options}

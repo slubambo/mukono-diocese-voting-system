@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, IconButton, Checkbox, FormControlLabel, Typography, Divider } from '@mui/material'
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, IconButton, Checkbox, FormControlLabel, Typography, Divider, Tooltip } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser'
@@ -23,6 +23,8 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const [positions, setPositions] = useState<Position[]>([])
   const [assigned, setAssigned] = useState<number[]>([])
   const [loadingPositions, setLoadingPositions] = useState(false)
+  const [lifecycleAction, setLifecycleAction] = useState<'open' | 'close' | 'cancel' | null>(null)
+  const [lifecyclePeriod, setLifecyclePeriod] = useState<VotingPeriod | null>(null)
   const toast = useToast()
   const { user } = useAuth()
   const isAdmin = Boolean(user?.roles?.includes('ROLE_ADMIN'))
@@ -132,16 +134,18 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
     }
   }
 
-  const doLifecycle = async (action: 'open' | 'close' | 'cancel', id: string | number) => {
-    if (!confirm(`${action.toUpperCase()} this voting period?`)) return
+  const doLifecycle = async () => {
+    if (!lifecycleAction || !lifecyclePeriod) return
     try {
-      if (action === 'open') await electionApi.openVotingPeriod(electionId, id)
-      if (action === 'close') await electionApi.closeVotingPeriod(electionId, id)
-      if (action === 'cancel') await electionApi.cancelVotingPeriod(electionId, id)
-      toast.success(`Voting period ${action}ed`)
+      if (lifecycleAction === 'open') await electionApi.openVotingPeriod(electionId, lifecyclePeriod.id)
+      if (lifecycleAction === 'close') await electionApi.closeVotingPeriod(electionId, lifecyclePeriod.id)
+      if (lifecycleAction === 'cancel') await electionApi.cancelVotingPeriod(electionId, lifecyclePeriod.id)
+      toast.success(`Voting period ${lifecycleAction}ed`)
       fetch()
+      setLifecycleAction(null)
+      setLifecyclePeriod(null)
     } catch (err: any) {
-      toast.error(err?.message || `Failed to ${action} voting period`)
+      toast.error(err?.message || `Failed to ${lifecycleAction} voting period`)
     }
   }
 
@@ -178,10 +182,18 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                     <TableCell align="right">
                       {isAdmin && (
                         <>
-                          <IconButton size="small" onClick={() => openDialog(p)} title="Edit"><EditIcon /></IconButton>
-                          <IconButton size="small" onClick={() => doLifecycle('open', p.id)} title="Open"><OpenInBrowserIcon /></IconButton>
-                          <IconButton size="small" onClick={() => doLifecycle('close', p.id)} title="Close"><CloseIcon /></IconButton>
-                          <IconButton size="small" onClick={() => doLifecycle('cancel', p.id)} title="Cancel"><CancelIcon /></IconButton>
+                          <Tooltip title="Edit">
+                            <IconButton size="small" onClick={() => openDialog(p)}><EditIcon /></IconButton>
+                          </Tooltip>
+                          <Tooltip title="Open">
+                            <IconButton size="small" onClick={() => { setLifecycleAction('open'); setLifecyclePeriod(p) }}><OpenInBrowserIcon /></IconButton>
+                          </Tooltip>
+                          <Tooltip title="Close">
+                            <IconButton size="small" onClick={() => { setLifecycleAction('close'); setLifecyclePeriod(p) }}><CloseIcon /></IconButton>
+                          </Tooltip>
+                          <Tooltip title="Cancel">
+                            <IconButton size="small" onClick={() => { setLifecycleAction('cancel'); setLifecyclePeriod(p) }}><CancelIcon /></IconButton>
+                          </Tooltip>
                         </>
                       )}
                     </TableCell>
@@ -243,6 +255,17 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
         <DialogActions>
           <Button onClick={() => setShowDialog(false)}>Cancel</Button>
           <Button variant="contained" onClick={submit}>Save</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(lifecycleAction)} onClose={() => { setLifecycleAction(null); setLifecyclePeriod(null) }}>
+        <DialogTitle>{lifecycleAction ? `${lifecycleAction.toUpperCase()} Voting Period` : 'Voting Period'}</DialogTitle>
+        <DialogContent>
+          {lifecyclePeriod ? `Are you sure you want to ${lifecycleAction} "${lifecyclePeriod.name || lifecyclePeriod.label || 'this period'}"?` : ''}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setLifecycleAction(null); setLifecyclePeriod(null) }}>Cancel</Button>
+          <Button variant="contained" onClick={doLifecycle}>Confirm</Button>
         </DialogActions>
       </Dialog>
     </Box>
