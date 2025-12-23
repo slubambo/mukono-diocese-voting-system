@@ -22,9 +22,12 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const [endTime, setEndTime] = useState('')
   const [positions, setPositions] = useState<Position[]>([])
   const [assigned, setAssigned] = useState<number[]>([])
+  const [assignedByPeriod, setAssignedByPeriod] = useState<Record<string, number[]>>({})
+  const [positionToPeriod, setPositionToPeriod] = useState<Record<number, string>>({})
   const [loadingPositions, setLoadingPositions] = useState(false)
   const [lifecycleAction, setLifecycleAction] = useState<'open' | 'close' | 'cancel' | null>(null)
   const [lifecyclePeriod, setLifecyclePeriod] = useState<VotingPeriod | null>(null)
+  const [electionWindow, setElectionWindow] = useState<{ start?: string; end?: string }>({})
   const toast = useToast()
   const { user } = useAuth()
   const isAdmin = Boolean(user?.roles?.includes('ROLE_ADMIN'))
@@ -43,6 +46,54 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   }
 
   useEffect(() => { fetch() }, [electionId])
+
+  useEffect(() => {
+    const loadAssignments = async () => {
+      try {
+        const res = await electionApi.listVotingPeriods(electionId)
+        const data = (res as any)?.content ?? res ?? []
+        const list = Array.isArray(data) ? data : []
+        const entries = await Promise.all(
+          list.map(async (p: any) => {
+            try {
+              const positionsRes = await electionApi.getVotingPeriodPositions(electionId, p.id)
+              return { id: String(p.id), positionIds: positionsRes.electionPositionIds || [] }
+            } catch (err) {
+              return { id: String(p.id), positionIds: [] }
+            }
+          })
+        )
+        const byPeriod: Record<string, number[]> = {}
+        const posMap: Record<number, string> = {}
+        entries.forEach((entry) => {
+          byPeriod[entry.id] = entry.positionIds
+          entry.positionIds.forEach((pid) => {
+            posMap[pid] = entry.id
+          })
+        })
+        setAssignedByPeriod(byPeriod)
+        setPositionToPeriod(posMap)
+      } catch (err) {
+        setAssignedByPeriod({})
+        setPositionToPeriod({})
+      }
+    }
+    loadAssignments()
+  }, [electionId])
+
+  useEffect(() => {
+    const loadElection = async () => {
+      try {
+        const res = await electionApi.get(electionId)
+        const start = (res as any)?.votingStartAt || (res as any)?.termStartDate
+        const end = (res as any)?.votingEndAt || (res as any)?.termEndDate
+        setElectionWindow({ start, end })
+      } catch (err) {
+        setElectionWindow({})
+      }
+    }
+    loadElection()
+  }, [electionId])
 
   const openDialog = (p?: VotingPeriod) => {
     setEditing(p ?? null)
@@ -109,11 +160,25 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       if (Number.isNaN(dt.getTime())) return undefined
       return dt.toISOString()
     }
+    const startIso = toIsoOrUndefined(startTime)
+    const endIso = toIsoOrUndefined(endTime)
+    if (startIso && endIso && new Date(endIso) <= new Date(startIso)) {
+      toast.error('Voting period end time must be after start time')
+      return
+    }
+    if (electionWindow.start && startIso && new Date(startIso) < new Date(electionWindow.start)) {
+      toast.error('Voting period start must be within the election window')
+      return
+    }
+    if (electionWindow.end && endIso && new Date(endIso) > new Date(electionWindow.end)) {
+      toast.error('Voting period end must be within the election window')
+      return
+    }
     try {
       const payload = {
         name,
-        startTime: toIsoOrUndefined(startTime),
-        endTime: toIsoOrUndefined(endTime),
+        startTime: startIso,
+        endTime: endIso,
       }
       let targetId = editing?.id
       if (editing?.id) {
@@ -169,6 +234,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                   <TableCell>Start</TableCell>
                   <TableCell>End</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell align="right">Positions</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -179,6 +245,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                     <TableCell>{p.startTime ? new Date(p.startTime).toLocaleString() : '—'}</TableCell>
                     <TableCell>{p.endTime ? new Date(p.endTime).toLocaleString() : '—'}</TableCell>
                     <TableCell>{p.status || '—'}</TableCell>
+                    <TableCell align="right">{assignedByPeriod[String(p.id)]?.length ?? 0}</TableCell>
                     <TableCell align="right">
                       {isAdmin && (
                         <>
@@ -210,8 +277,23 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
         <DialogContent>
           <Box sx={{ display: 'grid', gap: 2 }}>
             <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} fullWidth />
-            <TextField label="Start Time" type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} InputLabelProps={{ shrink: true }} />
-            <TextField label="End Time" type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} InputLabelProps={{ shrink: true }} />
+            <TextField
+              label="Start Time"
+              type="datetime-local"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: electionWindow.start ? formatLocalDateTime(electionWindow.start) : undefined, max: electionWindow.end ? formatLocalDateTime(electionWindow.end) : undefined }}
+              helperText={electionWindow.start && electionWindow.end ? `Must be within ${new Date(electionWindow.start).toLocaleString()} — ${new Date(electionWindow.end).toLocaleString()}` : undefined}
+            />
+            <TextField
+              label="End Time"
+              type="datetime-local"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: electionWindow.start ? formatLocalDateTime(electionWindow.start) : undefined, max: electionWindow.end ? formatLocalDateTime(electionWindow.end) : undefined }}
+            />
             <Divider />
             <Typography variant="subtitle2">Positions for this voting period</Typography>
             {loadingPositions ? (
@@ -232,16 +314,22 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                     <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>{fellowshipName}</Typography>
                     {items.map((pos) => {
                       const id = Number(pos.id)
+                      const assignedElsewhere = Boolean(positionToPeriod[id] && positionToPeriod[id] !== String(editing?.id ?? ''))
                       const checked = assigned.includes(id)
-                      const label = `${pos.fellowshipPosition?.titleName || pos.title || 'Position'} (${pos.seats ?? 1} seat${(pos.seats ?? 1) === 1 ? '' : 's'})`
+                      const fellowshipLabel = pos.fellowshipPosition?.fellowshipName ? ` — ${pos.fellowshipPosition.fellowshipName}` : ''
+                      const label = `${pos.fellowshipPosition?.titleName || pos.title || 'Position'}${fellowshipLabel} (${pos.seats ?? 1} seat${(pos.seats ?? 1) === 1 ? '' : 's'})`
                       return (
                         <FormControlLabel
                           key={id}
-                          control={<Checkbox checked={checked} onChange={() => {
-                            setAssigned((prev) => (
-                              prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
-                            ))
-                          }} />}
+                          control={<Checkbox
+                            checked={checked}
+                            disabled={assignedElsewhere}
+                            onChange={() => {
+                              setAssigned((prev) => (
+                                prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
+                              ))
+                            }}
+                          />}
                           label={label}
                         />
                       )
