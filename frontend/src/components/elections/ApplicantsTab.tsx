@@ -6,6 +6,7 @@ import RotateLeftIcon from '@mui/icons-material/RotateLeft'
 import UndoIcon from '@mui/icons-material/Undo'
 import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
+import StatusChip from '../common/StatusChip'
 import { electionApi } from '../../api/election.api'
 import { peopleApi } from '../../api/people.api'
 import { useToast } from '../feedback/ToastProvider'
@@ -180,20 +181,26 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Name</TableCell>
+                  <TableCell>Person</TableCell>
                   <TableCell>Position</TableCell>
+                  <TableCell>Source</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Submitted</TableCell>
+                  <TableCell>Decision</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {applicants.map(a => (
                   <TableRow key={a.id} hover>
-                    <TableCell>{a.personName || (a as any)?.person?.fullName || '—'}</TableCell>
+                    <TableCell>{(a as any)?.person?.fullName || a.personName || '—'}</TableCell>
                     <TableCell>{a.positionTitle || a.fellowshipPosition?.titleName || '—'}</TableCell>
-                    <TableCell>{a.status}</TableCell>
+                    <TableCell>{a.source || '—'}</TableCell>
+                    <TableCell><StatusChip status={(a.status || 'pending') as any} /></TableCell>
                     <TableCell>{a.submittedAt ? new Date(a.submittedAt).toLocaleString() : '—'}</TableCell>
+                    <TableCell>
+                      {a.decisionBy ? `${a.decisionBy}${a.decisionAt ? ` • ${new Date(a.decisionAt).toLocaleString()}` : ''}` : '—'}
+                    </TableCell>
                     <TableCell align="right">
                       {isAdmin && (
                         <>
@@ -247,14 +254,6 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                   }}
                 />
               )}
-            />
-            <TextField
-              label="Person ID (optional)"
-              type="number"
-              fullWidth
-              value={manualPersonId}
-              onChange={(e) => setManualPersonId(e.target.value)}
-              helperText="Use this only if you cannot find the person in search."
             />
             <TextField
               select
