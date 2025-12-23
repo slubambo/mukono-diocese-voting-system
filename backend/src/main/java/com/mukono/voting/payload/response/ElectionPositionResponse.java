@@ -11,6 +11,10 @@ public class ElectionPositionResponse {
     private Long electionId;
     private FellowshipPositionSummary fellowshipPosition;
     private Integer seats;
+    // New: convenience fields
+    private PositionScope positionScope;
+    private Long fellowshipId;
+    private String fellowshipName;
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -25,12 +29,29 @@ public class ElectionPositionResponse {
     public Integer getSeats() { return seats; }
     public void setSeats(Integer seats) { this.seats = seats; }
 
+    public PositionScope getPositionScope() { return positionScope; }
+    public void setPositionScope(PositionScope positionScope) { this.positionScope = positionScope; }
+
+    public Long getFellowshipId() { return fellowshipId; }
+    public void setFellowshipId(Long fellowshipId) { this.fellowshipId = fellowshipId; }
+
+    public String getFellowshipName() { return fellowshipName; }
+    public void setFellowshipName(String fellowshipName) { this.fellowshipName = fellowshipName; }
+
     public static ElectionPositionResponse fromEntity(ElectionPosition ep) {
         ElectionPositionResponse response = new ElectionPositionResponse();
         response.setId(ep.getId());
         response.setElectionId(ep.getElection().getId());
         response.setFellowshipPosition(FellowshipPositionSummary.fromEntity(ep.getFellowshipPosition()));
         response.setSeats(ep.getSeats());
+        // Populate convenience fields
+        if (ep.getFellowshipPosition() != null) {
+            response.setPositionScope(ep.getFellowshipPosition().getScope());
+            if (ep.getFellowshipPosition().getFellowship() != null) {
+                response.setFellowshipId(ep.getFellowshipPosition().getFellowship().getId());
+                response.setFellowshipName(ep.getFellowshipPosition().getFellowship().getName());
+            }
+        }
         return response;
     }
 
