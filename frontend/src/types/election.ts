@@ -107,6 +107,30 @@ export interface BallotEntry {
   candidateId?: number | string
 }
 
+export interface BallotPreviewCandidate {
+  candidateId?: number
+  personId?: number
+  fullName?: string
+}
+
+export interface BallotPreviewPosition {
+  electionPositionId?: number
+  positionTitle?: string
+  fellowshipName?: string
+  fellowshipId?: number
+  scope?: string
+  seats?: number
+  maxVotesPerVoter?: number
+  candidates?: BallotPreviewCandidate[]
+}
+
+export interface BallotPreviewResponse {
+  electionId?: number
+  votingPeriodId?: number
+  ballotTitle?: string
+  positions?: BallotPreviewPosition[]
+}
+
 export interface VotingPeriod {
   id: number | string
   name?: string

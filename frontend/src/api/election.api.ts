@@ -49,6 +49,8 @@ export const electionApi = {
   // ballot with optional params (e.g., electionPositionId)
   listCandidatesBallotWithParams: (electionId: string | number, params: Record<string, unknown> = {}) =>
     api.get<any>(`${BASE}/${electionId}/candidates/ballot`, { params }),
+  ballotPreview: (electionId: string | number, params: { votingPeriodId?: number; electionPositionId?: number } = {}) =>
+    api.get<import('../types/election').BallotPreviewResponse>(`${BASE}/${electionId}/ballot-preview`, { params }),
   createCandidateDirect: (electionId: string | number, payload: { electionPositionId: number; personId: number; decisionBy: string; notes?: string }) =>
     api.post(`${BASE}/${electionId}/candidates/direct`, payload),
   removeCandidate: (electionId: string | number, params: { electionPositionId: number; personId: number }, payload: { removedBy: string; notes?: string }) =>
