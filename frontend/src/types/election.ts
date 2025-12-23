@@ -86,9 +86,18 @@ export interface Candidate {
   id: number | string
   personId?: number
   personName?: string
+  person?: {
+    id?: number
+    fullName?: string
+    email?: string | null
+    phoneNumber?: string | null
+  }
   positionId?: number | string
   positionTitle?: string
+  fellowshipName?: string
   status?: string
+  electionPositionId?: number
+  applicantId?: number
 }
 
 export interface BallotEntry {

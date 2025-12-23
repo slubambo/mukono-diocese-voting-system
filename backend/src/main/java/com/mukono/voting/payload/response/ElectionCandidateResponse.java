@@ -8,6 +8,9 @@ public class ElectionCandidateResponse {
     private Long id;
     private Long electionId;
     private Long electionPositionId;
+    // New display fields for convenience
+    private String positionTitle; // electionPosition.fellowshipPosition.title.name
+    private String fellowshipName; // electionPosition.fellowship.name
     private PersonSummary person;
     private Long applicantId; // nullable
     private Instant createdAt;
@@ -19,6 +22,10 @@ public class ElectionCandidateResponse {
     public void setElectionId(Long electionId) { this.electionId = electionId; }
     public Long getElectionPositionId() { return electionPositionId; }
     public void setElectionPositionId(Long electionPositionId) { this.electionPositionId = electionPositionId; }
+    public String getPositionTitle() { return positionTitle; }
+    public void setPositionTitle(String positionTitle) { this.positionTitle = positionTitle; }
+    public String getFellowshipName() { return fellowshipName; }
+    public void setFellowshipName(String fellowshipName) { this.fellowshipName = fellowshipName; }
     public PersonSummary getPerson() { return person; }
     public void setPerson(PersonSummary person) { this.person = person; }
     public Long getApplicantId() { return applicantId; }
@@ -33,6 +40,15 @@ public class ElectionCandidateResponse {
         dto.setId(c.getId());
         dto.setElectionId(c.getElection().getId());
         dto.setElectionPositionId(c.getElectionPosition().getId());
+        // Populate display fields
+        if (c.getElectionPosition() != null && c.getElectionPosition().getFellowshipPosition() != null) {
+            if (c.getElectionPosition().getFellowshipPosition().getTitle() != null) {
+                dto.setPositionTitle(c.getElectionPosition().getFellowshipPosition().getTitle().getName());
+            }
+            if (c.getElectionPosition().getFellowship() != null) {
+                dto.setFellowshipName(c.getElectionPosition().getFellowship().getName());
+            }
+        }
         dto.setPerson(PersonSummary.fromEntity(c.getPerson()));
         dto.setApplicantId(c.getApplicant() != null ? c.getApplicant().getId() : null);
         dto.setCreatedAt(c.getCreatedAt());

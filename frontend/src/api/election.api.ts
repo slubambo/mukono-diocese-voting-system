@@ -51,8 +51,11 @@ export const electionApi = {
     api.get<any>(`${BASE}/${electionId}/candidates/ballot`, { params }),
   createCandidateDirect: (electionId: string | number, payload: { electionPositionId: number; personId: number; decisionBy: string; notes?: string }) =>
     api.post(`${BASE}/${electionId}/candidates/direct`, payload),
+  removeCandidate: (electionId: string | number, params: { electionPositionId: number; personId: number }, payload: { removedBy: string; notes?: string }) =>
+    api.delete(`${BASE}/${electionId}/candidates`, { params, data: payload }),
   createCandidateFromApplicant: (electionId: string | number, payload: unknown) => api.post(`${BASE}/${electionId}/candidates/from-applicant`, payload),
-  generateCandidates: (electionId: string | number) => api.post(`${BASE}/${electionId}/candidates/generate`),
+  generateCandidates: (electionId: string | number, params: { electionPositionId: number; createdBy: string }) =>
+    api.post(`${BASE}/${electionId}/candidates/generate`, {}, { params }),
   deleteCandidatesBulk: (electionId: string | number, payload: unknown) => api.delete(`${BASE}/${electionId}/candidates`, { data: payload }),
   // Admin voting periods
   listVotingPeriods: (electionId: string | number) => api.get<import('../types/election').PagedResponse<import('../types/election').VotingPeriod>>(`/api/v1/admin/elections/${electionId}/voting-periods`),
