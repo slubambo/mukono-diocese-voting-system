@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react'
 import {
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Paper,
   Table,
@@ -44,6 +48,8 @@ const ElectionsPage: React.FC = () => {
   const [sort] = useState('name,asc')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Election | null>(null)
+  const [canceling, setCanceling] = useState<Election | null>(null)
+  const [cancelReason, setCancelReason] = useState('')
 
   const fetchElections = async () => {
     setLoading(true)
@@ -82,11 +88,22 @@ const ElectionsPage: React.FC = () => {
     loadElection()
   }
 
-  const handleCancel = async (e: Election) => {
-    if (!confirm(`Cancel election "${e.name}"? This action cannot be undone.`)) return
+  const handleCancel = (e: Election) => {
+    setCancelReason('')
+    setCanceling(e)
+  }
+
+  const submitCancel = async () => {
+    if (!canceling) return
+    if (!cancelReason.trim()) {
+      toast.error('Cancellation reason is required')
+      return
+    }
     try {
-      await electionApi.cancel(e.id)
+      await electionApi.cancel(canceling.id, { reason: cancelReason.trim() })
       toast.success('Election cancelled')
+      setCanceling(null)
+      setCancelReason('')
       fetchElections()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to cancel election')
@@ -119,8 +136,11 @@ const ElectionsPage: React.FC = () => {
                   <TableRow>
                     <TableCell>Name</TableCell>
                     <TableCell>Status</TableCell>
-                    <TableCell>Timeline</TableCell>
-                    <TableCell>Created</TableCell>
+                    <TableCell>Scope</TableCell>
+                    <TableCell>Fellowship</TableCell>
+                    <TableCell>Target</TableCell>
+                    <TableCell>Term</TableCell>
+                    <TableCell>Voting</TableCell>
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -129,30 +149,30 @@ const ElectionsPage: React.FC = () => {
                     <TableRow key={e.id} hover>
                       <TableCell>{e.name}</TableCell>
                       <TableCell><StatusChip status={(e.status || 'pending') as any} /></TableCell>
+                      <TableCell>{e.scope || '—'}</TableCell>
+                      <TableCell>{e.fellowshipName || 'All fellowships'}</TableCell>
                       <TableCell>
                         {(() => {
-                          // Prefer voting period if available, else term dates
-                          const vs = e.votingStartAt
-                          const ve = e.votingEndAt
-                          const ts = e.termStartDate
-                          const te = e.termEndDate
-
-                          const start = vs || ts
-                          const end = ve || te
-
-                          if (start && end) {
-                            try {
-                              return `${new Date(start).toLocaleDateString()} — ${new Date(end).toLocaleDateString()}`
-                            } catch (err) {
-                              return `${start} — ${end}`
-                            }
-                          }
-
-                          if (start) return new Date(start).toLocaleDateString()
+                          if (e.scope === 'DIOCESE') return e.dioceseId ? `Diocese #${e.dioceseId}` : '—'
+                          if (e.scope === 'ARCHDEACONRY') return e.archdeaconryId ? `Archdeaconry #${e.archdeaconryId}` : '—'
+                          if (e.scope === 'CHURCH') return e.churchId ? `Church #${e.churchId}` : '—'
                           return '—'
                         })()}
                       </TableCell>
-                      <TableCell>{e.createdAt ? new Date(e.createdAt).toLocaleString() : '—'}</TableCell>
+                      <TableCell>
+                        {e.termStartDate && e.termEndDate
+                          ? `${new Date(e.termStartDate).toLocaleDateString()} — ${new Date(e.termEndDate).toLocaleDateString()}`
+                          : e.termStartDate
+                            ? new Date(e.termStartDate).toLocaleDateString()
+                            : '—'}
+                      </TableCell>
+                      <TableCell>
+                        {e.votingStartAt && e.votingEndAt
+                          ? `${new Date(e.votingStartAt).toLocaleDateString()} — ${new Date(e.votingEndAt).toLocaleDateString()}`
+                          : e.votingStartAt
+                            ? new Date(e.votingStartAt).toLocaleDateString()
+                            : '—'}
+                      </TableCell>
                       <TableCell align="right">
                         <IconButton onClick={() => handleView(e.id)} size="small"><VisibilityIcon /></IconButton>
                         {isAdmin && (
@@ -172,6 +192,26 @@ const ElectionsPage: React.FC = () => {
         )}
 
         <ElectionForm open={showForm} onClose={() => { setShowForm(false); setEditing(null) }} onSaved={() => { setShowForm(false); setEditing(null); fetchElections() }} election={editing || undefined} />
+
+        <Dialog open={Boolean(canceling)} onClose={() => setCanceling(null)} fullWidth maxWidth="sm">
+          <DialogTitle>Cancel Election</DialogTitle>
+          <DialogContent>
+            <Box sx={{ display: 'grid', gap: 2, mt: 1 }}>
+              <TextField
+                label="Reason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                required
+                multiline
+                minRows={3}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCanceling(null)}>Close</Button>
+            <Button variant="contained" color="error" onClick={submitCancel}>Cancel Election</Button>
+          </DialogActions>
+        </Dialog>
       </PageLayout>
     </AppShell>
   )

@@ -13,7 +13,7 @@ export const electionApi = {
 
   update: (id: string | number, payload: Partial<Election>) => api.put<Election>(`${BASE}/${id}`, payload),
 
-  cancel: (id: string | number) => api.post<void>(`${BASE}/${id}/cancel`),
+  cancel: (id: string | number, payload: { reason: string }) => api.post<void>(`${BASE}/${id}/cancel`, payload),
 
   // Positions within an election
   listPositions: (electionId: string | number) => api.get<import('../types/election').PagedResponse<Position>>(`${BASE}/${electionId}/positions`),

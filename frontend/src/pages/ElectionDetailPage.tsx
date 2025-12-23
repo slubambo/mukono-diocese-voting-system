@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Box, Paper, Tab, Tabs, Typography, IconButton } from '@mui/material'
+import { Box, Paper, Tab, Tabs, Typography, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import CancelIcon from '@mui/icons-material/Cancel'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -29,6 +29,8 @@ const ElectionDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [election, setElection] = useState<any>(null)
   const [tab, setTab] = useState(0)
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
 
   const fetch = async () => {
     if (!electionId) return
@@ -52,10 +54,15 @@ const ElectionDetailPage: React.FC = () => {
 
   const handleCancel = async () => {
     if (!electionId) return
-    if (!confirm('Cancel this election? This action cannot be undone.')) return
+    if (!cancelReason.trim()) {
+      toast.error('Cancellation reason is required')
+      return
+    }
     try {
-      await electionApi.cancel(electionId)
+      await electionApi.cancel(electionId, { reason: cancelReason.trim() })
       toast.success('Election cancelled')
+      setCancelOpen(false)
+      setCancelReason('')
       fetch()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to cancel election')
@@ -85,7 +92,7 @@ const ElectionDetailPage: React.FC = () => {
             {isAdmin ? (
               <>
                 <IconButton onClick={handleEdit}><EditIcon /></IconButton>
-                <IconButton onClick={handleCancel}><CancelIcon /></IconButton>
+                <IconButton onClick={() => { setCancelReason(''); setCancelOpen(true) }}><CancelIcon /></IconButton>
               </>
             ) : null}
           </>
@@ -124,6 +131,26 @@ const ElectionDetailPage: React.FC = () => {
           {tab === 4 && <CandidatesTab electionId={electionId!} />}
           {tab === 5 && <BallotPreviewTab electionId={electionId!} />}
         </Paper>
+
+        <Dialog open={cancelOpen} onClose={() => setCancelOpen(false)} fullWidth maxWidth="sm">
+          <DialogTitle>Cancel Election</DialogTitle>
+          <DialogContent>
+            <Box sx={{ display: 'grid', gap: 2, mt: 1 }}>
+              <TextField
+                label="Reason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                required
+                multiline
+                minRows={3}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCancelOpen(false)}>Close</Button>
+            <Button variant="contained" color="error" onClick={handleCancel}>Cancel Election</Button>
+          </DialogActions>
+        </Dialog>
       </PageLayout>
     </AppShell>
   )
