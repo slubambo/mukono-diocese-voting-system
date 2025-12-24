@@ -9,6 +9,7 @@ import com.mukono.voting.payload.response.BallotResponse;
 import com.mukono.voting.repository.election.ElectionCandidateRepository;
 import com.mukono.voting.repository.election.ElectionPositionRepository;
 import com.mukono.voting.repository.election.VotingPeriodRepository;
+import com.mukono.voting.repository.election.VotingPeriodPositionRepository;
 import com.mukono.voting.repository.leadership.LeadershipAssignmentRepository;
 import com.mukono.voting.service.election.ElectionVoterEligibilityService;
 import com.mukono.voting.service.election.EligibilityDecision;
@@ -31,17 +32,20 @@ import java.util.stream.Collectors;
 public class BallotService {
 
     private final VotingPeriodRepository votingPeriodRepository;
+    private final VotingPeriodPositionRepository votingPeriodPositionRepository;
     private final ElectionPositionRepository electionPositionRepository;
     private final ElectionCandidateRepository electionCandidateRepository;
     private final ElectionVoterEligibilityService eligibilityService;
     private final LeadershipAssignmentRepository leadershipAssignmentRepository;
 
     public BallotService(VotingPeriodRepository votingPeriodRepository,
+                        VotingPeriodPositionRepository votingPeriodPositionRepository,
                         ElectionPositionRepository electionPositionRepository,
                         ElectionCandidateRepository electionCandidateRepository,
                         ElectionVoterEligibilityService eligibilityService,
                         LeadershipAssignmentRepository leadershipAssignmentRepository) {
         this.votingPeriodRepository = votingPeriodRepository;
+        this.votingPeriodPositionRepository = votingPeriodPositionRepository;
         this.electionPositionRepository = electionPositionRepository;
         this.electionCandidateRepository = electionCandidateRepository;
         this.eligibilityService = eligibilityService;
@@ -84,21 +88,34 @@ public class BallotService {
 
         Election election = votingPeriod.getElection();
 
-        // 5. Load positions for election (sorted by ID for determinism)
-        List<ElectionPosition> positions = electionPositionRepository.findByElectionId(electionId);
-        positions.sort((p1, p2) -> p1.getId().compareTo(p2.getId()));
+        // 5. Load assigned position IDs for this voting period
+        List<Long> assignedPositionIds = votingPeriodPositionRepository
+                .findElectionPositionIdsByVotingPeriod(electionId, votingPeriodId);
+        
+        if (assignedPositionIds.isEmpty()) {
+            throw new IllegalArgumentException("No positions are configured for this voting period");
+        }
 
-        // 6. Load all candidates for election efficiently (already sorted by fullName)
-        List<ElectionCandidate> allCandidates = electionCandidateRepository.findAllCandidatesForElectionWithDetails(electionId);
+        // 6. Load only assigned positions (sorted by fellowship ID, then position ID for determinism)
+        List<ElectionPosition> positions = electionPositionRepository.findAllById(assignedPositionIds);
+        positions.sort((p1, p2) -> {
+            int fellowshipCompare = p1.getFellowship().getId().compareTo(p2.getFellowship().getId());
+            if (fellowshipCompare != 0) return fellowshipCompare;
+            return p1.getId().compareTo(p2.getId());
+        });
 
-        // 7. Group candidates by position
+        // 7. Load candidates only for assigned positions (already sorted by fullName)
+        List<ElectionCandidate> allCandidates = electionCandidateRepository
+                .findByElectionPositionIdIn(assignedPositionIds);
+
+        // 8. Group candidates by position
         Map<Long, List<ElectionCandidate>> candidatesByPosition = allCandidates.stream()
                 .collect(Collectors.groupingBy(c -> c.getElectionPosition().getId()));
 
-        // 8. Get candidate origin info (archdeaconry/church from leadership assignments)
+        // 9. Get candidate origin info (archdeaconry/church from leadership assignments)
         Map<Long, LeadershipAssignment> candidateOrigins = getCandidateOrigins(allCandidates);
 
-        // 9. Build ballot response
+        // 10. Build ballot response
         BallotResponse ballot = new BallotResponse(electionId, votingPeriodId, personId, election.getName());
 
         List<BallotPositionResponse> positionResponses = new ArrayList<>();
@@ -108,7 +125,7 @@ public class BallotService {
                     position.getFellowshipPosition().getTitle().getName(),
                     position.getFellowshipPosition().getScope().name(),
                     position.getSeats(),
-                    position.getSeats() // maxVotesPerVoter = seats (can vote for up to seats count)
+                    position.getMaxVotesPerVoter() // Use actual maxVotesPerVoter from position
             );
 
             // Add candidates for this position

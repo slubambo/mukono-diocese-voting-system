@@ -2,10 +2,17 @@ package com.mukono.voting.controller.admin;
 
 import com.mukono.voting.model.election.VotingPeriod;
 import com.mukono.voting.model.election.VotingPeriodStatus;
+import com.mukono.voting.model.election.VotingPeriodPosition;
+import com.mukono.voting.model.election.ElectionPosition;
 import com.mukono.voting.payload.request.CreateVotingPeriodRequest;
 import com.mukono.voting.payload.request.UpdateVotingPeriodRequest;
+import com.mukono.voting.payload.request.AssignVotingPeriodPositionsRequest;
 import com.mukono.voting.payload.response.VotingPeriodResponse;
+import com.mukono.voting.payload.response.VotingPeriodPositionsResponse;
+import com.mukono.voting.payload.response.VotingPeriodPositionsMapResponse;
 import com.mukono.voting.service.election.VotingPeriodService;
+import com.mukono.voting.service.election.VotingPeriodPositionService;
+import com.mukono.voting.repository.election.ElectionPositionRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.domain.Page;
@@ -89,33 +96,10 @@ public class VotingPeriodAdminController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id,desc") String sort,
             @RequestParam(required = false) VotingPeriodStatus status) {
-        
         Pageable pageable = toPageable(page, size, sort);
-        Page<VotingPeriod> votingPeriods = votingPeriodService.listVotingPeriods(electionId, status, pageable);
-        Page<VotingPeriodResponse> responses = votingPeriods.map(votingPeriodService::toResponse);
-        
+        // Use optimized list with counts
+        Page<VotingPeriodResponse> responses = votingPeriodService.listVotingPeriodsWithCounts(electionId, status, pageable);
         return ResponseEntity.ok(responses);
-    }
-
-    /**
-     * Update a voting period.
-     * Allowed only when status is SCHEDULED or OPEN (and only description for OPEN).
-     * Rejects if status is CLOSED or CANCELLED.
-     *
-     * PUT /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}
-     *
-     * @param electionId the election ID
-     * @param votingPeriodId the voting period ID
-     * @param request update request with optional fields (name, description, startTime, endTime)
-     * @return updated voting period response (200 OK)
-     */
-    @PutMapping("/{votingPeriodId}")
-    public ResponseEntity<VotingPeriodResponse> updateVotingPeriod(
-            @PathVariable @NotNull Long electionId,
-            @PathVariable @NotNull Long votingPeriodId,
-            @Valid @RequestBody UpdateVotingPeriodRequest request) {
-        VotingPeriod updated = votingPeriodService.updateVotingPeriod(electionId, votingPeriodId, request);
-        return ResponseEntity.ok(votingPeriodService.toResponse(updated));
     }
 
     /**
@@ -171,6 +155,53 @@ public class VotingPeriodAdminController {
             @PathVariable @NotNull Long votingPeriodId) {
         VotingPeriod cancelled = votingPeriodService.cancelVotingPeriod(electionId, votingPeriodId);
         return ResponseEntity.ok(votingPeriodService.toResponse(cancelled));
+    }
+
+    /**
+     * Assign positions to a voting period.
+     * Requires ADMIN role.
+     *
+     * POST /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}/positions
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @param request positions assignment request
+     * @return voting period with assigned positions (200 OK)
+     */
+    @PostMapping("/{votingPeriodId}/positions")
+    public ResponseEntity<VotingPeriodResponse> assignVotingPeriodPositions(
+            @PathVariable @NotNull Long electionId,
+            @PathVariable @NotNull Long votingPeriodId,
+            @Valid @RequestBody AssignVotingPeriodPositionsRequest request) {
+        VotingPeriod updated = votingPeriodService.assignVotingPeriodPositions(electionId, votingPeriodId, request);
+        return ResponseEntity.ok(votingPeriodService.toResponse(updated));
+    }
+
+    /**
+     * Get assigned positions for a voting period.
+     *
+     * GET /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}/positions
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @return assigned positions response (200 OK)
+     */
+    @GetMapping("/{votingPeriodId}/positions")
+    public ResponseEntity<VotingPeriodPositionsResponse> getVotingPeriodPositions(
+            @PathVariable @NotNull Long electionId,
+            @PathVariable @NotNull Long votingPeriodId) {
+        VotingPeriodPositionsResponse positions = votingPeriodService.getVotingPeriodPositions(electionId, votingPeriodId);
+        return ResponseEntity.ok(positions);
+    }
+
+    /**
+     * Bulk mapping of positions assigned to voting periods for an election.
+     * GET /api/v1/admin/elections/{electionId}/voting-periods/positions-map
+     */
+    @GetMapping("/positions-map")
+    public ResponseEntity<VotingPeriodPositionsMapResponse> getPositionsMap(
+            @PathVariable @NotNull Long electionId) {
+        return ResponseEntity.ok(votingPeriodService.getPositionsMap(electionId));
     }
 
     /**

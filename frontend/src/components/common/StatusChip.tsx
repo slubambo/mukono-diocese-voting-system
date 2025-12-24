@@ -28,10 +28,13 @@ const StatusChip: React.FC<StatusChipProps> = ({ status, label, ...props }) => {
 
   const config = statusConfig[status]
 
+  const fallback = { color: 'default' as ChipProps['color'], label: String(status ?? 'Unknown') }
+  const used = config ?? fallback
+
   return (
     <Chip
-      label={label || config.label}
-      color={config.color}
+      label={label || used.label}
+      color={used.color}
       variant="outlined"
       sx={{ fontWeight: 600, fontSize: '0.75rem' }}
       {...props}

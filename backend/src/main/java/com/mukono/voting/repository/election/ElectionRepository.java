@@ -154,6 +154,52 @@ public interface ElectionRepository extends JpaRepository<Election, Long> {
             LocalDate termStartDate, LocalDate termEndDate);
 
     // =========================================================================
+    // MULTI-FELLOWSHIP UNIQUENESS (without fellowship constraint)
+    // =========================================================================
+
+    /**
+     * Check if a diocese election already exists with the given scope, target, and term.
+     * Used for multi-fellowship elections where fellowships are inferred from positions.
+     * 
+     * @param scope the position scope (should be DIOCESE)
+     * @param dioceseId the diocese ID
+     * @param termStartDate the term start date
+     * @param termEndDate the term end date
+     * @return true if a matching election exists, false otherwise
+     */
+    boolean existsByScopeAndDioceseIdAndTermStartDateAndTermEndDate(
+            PositionScope scope, Long dioceseId, 
+            LocalDate termStartDate, LocalDate termEndDate);
+
+    /**
+     * Check if an archdeaconry election already exists with the given scope, target, and term.
+     * Used for multi-fellowship elections where fellowships are inferred from positions.
+     * 
+     * @param scope the position scope (should be ARCHDEACONRY)
+     * @param archdeaconryId the archdeaconry ID
+     * @param termStartDate the term start date
+     * @param termEndDate the term end date
+     * @return true if a matching election exists, false otherwise
+     */
+    boolean existsByScopeAndArchdeaconryIdAndTermStartDateAndTermEndDate(
+            PositionScope scope, Long archdeaconryId,
+            LocalDate termStartDate, LocalDate termEndDate);
+
+    /**
+     * Check if a church election already exists with the given scope, target, and term.
+     * Used for multi-fellowship elections where fellowships are inferred from positions.
+     * 
+     * @param scope the position scope (should be CHURCH)
+     * @param churchId the church ID
+     * @param termStartDate the term start date
+     * @param termEndDate the term end date
+     * @return true if a matching election exists, false otherwise
+     */
+    boolean existsByScopeAndChurchIdAndTermStartDateAndTermEndDate(
+            PositionScope scope, Long churchId,
+            LocalDate termStartDate, LocalDate termEndDate);
+
+    // =========================================================================
     // TIME-WINDOW QUERIES (for automation / "what is open now")
     // =========================================================================
 

@@ -50,11 +50,10 @@ public class Election extends DateAudit {
     @NotNull(message = "Election status is required")
     private ElectionStatus status = ElectionStatus.DRAFT;
 
-    // Ownership / Context
+    // Ownership / Context (DEPRECATED - fellowships now inferred via positions)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "fellowship_id", nullable = false)
-    @NotNull(message = "Fellowship is required")
-    private Fellowship fellowship;
+    @JoinColumn(name = "fellowship_id", nullable = true)
+    private Fellowship fellowship; // Nullable for backward compatibility; do not use for new elections
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

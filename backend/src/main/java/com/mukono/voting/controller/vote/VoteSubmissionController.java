@@ -18,22 +18,18 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("hasRole('VOTER')")
 public class VoteSubmissionController {
 
-    private final VoteSubmissionService voteSubmissionService;
+	private final VoteSubmissionService voteSubmissionService;
 
-    public VoteSubmissionController(VoteSubmissionService voteSubmissionService) {
-        this.voteSubmissionService = voteSubmissionService;
-    }
+	public VoteSubmissionController(VoteSubmissionService voteSubmissionService) {
+		this.voteSubmissionService = voteSubmissionService;
+	}
 
-    @PostMapping("/submit")
-    public ResponseEntity<VoteSubmitResponse> submit(@Valid @RequestBody VoteSubmitRequest request,
-                                                     Authentication authentication) {
-        VoterPrincipal voter = (VoterPrincipal) authentication.getPrincipal();
-        VoteSubmitResponse resp = voteSubmissionService.submitVotes(
-                voter.getPersonId(),
-                voter.getElectionId(),
-                voter.getVotingPeriodId(),
-                request
-        );
-        return ResponseEntity.status(201).body(resp);
-    }
+	@PostMapping("/submit")
+	public ResponseEntity<VoteSubmitResponse> submit(@Valid @RequestBody VoteSubmitRequest request,
+			Authentication authentication) {
+		VoterPrincipal voter = (VoterPrincipal) authentication.getPrincipal();
+		VoteSubmitResponse resp = voteSubmissionService.submitVotes(voter.getPersonId(), voter.getElectionId(),
+				voter.getVotingPeriodId(), request);
+		return ResponseEntity.status(201).body(resp);
+	}
 }

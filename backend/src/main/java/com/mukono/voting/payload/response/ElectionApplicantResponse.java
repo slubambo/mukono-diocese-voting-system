@@ -8,6 +8,8 @@ public class ElectionApplicantResponse {
     private Long id;
     private Long electionId;
     private Long electionPositionId;
+    private String positionTitle; // Display field from electionPosition.fellowshipPosition.title.name
+    private String fellowshipName; // Display field from electionPosition.fellowship.name
     private PersonSummary person;
     private PersonSummary submittedBy; // nullable
     private String source;
@@ -25,6 +27,10 @@ public class ElectionApplicantResponse {
     public void setElectionId(Long electionId) { this.electionId = electionId; }
     public Long getElectionPositionId() { return electionPositionId; }
     public void setElectionPositionId(Long electionPositionId) { this.electionPositionId = electionPositionId; }
+    public String getPositionTitle() { return positionTitle; }
+    public void setPositionTitle(String positionTitle) { this.positionTitle = positionTitle; }
+    public String getFellowshipName() { return fellowshipName; }
+    public void setFellowshipName(String fellowshipName) { this.fellowshipName = fellowshipName; }
     public PersonSummary getPerson() { return person; }
     public void setPerson(PersonSummary person) { this.person = person; }
     public PersonSummary getSubmittedBy() { return submittedBy; }
@@ -51,6 +57,17 @@ public class ElectionApplicantResponse {
         dto.setId(a.getId());
         dto.setElectionId(a.getElection().getId());
         dto.setElectionPositionId(a.getElectionPosition().getId());
+        
+        // Populate position display fields for UI convenience
+        if (a.getElectionPosition() != null && a.getElectionPosition().getFellowshipPosition() != null) {
+            if (a.getElectionPosition().getFellowshipPosition().getTitle() != null) {
+                dto.setPositionTitle(a.getElectionPosition().getFellowshipPosition().getTitle().getName());
+            }
+            if (a.getElectionPosition().getFellowship() != null) {
+                dto.setFellowshipName(a.getElectionPosition().getFellowship().getName());
+            }
+        }
+        
         dto.setPerson(PersonSummary.fromEntity(a.getPerson()));
         dto.setSubmittedBy(a.getSubmittedBy() != null ? PersonSummary.fromEntity(a.getSubmittedBy()) : null);
         dto.setSource(a.getSource().name());

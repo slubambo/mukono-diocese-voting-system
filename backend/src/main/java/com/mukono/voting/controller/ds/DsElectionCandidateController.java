@@ -4,6 +4,7 @@ import com.mukono.voting.payload.request.AddCandidateDirectRequest;
 import com.mukono.voting.payload.request.CreateCandidateFromApplicantRequest;
 import com.mukono.voting.payload.request.RemoveCandidateRequest;
 import com.mukono.voting.payload.response.ElectionCandidateResponse;
+import com.mukono.voting.payload.response.BallotGroupedByPositionResponse;
 import com.mukono.voting.service.election.ElectionCandidateService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -70,12 +71,21 @@ public class DsElectionCandidateController {
     }
 
     @GetMapping("/ballot")
-    public ResponseEntity<List<ElectionCandidateResponse>> ballot(
+    public ResponseEntity<?> ballot(
             @PathVariable Long electionId,
-            @RequestParam Long electionPositionId) {
-        var list = candidateService.listCandidatesForBallot(electionId, electionPositionId)
-                .stream().map(ElectionCandidateResponse::fromEntity).toList();
-        return ResponseEntity.ok(list);
+            @RequestParam(required = false) Long electionPositionId,
+            @RequestParam(required = false) Long votingPeriodId) {
+        
+        // If electionPositionId is provided, return flat list for that position
+        if (electionPositionId != null) {
+            var list = candidateService.listCandidatesForBallot(electionId, electionPositionId)
+                    .stream().map(ElectionCandidateResponse::fromEntity).toList();
+            return ResponseEntity.ok(list);
+        }
+        
+        // Otherwise, return grouped by position (optionally filtered by voting period)
+        var grouped = candidateService.listBallotGroupedByPosition(electionId, votingPeriodId);
+        return ResponseEntity.ok(grouped);
     }
 
     @DeleteMapping

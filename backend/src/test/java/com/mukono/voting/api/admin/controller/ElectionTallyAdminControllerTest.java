@@ -292,7 +292,7 @@ public class ElectionTallyAdminControllerTest extends IntegrationTestBase {
         fp.setSeats(seats);
         fellowshipPositionRepository.save(fp);
 
-        ElectionPosition position = new ElectionPosition(election, fp, 1);
+        ElectionPosition position = new ElectionPosition(election, fellowship, fp, 1);
         position = positionRepository.save(position);
 
         // Create voters and candidates
@@ -358,7 +358,7 @@ public class ElectionTallyAdminControllerTest extends IntegrationTestBase {
         fp.setSeats(1);
         fellowshipPositionRepository.save(fp);
 
-        ElectionPosition position = new ElectionPosition(election, fp, 1);
+        ElectionPosition position = new ElectionPosition(election, fellowship, fp, 1);
         position = positionRepository.save(position);
 
         // Create 2 candidates with same votes

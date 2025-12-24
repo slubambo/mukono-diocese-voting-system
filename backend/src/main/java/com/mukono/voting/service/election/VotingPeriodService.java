@@ -3,18 +3,25 @@ package com.mukono.voting.service.election;
 import com.mukono.voting.model.election.Election;
 import com.mukono.voting.model.election.VotingPeriod;
 import com.mukono.voting.model.election.VotingPeriodStatus;
+import com.mukono.voting.model.election.VotingPeriodPosition;
+import com.mukono.voting.model.election.ElectionPosition;
 import com.mukono.voting.payload.request.CreateVotingPeriodRequest;
 import com.mukono.voting.payload.request.UpdateVotingPeriodRequest;
+import com.mukono.voting.payload.request.AssignVotingPeriodPositionsRequest;
 import com.mukono.voting.payload.response.VotingPeriodResponse;
+import com.mukono.voting.payload.response.VotingPeriodPositionsResponse;
+import com.mukono.voting.payload.response.VotingPeriodPositionsMapResponse;
 import com.mukono.voting.repository.election.ElectionRepository;
 import com.mukono.voting.repository.election.VotingPeriodRepository;
+import com.mukono.voting.repository.election.ElectionPositionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Service for VotingPeriod entity.
@@ -26,12 +33,18 @@ public class VotingPeriodService {
 
     private final VotingPeriodRepository votingPeriodRepository;
     private final ElectionRepository electionRepository;
+    private final VotingPeriodPositionService votingPeriodPositionService;
+    private final ElectionPositionRepository electionPositionRepository;
 
     public VotingPeriodService(
             VotingPeriodRepository votingPeriodRepository,
-            ElectionRepository electionRepository) {
+            ElectionRepository electionRepository,
+            VotingPeriodPositionService votingPeriodPositionService,
+            ElectionPositionRepository electionPositionRepository) {
         this.votingPeriodRepository = votingPeriodRepository;
         this.electionRepository = electionRepository;
+        this.votingPeriodPositionService = votingPeriodPositionService;
+        this.electionPositionRepository = electionPositionRepository;
     }
 
     /**
@@ -120,6 +133,43 @@ public class VotingPeriodService {
             return votingPeriodRepository.findByElectionIdAndStatus(electionId, status, pageable);
         }
         return votingPeriodRepository.findByElectionId(electionId, pageable);
+    }
+
+    /**
+     * List voting periods and include positionsCount per item using a bulk count.
+     */
+    @Transactional(readOnly = true)
+    public Page<VotingPeriodResponse> listVotingPeriodsWithCounts(Long electionId, VotingPeriodStatus status, Pageable pageable) {
+        Page<VotingPeriod> page = listVotingPeriods(electionId, status, pageable);
+        List<Long> ids = page.getContent().stream().map(VotingPeriod::getId).toList();
+        Map<Long, Long> counts = votingPeriodPositionService.countAssignedPositionsForPeriods(ids);
+        return page.map(vp -> toResponse(vp, counts.getOrDefault(vp.getId(), 0L)));
+    }
+
+    /**
+     * Build bulk positions map response for an election.
+     */
+    @Transactional(readOnly = true)
+    public VotingPeriodPositionsMapResponse getPositionsMap(Long electionId) {
+        // Validate election exists
+        if (!electionRepository.existsById(electionId)) {
+            throw new IllegalArgumentException("Election not found");
+        }
+        // Fetch all voting periods for the election
+        List<VotingPeriod> periods = votingPeriodRepository.findByElectionId(electionId);
+        // Build periods -> positions list
+        List<VotingPeriodPositionsMapResponse.PeriodPositions> periodItems = new ArrayList<>();
+        for (VotingPeriod p : periods) {
+            List<Long> positionIds = votingPeriodPositionService.getAssignedPositionIds(electionId, p.getId());
+            periodItems.add(new VotingPeriodPositionsMapResponse.PeriodPositions(p.getId(), positionIds));
+        }
+        // Build position -> period map from pairs
+        List<long[]> pairs = votingPeriodPositionService.getPeriodPositionPairs(electionId);
+        Map<Long, Long> positionToPeriod = new HashMap<>();
+        for (long[] pair : pairs) {
+            positionToPeriod.put(pair[1], pair[0]);
+        }
+        return new VotingPeriodPositionsMapResponse(periodItems, positionToPeriod);
     }
 
     /**
@@ -252,6 +302,113 @@ public class VotingPeriodService {
         // This is handled at the controller/facade level for clean separation
         
         return votingPeriod;
+    }
+
+    /**
+     * Assign election positions to a voting period.
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @param request assignment request with position IDs
+     * @return updated VotingPeriod entity
+     * @throws IllegalArgumentException if validation fails
+     */
+    public VotingPeriod assignVotingPeriodPositions(
+            Long electionId, 
+            Long votingPeriodId,
+            AssignVotingPeriodPositionsRequest request) {
+        // Validate voting period exists
+        VotingPeriod votingPeriod = getVotingPeriod(electionId, votingPeriodId);
+        
+        // Delegate to position service for assignment logic
+        votingPeriodPositionService.assignPositions(
+                electionId, 
+                votingPeriodId, 
+                request.getElectionPositionIds()
+        );
+        
+        return votingPeriod;
+    }
+
+    /**
+     * Get assigned positions for a voting period, grouped by fellowship.
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @return response with positions grouped by fellowship
+     * @throws IllegalArgumentException if validation fails
+     */
+    public VotingPeriodPositionsResponse getVotingPeriodPositions(Long electionId, Long votingPeriodId) {
+        // Validate voting period exists
+        getVotingPeriod(electionId, votingPeriodId);
+        
+        // Get assigned position mappings
+        List<VotingPeriodPosition> mappings = votingPeriodPositionService.getAssignedPositions(
+                electionId, votingPeriodId);
+        
+        // Extract position IDs
+        List<Long> electionPositionIds = mappings.stream()
+                .map(m -> m.getElectionPosition().getId())
+                .collect(Collectors.toList());
+        
+        // Load full position entities
+        List<ElectionPosition> positions = electionPositionRepository.findAllById(electionPositionIds);
+        
+        // Group by fellowship
+        Map<Long, List<ElectionPosition>> byFellowship = positions.stream()
+                .collect(Collectors.groupingBy(
+                        pos -> pos.getFellowship().getId(),
+                        TreeMap::new, // Sorted by fellowship ID
+                        Collectors.toList()
+                ));
+        
+        // Build fellowship groups
+        List<VotingPeriodPositionsResponse.FellowshipPositionsGroup> fellowshipGroups = 
+                byFellowship.entrySet().stream()
+                        .map(entry -> {
+                            Long fellowshipId = entry.getKey();
+                            List<ElectionPosition> fellowshipPositions = entry.getValue();
+                            
+                            // Get fellowship name from first position
+                            String fellowshipName = fellowshipPositions.isEmpty() ? "" : 
+                                    fellowshipPositions.get(0).getFellowship().getName();
+                            
+                            // Build position summaries
+                            List<VotingPeriodPositionsResponse.PositionSummary> positionSummaries = 
+                                    fellowshipPositions.stream()
+                                            .sorted(Comparator.comparing(ElectionPosition::getId))
+                                            .map(pos -> new VotingPeriodPositionsResponse.PositionSummary(
+                                                    pos.getId(),
+                                                    pos.getFellowshipPosition().getId(),
+                                                    pos.getFellowshipPosition().getTitle().getName(),
+                                                    pos.getSeats(),
+                                                    pos.getMaxVotesPerVoter()
+                                            ))
+                                            .collect(Collectors.toList());
+                            
+                            return new VotingPeriodPositionsResponse.FellowshipPositionsGroup(
+                                    fellowshipId,
+                                    fellowshipName,
+                                    positionSummaries
+                            );
+                        })
+                        .collect(Collectors.toList());
+        
+        return new VotingPeriodPositionsResponse(
+                votingPeriodId,
+                electionId,
+                electionPositionIds,
+                fellowshipGroups
+        );
+    }
+
+    /**
+     * Convert VotingPeriod entity to VotingPeriodResponse with positionsCount.
+     */
+    public VotingPeriodResponse toResponse(VotingPeriod votingPeriod, Long positionsCount) {
+        VotingPeriodResponse r = toResponse(votingPeriod);
+        r.setPositionsCount(positionsCount);
+        return r;
     }
 
     /**

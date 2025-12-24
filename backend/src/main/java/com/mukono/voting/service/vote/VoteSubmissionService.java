@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 public class VoteSubmissionService {
 
     private final VotingPeriodRepository votingPeriodRepository;
+    private final VotingPeriodPositionRepository votingPeriodPositionRepository;
     private final ElectionPositionRepository electionPositionRepository;
     private final ElectionCandidateRepository electionCandidateRepository;
     private final PersonRepository personRepository;
@@ -31,6 +32,7 @@ public class VoteSubmissionService {
     private final ElectionVoterEligibilityService eligibilityService;
 
     public VoteSubmissionService(VotingPeriodRepository votingPeriodRepository,
+                                 VotingPeriodPositionRepository votingPeriodPositionRepository,
                                  ElectionPositionRepository electionPositionRepository,
                                  ElectionCandidateRepository electionCandidateRepository,
                                  PersonRepository personRepository,
@@ -38,6 +40,7 @@ public class VoteSubmissionService {
                                  VoteSelectionRepository voteSelectionRepository,
                                  ElectionVoterEligibilityService eligibilityService) {
         this.votingPeriodRepository = votingPeriodRepository;
+        this.votingPeriodPositionRepository = votingPeriodPositionRepository;
         this.electionPositionRepository = electionPositionRepository;
         this.electionCandidateRepository = electionCandidateRepository;
         this.personRepository = personRepository;
@@ -71,8 +74,24 @@ public class VoteSubmissionService {
             throw new IllegalArgumentException("Voter not eligible for this election: " + decision.getReason());
         }
 
-        // 3) Validate positions
+        // 2.5) Extract position IDs and validate they are assigned to this voting period
         List<Long> positionIds = request.getVotes().stream().map(VoteSubmitRequest.VoteItem::getPositionId).toList();
+        List<Long> assignedPositionIds = votingPeriodPositionRepository
+                .findElectionPositionIdsByVotingPeriod(electionId, votingPeriodId);
+        
+        if (assignedPositionIds.isEmpty()) {
+            throw new IllegalArgumentException("No positions are configured for this voting period");
+        }
+        
+        Set<Long> assignedSet = new HashSet<>(assignedPositionIds);
+        for (Long posId : positionIds) {
+            if (!assignedSet.contains(posId)) {
+                throw new IllegalArgumentException(
+                        "Position " + posId + " is not active for voting in this period");
+            }
+        }
+
+        // 3) Validate positions belong to election
         Map<Long, ElectionPosition> positions = electionPositionRepository.findAllById(positionIds)
                 .stream()
                 .collect(Collectors.toMap(ElectionPosition::getId, p -> p));

@@ -203,7 +203,7 @@ public class ElectionResultsAdminControllerTest extends IntegrationTestBase {
         fp.setScope(com.mukono.voting.model.leadership.PositionScope.CHURCH);
         fellowshipPositionRepository.save(fp);
 
-        ElectionPosition position = new ElectionPosition(election, fp, 1);
+        ElectionPosition position = new ElectionPosition(election, fellowship, fp, 1);
         position = positionRepository.save(position);
 
         // Create voters and candidates
@@ -270,7 +270,7 @@ public class ElectionResultsAdminControllerTest extends IntegrationTestBase {
         fp.setScope(com.mukono.voting.model.leadership.PositionScope.CHURCH);
         fellowshipPositionRepository.save(fp);
 
-        ElectionPosition position = new ElectionPosition(election, fp, 1);
+        ElectionPosition position = new ElectionPosition(election, fellowship, fp, 1);
         positionRepository.save(position);
 
         // Create candidates but no votes

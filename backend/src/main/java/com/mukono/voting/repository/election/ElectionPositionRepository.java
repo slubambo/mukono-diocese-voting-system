@@ -79,6 +79,19 @@ public interface ElectionPositionRepository extends JpaRepository<ElectionPositi
      */
     boolean existsByElectionIdAndFellowshipPositionId(Long electionId, Long fellowshipPositionId);
 
+    /**
+     * Check if a position is already added to an election for a specific fellowship.
+     * Used in multi-fellowship architecture where same position can exist for different fellowships.
+     * Matches the unique constraint (election_id, fellowship_id, fellowship_position_id).
+     * 
+     * @param electionId the election ID
+     * @param fellowshipId the fellowship ID
+     * @param fellowshipPositionId the fellowship position ID
+     * @return true if the position is already in the election for this fellowship, false otherwise
+     */
+    boolean existsByElectionIdAndFellowshipIdAndFellowshipPositionId(
+            Long electionId, Long fellowshipId, Long fellowshipPositionId);
+
     // =========================================================================
     // BULK DELETE BY ELECTION
     // =========================================================================
