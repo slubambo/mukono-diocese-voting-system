@@ -84,6 +84,7 @@ export type EligibleVoterResponse = {
   email?: string | null
   fellowshipName?: string | null
   scope?: string | null
+  scopeName?: string | null
   voted?: boolean
   voteCastAt?: string | null
   lastCodeStatus?: VotingCodeStatus | null
@@ -94,6 +95,8 @@ export type EligibleVoterResponse = {
 export type EligibleVoterFilters = PagingParams & {
   status?: EligibleVoterStatus | 'VOTED' | 'NOT_VOTED'
   q?: string
+  fellowshipId?: number
+  electionPositionId?: number
 }
 
 export type PagedResponseEligibleVoterResponse = {

@@ -14,7 +14,7 @@ public interface EligibleVoterProjection {
     String getFellowshipName();
     String getScope();
     String getScopeName();
-    Boolean getVoted();
+    Integer getVoted(); // MariaDB returns 1/0 from CASE WHEN
     Instant getVoteCastAt();
     String getLastCodeStatus();
     LocalDateTime getLastCodeIssuedAt();

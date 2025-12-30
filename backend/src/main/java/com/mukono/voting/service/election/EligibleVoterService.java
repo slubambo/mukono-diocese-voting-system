@@ -71,7 +71,7 @@ public class EligibleVoterService {
                 p.getFellowshipName(),
                 p.getScope(),
                 p.getScopeName(),
-                Boolean.TRUE.equals(p.getVoted()),
+                p.getVoted() != null && p.getVoted() != 0, // Convert Integer (1/0) to boolean
                 p.getVoteCastAt(),
                 p.getLastCodeStatus(),
                 p.getLastCodeIssuedAt(),

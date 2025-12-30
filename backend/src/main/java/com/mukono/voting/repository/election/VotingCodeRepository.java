@@ -201,15 +201,21 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
             GROUP BY vr.person_id
         ) vr ON vr.person_id = p.id
         LEFT JOIN (
-            SELECT DISTINCT ON (vc.person_id)
-                   vc.person_id,
-                   vc.status,
-                   vc.issued_at,
-                   vc.used_at
-            FROM voting_codes vc
-            WHERE vc.election_id = :electionId
-              AND (:votingPeriodId IS NULL OR vc.voting_period_id = :votingPeriodId)
-            ORDER BY vc.person_id, vc.issued_at DESC
+            SELECT person_id,
+                   status,
+                   issued_at,
+                   used_at
+            FROM (
+                SELECT vc.person_id,
+                       vc.status,
+                       vc.issued_at,
+                       vc.used_at,
+                       ROW_NUMBER() OVER (PARTITION BY vc.person_id ORDER BY vc.issued_at DESC) AS rn
+                FROM voting_codes vc
+                WHERE vc.election_id = :electionId
+                  AND (:votingPeriodId IS NULL OR vc.voting_period_id = :votingPeriodId)
+            ) t
+            WHERE t.rn = 1
         ) vc ON vc.person_id = p.id
         WHERE e.id = :electionId
           AND (:fellowshipId IS NULL OR f.id = :fellowshipId)
@@ -217,9 +223,9 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
           AND (:status = 'ALL'
                OR (:status = 'VOTED' AND vr.person_id IS NOT NULL)
                OR (:status = 'NOT_VOTED' AND vr.person_id IS NULL))
-          AND (:q IS NULL OR p.full_name ILIKE CONCAT('%', :q, '%')
-               OR p.phone_number ILIKE CONCAT('%', :q, '%')
-               OR p.email ILIKE CONCAT('%', :q, '%'))
+          AND (:q IS NULL OR LOWER(p.full_name) LIKE CONCAT('%', LOWER(:q), '%')
+               OR LOWER(p.phone_number) LIKE CONCAT('%', LOWER(:q), '%')
+               OR LOWER(p.email) LIKE CONCAT('%', LOWER(:q), '%'))
         GROUP BY p.id, p.full_name, p.phone_number, p.email, f.name, e.scope, d.name, ad.name, ch.name,
                  vr.person_id, vr.submitted_at, vc.status, vc.issued_at, vc.used_at
         """,
@@ -233,25 +239,39 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
             JOIN fellowships f ON f.id = fp.fellowship_id
             JOIN election_positions ep ON ep.fellowship_position_id = fp.id AND ep.election_id = :electionId
             JOIN elections e ON e.id = ep.election_id
+            LEFT JOIN (
+                SELECT vr.person_id, MIN(vr.submitted_at) AS submitted_at
+                FROM vote_records vr
+                WHERE vr.election_id = :electionId
+                  AND (:votingPeriodId IS NULL OR vr.voting_period_id = :votingPeriodId)
+                GROUP BY vr.person_id
+            ) vr ON vr.person_id = p.id
+            LEFT JOIN (
+                SELECT person_id,
+                       status,
+                       issued_at,
+                       used_at
+                FROM (
+                    SELECT vc.person_id,
+                           vc.status,
+                           vc.issued_at,
+                           vc.used_at,
+                           ROW_NUMBER() OVER (PARTITION BY vc.person_id ORDER BY vc.issued_at DESC) AS rn
+                    FROM voting_codes vc
+                    WHERE vc.election_id = :electionId
+                      AND (:votingPeriodId IS NULL OR vc.voting_period_id = :votingPeriodId)
+                ) t
+                WHERE t.rn = 1
+            ) vc ON vc.person_id = p.id
             WHERE e.id = :electionId
               AND (:status = 'ALL'
-                   OR (:status = 'VOTED' AND EXISTS (
-                        SELECT 1 FROM vote_records vr2
-                        WHERE vr2.election_id = :electionId
-                          AND (:votingPeriodId IS NULL OR vr2.voting_period_id = :votingPeriodId)
-                          AND vr2.person_id = p.id
-                    ))
-                   OR (:status = 'NOT_VOTED' AND NOT EXISTS (
-                        SELECT 1 FROM vote_records vr3
-                        WHERE vr3.election_id = :electionId
-                          AND (:votingPeriodId IS NULL OR vr3.voting_period_id = :votingPeriodId)
-                          AND vr3.person_id = p.id
-                    )))
+                   OR (:status = 'VOTED' AND vr.person_id IS NOT NULL)
+                   OR (:status = 'NOT_VOTED' AND vr.person_id IS NULL))
               AND (:fellowshipId IS NULL OR f.id = :fellowshipId)
               AND (:electionPositionId IS NULL OR ep.id = :electionPositionId)
-              AND (:q IS NULL OR p.full_name ILIKE CONCAT('%', :q, '%')
-                   OR p.phone_number ILIKE CONCAT('%', :q, '%')
-                   OR p.email ILIKE CONCAT('%', :q, '%'))
+              AND (:q IS NULL OR LOWER(p.full_name) LIKE CONCAT('%', LOWER(:q), '%')
+                   OR LOWER(p.phone_number) LIKE CONCAT('%', LOWER(:q), '%')
+                   OR LOWER(p.email) LIKE CONCAT('%', LOWER(:q), '%'))
             GROUP BY p.id
         ) sub
         """,

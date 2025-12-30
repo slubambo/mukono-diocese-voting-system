@@ -217,7 +217,9 @@ const EligibleVotersTab: React.FC<Props> = ({ electionId, votingPeriodId }) => {
                         </Box>
                       </TableCell>
                       <TableCell>{row.fellowshipName || '—'}</TableCell>
-                      <TableCell>{row.scope || '—'}</TableCell>
+                      <TableCell>
+                        {row.scopeName || row.scope || '—'}
+                      </TableCell>
                       <TableCell>
                         <StatusChip status={row.voted ? 'ACTIVE' : 'inactive'} label={voteLabel(row)} />
                         {row.voteCastAt && <Typography variant="caption" color="text.secondary">{formatDate(row.voteCastAt)}</Typography>}
