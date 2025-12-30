@@ -84,6 +84,25 @@ public class VotingPeriodAdminController {
     }
 
     /**
+     * Update an existing voting period.
+     *
+     * PUT /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @param request update request with name, description, startTime, endTime
+     * @return updated voting period response (200 OK)
+     */
+    @PutMapping("/{votingPeriodId}")
+    public ResponseEntity<VotingPeriodResponse> updateVotingPeriod(
+            @PathVariable @NotNull Long electionId,
+            @PathVariable @NotNull Long votingPeriodId,
+            @Valid @RequestBody UpdateVotingPeriodRequest request) {
+        VotingPeriod updated = votingPeriodService.updateVotingPeriod(electionId, votingPeriodId, request);
+        return ResponseEntity.ok(votingPeriodService.toResponse(updated));
+    }
+
+    /**
      * List voting periods for an election (paginated, optionally filtered by status).
      *
      * GET /api/v1/admin/elections/{electionId}/voting-periods?page=0&size=10&sort=name,asc&status=OPEN

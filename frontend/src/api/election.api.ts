@@ -73,6 +73,7 @@ export const electionApi = {
   openVotingPeriod: (electionId: string | number, votingPeriodId: string | number) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/open`),
   closeVotingPeriod: (electionId: string | number, votingPeriodId: string | number) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/close`),
   cancelVotingPeriod: (electionId: string | number, votingPeriodId: string | number) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/cancel`),
+  reactivateVotingPeriod: (electionId: string | number, votingPeriodId: string | number) => api.post(`/api/v1/admin/elections/${electionId}/voting-periods/${votingPeriodId}/reactivate`),
 }
 
 export type { Election, Position }

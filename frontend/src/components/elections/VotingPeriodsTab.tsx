@@ -5,6 +5,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser'
 import CloseIcon from '@mui/icons-material/Close'
 import CancelIcon from '@mui/icons-material/Cancel'
+import RestoreIcon from '@mui/icons-material/Restore'
 import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
 import StatusChip from '../common/StatusChip'
@@ -26,7 +27,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const [assignedByPeriod, setAssignedByPeriod] = useState<Record<string, number[]>>({})
   const [positionToPeriod, setPositionToPeriod] = useState<Record<number, string>>({})
   const [loadingPositions, setLoadingPositions] = useState(false)
-  const [lifecycleAction, setLifecycleAction] = useState<'open' | 'close' | 'cancel' | null>(null)
+  const [lifecycleAction, setLifecycleAction] = useState<'open' | 'close' | 'cancel' | 'reactivate' | null>(null)
   const [lifecyclePeriod, setLifecyclePeriod] = useState<VotingPeriod | null>(null)
   const [electionWindow, setElectionWindow] = useState<{ start?: string; end?: string }>({})
   const originalValuesRef = useRef<{ name?: string; start?: string; end?: string }>({})
@@ -217,13 +218,16 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       if (lifecycleAction === 'open') await electionApi.openVotingPeriod(electionId, lifecyclePeriod.id)
       if (lifecycleAction === 'close') await electionApi.closeVotingPeriod(electionId, lifecyclePeriod.id)
       if (lifecycleAction === 'cancel') await electionApi.cancelVotingPeriod(electionId, lifecyclePeriod.id)
-      toast.success(`Voting period ${lifecycleAction}ed`)
+      if (lifecycleAction === 'reactivate') await electionApi.reactivateVotingPeriod(electionId, lifecyclePeriod.id)
+      const action = lifecycleAction === 'reactivate' ? 'reactivated' : `${lifecycleAction}ed`
+      toast.success(`Voting period ${action}`)
       fetch()
       loadAssignments()
       setLifecycleAction(null)
       setLifecyclePeriod(null)
     } catch (err: any) {
-      toast.error(err?.message || `Failed to ${lifecycleAction} voting period`)
+      const action = lifecycleAction === 'reactivate' ? 'reactivate' : lifecycleAction
+      toast.error(err?.message || `Failed to ${action} voting period`)
     }
   }
 
@@ -265,15 +269,24 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                           <Tooltip title="Edit">
                             <IconButton size="small" onClick={() => openDialog(p)}><EditIcon /></IconButton>
                           </Tooltip>
-                          <Tooltip title="Open">
-                            <IconButton size="small" onClick={() => { setLifecycleAction('open'); setLifecyclePeriod(p) }}><OpenInBrowserIcon /></IconButton>
-                          </Tooltip>
-                          <Tooltip title="Close">
-                            <IconButton size="small" onClick={() => { setLifecycleAction('close'); setLifecyclePeriod(p) }}><CloseIcon /></IconButton>
-                          </Tooltip>
-                          <Tooltip title="Cancel">
-                            <IconButton size="small" onClick={() => { setLifecycleAction('cancel'); setLifecyclePeriod(p) }}><CancelIcon /></IconButton>
-                          </Tooltip>
+                          {p.status !== 'CANCELLED' && (
+                            <>
+                              <Tooltip title="Open">
+                                <IconButton size="small" onClick={() => { setLifecycleAction('open'); setLifecyclePeriod(p) }}><OpenInBrowserIcon /></IconButton>
+                              </Tooltip>
+                              <Tooltip title="Close">
+                                <IconButton size="small" onClick={() => { setLifecycleAction('close'); setLifecyclePeriod(p) }}><CloseIcon /></IconButton>
+                              </Tooltip>
+                              <Tooltip title="Cancel">
+                                <IconButton size="small" onClick={() => { setLifecycleAction('cancel'); setLifecyclePeriod(p) }}><CancelIcon /></IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                          {p.status === 'CANCELLED' && (
+                            <Tooltip title="Reactivate">
+                              <IconButton size="small" onClick={() => { setLifecycleAction('reactivate'); setLifecyclePeriod(p) }}><RestoreIcon /></IconButton>
+                            </Tooltip>
+                          )}
                         </>
                       )}
                     </TableCell>
