@@ -46,3 +46,52 @@ Notes:
 - Password is never returned in any response.
 - Role names are plain strings, e.g., ROLE_ADMIN, ROLE_DS.
 - Only ROLE_ADMIN can create/update/delete/activate/deactivate/reset passwords.
+
+# Eligible Voters Endpoints (Admin)
+
+## List eligible voters by voting period
+`GET /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}/eligible-voters`
+
+Query params:
+- `page` / `size` / `sort` (default `fullName,asc`)
+- `status`: `ALL` (default) | `VOTED` | `NOT_VOTED`
+- `q`: search by name/phone/email
+- `fellowshipId` (optional filter)
+- `electionPositionId` (optional filter)
+
+Response:
+```
+{
+  "content": [
+    {
+      "personId": 1,
+      "fullName": "Jane Doe",
+      "phoneNumber": "2567...",
+      "email": "jane@example.com",
+      "fellowshipName": "Youth",
+      "scope": "DIOCESE",
+      "scopeName": "Mukono",
+      "voted": true,
+      "voteCastAt": "2024-11-01T10:00:00Z",
+      "lastCodeStatus": "USED",
+      "lastCodeIssuedAt": "2024-11-01T09:45:00",
+      "lastCodeUsedAt": "2024-11-01T10:00:00"
+    }
+  ],
+  "totalElements": 1,
+  "totalPages": 1,
+  "page": 0,
+  "size": 20,
+  "last": true
+}
+```
+
+## Count eligible voters by voting period
+`GET /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}/eligible-voters/count`
+
+Query params:
+- `status`: `ALL` (default) | `VOTED` | `NOT_VOTED`
+- `fellowshipId` (optional)
+- `electionPositionId` (optional)
+
+Response: `{ "count": 123 }`

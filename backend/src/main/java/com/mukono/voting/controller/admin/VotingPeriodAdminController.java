@@ -13,6 +13,9 @@ import com.mukono.voting.payload.response.VotingPeriodPositionsMapResponse;
 import com.mukono.voting.service.election.VotingPeriodService;
 import com.mukono.voting.service.election.VotingPeriodPositionService;
 import com.mukono.voting.repository.election.ElectionPositionRepository;
+import com.mukono.voting.payload.response.common.CountResponse;
+import com.mukono.voting.payload.response.election.EligibleVoterResponse;
+import com.mukono.voting.service.election.EligibleVoterService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.domain.Page;
@@ -38,9 +41,12 @@ import org.springframework.web.bind.annotation.*;
 public class VotingPeriodAdminController {
 
     private final VotingPeriodService votingPeriodService;
+    private final EligibleVoterService eligibleVoterService;
 
-    public VotingPeriodAdminController(VotingPeriodService votingPeriodService) {
+    public VotingPeriodAdminController(VotingPeriodService votingPeriodService,
+                                       EligibleVoterService eligibleVoterService) {
         this.votingPeriodService = votingPeriodService;
+        this.eligibleVoterService = eligibleVoterService;
     }
 
     /**
@@ -202,6 +208,61 @@ public class VotingPeriodAdminController {
     public ResponseEntity<VotingPeriodPositionsMapResponse> getPositionsMap(
             @PathVariable @NotNull Long electionId) {
         return ResponseEntity.ok(votingPeriodService.getPositionsMap(electionId));
+    }
+
+    /**
+     * Get eligible voters for a voting period.
+     *
+     * GET /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}/eligible-voters?page=0&size=20&sort=fullName,asc
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @param page page number (0-indexed, default 0)
+     * @param size page size (default 20)
+     * @param sort sort order (default: "fullName,asc")
+     * @param status optional status filter (ALL, REGISTERED, NOT_REGISTERED)
+     * @param q optional search query (by name or ID number)
+     * @param fellowshipId optional filter by fellowship ID
+     * @param electionPositionId optional filter by election position ID
+     * @return paginated eligible voter responses (200 OK)
+     */
+    @GetMapping("/{votingPeriodId}/eligible-voters")
+    public ResponseEntity<Page<EligibleVoterResponse>> listEligibleVoters(
+            @PathVariable @NotNull Long electionId,
+            @PathVariable @NotNull Long votingPeriodId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "fullName,asc") String sort,
+            @RequestParam(required = false, defaultValue = "ALL") String status,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Long fellowshipId,
+            @RequestParam(required = false) Long electionPositionId) {
+        Pageable pageable = toPageable(page, size, sort);
+        var result = eligibleVoterService.listEligibleVoters(electionId, votingPeriodId, status, q, fellowshipId, electionPositionId, pageable);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Count eligible voters for a voting period.
+     *
+     * GET /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}/eligible-voters/count
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @param status optional status filter (ALL, REGISTERED, NOT_REGISTERED)
+     * @param fellowshipId optional filter by fellowship ID
+     * @param electionPositionId optional filter by election position ID
+     * @return count response (200 OK)
+     */
+    @GetMapping("/{votingPeriodId}/eligible-voters/count")
+    public ResponseEntity<CountResponse> countEligibleVoters(
+            @PathVariable @NotNull Long electionId,
+            @PathVariable @NotNull Long votingPeriodId,
+            @RequestParam(required = false, defaultValue = "ALL") String status,
+            @RequestParam(required = false) Long fellowshipId,
+            @RequestParam(required = false) Long electionPositionId) {
+        var count = eligibleVoterService.countEligibleVoters(electionId, votingPeriodId, status, fellowshipId, electionPositionId);
+        return ResponseEntity.ok(count);
     }
 
     /**

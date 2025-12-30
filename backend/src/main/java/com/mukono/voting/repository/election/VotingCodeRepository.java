@@ -2,6 +2,7 @@ package com.mukono.voting.repository.election;
 
 import com.mukono.voting.model.election.VotingCode;
 import com.mukono.voting.model.election.VotingCodeStatus;
+import com.mukono.voting.repository.election.projection.EligibleVoterProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -158,5 +159,110 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
     java.util.List<VotingCode> findActiveCodesForPeriod(
         @Param("electionId") Long electionId,
         @Param("votingPeriodId") Long votingPeriodId
+    );
+
+    /**
+     * Search for eligible voters with optional filters and pagination.
+     * 
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID (optional)
+     * @param status the vote/code status (ALL, VOTED, NOT_VOTED)
+     * @param q search query for voter details (name, phone, email)
+     * @param pageable pagination information
+     * @return Page of eligible voters projection
+     */
+    @Query(value = """
+        SELECT p.id               AS personId,
+               p.full_name        AS fullName,
+               p.phone_number     AS phoneNumber,
+               p.email            AS email,
+               f.name             AS fellowshipName,
+               e.scope            AS scope,
+               COALESCE(d.name, ad.name, ch.name) AS scopeName,
+               CASE WHEN vr.person_id IS NOT NULL THEN TRUE ELSE FALSE END AS voted,
+               vr.submitted_at    AS voteCastAt,
+               vc.status          AS lastCodeStatus,
+               vc.issued_at       AS lastCodeIssuedAt,
+               vc.used_at         AS lastCodeUsedAt
+        FROM people p
+        JOIN leadership_assignments la ON la.person_id = p.id AND la.status = 'ACTIVE'
+        JOIN fellowship_positions fp ON fp.id = la.fellowship_position_id
+        JOIN fellowships f ON f.id = fp.fellowship_id
+        JOIN election_positions ep ON ep.fellowship_position_id = fp.id AND ep.election_id = :electionId
+        JOIN elections e ON e.id = ep.election_id
+        LEFT JOIN dioceses d ON la.diocese_id = d.id
+        LEFT JOIN archdeaconries ad ON la.archdeaconry_id = ad.id
+        LEFT JOIN churches ch ON la.church_id = ch.id
+        LEFT JOIN (
+            SELECT vr.person_id, MIN(vr.submitted_at) AS submitted_at
+            FROM vote_records vr
+            WHERE vr.election_id = :electionId
+              AND (:votingPeriodId IS NULL OR vr.voting_period_id = :votingPeriodId)
+            GROUP BY vr.person_id
+        ) vr ON vr.person_id = p.id
+        LEFT JOIN (
+            SELECT DISTINCT ON (vc.person_id)
+                   vc.person_id,
+                   vc.status,
+                   vc.issued_at,
+                   vc.used_at
+            FROM voting_codes vc
+            WHERE vc.election_id = :electionId
+              AND (:votingPeriodId IS NULL OR vc.voting_period_id = :votingPeriodId)
+            ORDER BY vc.person_id, vc.issued_at DESC
+        ) vc ON vc.person_id = p.id
+        WHERE e.id = :electionId
+          AND (:fellowshipId IS NULL OR f.id = :fellowshipId)
+          AND (:electionPositionId IS NULL OR ep.id = :electionPositionId)
+          AND (:status = 'ALL'
+               OR (:status = 'VOTED' AND vr.person_id IS NOT NULL)
+               OR (:status = 'NOT_VOTED' AND vr.person_id IS NULL))
+          AND (:q IS NULL OR p.full_name ILIKE CONCAT('%', :q, '%')
+               OR p.phone_number ILIKE CONCAT('%', :q, '%')
+               OR p.email ILIKE CONCAT('%', :q, '%'))
+        GROUP BY p.id, p.full_name, p.phone_number, p.email, f.name, e.scope, d.name, ad.name, ch.name,
+                 vr.person_id, vr.submitted_at, vc.status, vc.issued_at, vc.used_at
+        """,
+        countQuery = """
+        SELECT COUNT(*)
+        FROM (
+            SELECT p.id
+            FROM people p
+            JOIN leadership_assignments la ON la.person_id = p.id AND la.status = 'ACTIVE'
+            JOIN fellowship_positions fp ON fp.id = la.fellowship_position_id
+            JOIN fellowships f ON f.id = fp.fellowship_id
+            JOIN election_positions ep ON ep.fellowship_position_id = fp.id AND ep.election_id = :electionId
+            JOIN elections e ON e.id = ep.election_id
+            WHERE e.id = :electionId
+              AND (:status = 'ALL'
+                   OR (:status = 'VOTED' AND EXISTS (
+                        SELECT 1 FROM vote_records vr2
+                        WHERE vr2.election_id = :electionId
+                          AND (:votingPeriodId IS NULL OR vr2.voting_period_id = :votingPeriodId)
+                          AND vr2.person_id = p.id
+                    ))
+                   OR (:status = 'NOT_VOTED' AND NOT EXISTS (
+                        SELECT 1 FROM vote_records vr3
+                        WHERE vr3.election_id = :electionId
+                          AND (:votingPeriodId IS NULL OR vr3.voting_period_id = :votingPeriodId)
+                          AND vr3.person_id = p.id
+                    )))
+              AND (:fellowshipId IS NULL OR f.id = :fellowshipId)
+              AND (:electionPositionId IS NULL OR ep.id = :electionPositionId)
+              AND (:q IS NULL OR p.full_name ILIKE CONCAT('%', :q, '%')
+                   OR p.phone_number ILIKE CONCAT('%', :q, '%')
+                   OR p.email ILIKE CONCAT('%', :q, '%'))
+            GROUP BY p.id
+        ) sub
+        """,
+        nativeQuery = true)
+    Page<EligibleVoterProjection> searchEligibleVoters(
+        @Param("electionId") Long electionId,
+        @Param("votingPeriodId") Long votingPeriodId,
+        @Param("status") String status,
+        @Param("q") String q,
+        @Param("fellowshipId") Long fellowshipId,
+        @Param("electionPositionId") Long electionPositionId,
+        Pageable pageable
     );
 }
