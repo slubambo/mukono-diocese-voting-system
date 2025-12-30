@@ -74,3 +74,33 @@ export type PagingParams = {
   size?: number
   sort?: string
 }
+
+export type EligibleVoterStatus = 'VOTED' | 'NOT_VOTED' | 'ALL'
+
+export type EligibleVoterResponse = {
+  personId: number
+  fullName: string
+  phoneNumber?: string | null
+  email?: string | null
+  fellowshipName?: string | null
+  scope?: string | null
+  voted?: boolean
+  voteCastAt?: string | null
+  lastCodeStatus?: VotingCodeStatus | null
+  lastCodeIssuedAt?: string | null
+  lastCodeUsedAt?: string | null
+}
+
+export type EligibleVoterFilters = PagingParams & {
+  status?: EligibleVoterStatus | 'VOTED' | 'NOT_VOTED'
+  q?: string
+}
+
+export type PagedResponseEligibleVoterResponse = {
+  content?: EligibleVoterResponse[]
+  page?: number
+  size?: number
+  totalElements?: number
+  totalPages?: number
+  last?: boolean
+}

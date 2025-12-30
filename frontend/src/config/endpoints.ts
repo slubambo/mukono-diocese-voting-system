@@ -123,3 +123,9 @@ export const VOTING_PERIOD_POSITION_ENDPOINTS = {
   BY_PERIOD: (electionId: number | string, votingPeriodId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/${votingPeriodId}/positions`,
   MAP: (electionId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/positions-map`,
 } as const
+
+// UI-E: Eligible voters listing with vote status
+export const ELIGIBLE_VOTERS_ENDPOINTS = {
+  LIST: (electionId: number | string, votingPeriodId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/${votingPeriodId}/eligible-voters`,
+  COUNT: (electionId: number | string, votingPeriodId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/${votingPeriodId}/eligible-voters/count`,
+} as const

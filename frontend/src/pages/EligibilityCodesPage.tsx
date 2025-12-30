@@ -22,6 +22,7 @@ import PageLayout from '../components/layout/PageLayout'
 import { electionApi } from '../api/election.api'
 import { useToast } from '../components/feedback/ToastProvider'
 import EligibilityTab from '../components/eligibility/EligibilityTab'
+import EligibleVotersTab from '../components/eligibility/EligibleVotersTab'
 import CodesTab from '../components/eligibility/CodesTab'
 import PeriodPositionsTab from '../components/eligibility/PeriodPositionsTab'
 import StatusChip from '../components/common/StatusChip'
@@ -210,6 +211,7 @@ const EligibilityCodesPage: React.FC = () => {
             <Paper sx={{ mb: 2 }}>
               <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
                 <Tab label="Eligibility" />
+                <Tab label="Eligible Voters" />
                 <Tab label="Voting Codes" />
                 <Tab label="Today’s Positions" />
               </Tabs>
@@ -219,6 +221,15 @@ const EligibilityCodesPage: React.FC = () => {
               <EligibilityTab electionId={selectedElection.id} isAdmin={isAdmin} />
             )}
             {tab === 1 && (
+              votingPeriodReady ? (
+                <EligibleVotersTab electionId={selectedElection!.id} votingPeriodId={selectedPeriod!.id} />
+              ) : (
+                <Paper sx={{ p: 3 }}>
+                  <Typography>Select a voting period to view eligible voters.</Typography>
+                </Paper>
+              )
+            )}
+            {tab === 2 && (
               votingPeriodReady ? (
                 <CodesTab
                   electionId={selectedElection!.id}
@@ -232,7 +243,7 @@ const EligibilityCodesPage: React.FC = () => {
                 </Paper>
               )
             )}
-            {tab === 2 && (
+            {tab === 3 && (
               votingPeriodReady ? (
                 <PeriodPositionsTab electionId={selectedElection!.id} votingPeriodId={selectedPeriod!.id} />
               ) : (

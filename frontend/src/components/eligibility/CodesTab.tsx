@@ -28,6 +28,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import AddIcon from '@mui/icons-material/Add'
+import RefreshIcon from '@mui/icons-material/Refresh'
 import { codesApi } from '../../api/codes.api'
 import { peopleApi } from '../../api/people.api'
 import { useToast } from '../feedback/ToastProvider'
@@ -78,6 +79,7 @@ const CodesTab: React.FC<CodesTabProps> = ({ electionId, votingPeriodId, isAdmin
   const [reasonDialog, setReasonDialog] = useState<{ mode: 'regenerate' | 'revoke'; code?: VotingCodeResponse } | null>(null)
   const [reasonText, setReasonText] = useState('')
   const [reasonBusy, setReasonBusy] = useState(false)
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
 
   const canIssue = isAdmin && votingPeriodStatus === 'OPEN'
 
@@ -139,6 +141,7 @@ const CodesTab: React.FC<CodesTabProps> = ({ electionId, votingPeriodId, isAdmin
       setRows(content)
       setTotal(res.totalElements || 0)
       loadNames(content)
+      setLastRefreshed(new Date())
     } catch (err: any) {
       toast.error(err?.message || 'Failed to load voting codes')
       setRows([])
@@ -241,6 +244,16 @@ const CodesTab: React.FC<CodesTabProps> = ({ electionId, votingPeriodId, isAdmin
             <Typography variant="h5" sx={{ mt: 1 }}>{counts[key] ?? 0}</Typography>
           </Paper>
         ))}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
+          <Tooltip title="Refresh counts and list">
+            <span>
+              <Button startIcon={<RefreshIcon />} size="small" onClick={() => { refreshCounts(); fetchCodes() }} disabled={loading}>
+                Refresh
+              </Button>
+            </span>
+          </Tooltip>
+          {lastRefreshed && <Typography variant="caption" color="text.secondary">Updated {lastRefreshed.toLocaleTimeString()}</Typography>}
+        </Box>
       </Box>
 
       {/* Issue code */}
@@ -254,7 +267,7 @@ const CodesTab: React.FC<CodesTabProps> = ({ electionId, votingPeriodId, isAdmin
             onInputChange={(_, value) => searchPeople(value)}
             value={issuePerson}
             onChange={(_, value) => setIssuePerson(value)}
-            renderInput={(params) => <TextField {...params} label="Person" placeholder="Search people" />}
+            renderInput={(params) => <TextField {...params} label="Person" placeholder="Search people" helperText="Type 2+ characters to search" />}
           />
           <TextField
             label="Remarks (optional)"
@@ -302,7 +315,7 @@ const CodesTab: React.FC<CodesTabProps> = ({ electionId, votingPeriodId, isAdmin
             onInputChange={(_, value) => searchPeople(value)}
             value={selectedPersonFilter}
             onChange={(_, value) => setSelectedPersonFilter(value)}
-            renderInput={(params) => <TextField {...params} label="Filter by person" placeholder="Search people" />}
+            renderInput={(params) => <TextField {...params} label="Filter by person" placeholder="Search people" helperText="Type 2+ characters to search" />}
           />
         </Box>
 

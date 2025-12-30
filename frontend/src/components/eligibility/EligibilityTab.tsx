@@ -26,6 +26,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
+import RefreshIcon from '@mui/icons-material/Refresh'
 import { eligibilityApi } from '../../api/eligibility.api'
 import { voterRollApi } from '../../api/voterRoll.api'
 import { peopleApi } from '../../api/people.api'
@@ -80,6 +81,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
   const [editing, setEditing] = useState<VoterRollEntryResponse | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<VoterRollEntryResponse | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
 
   const loadCounts = async () => {
     try {
@@ -133,6 +135,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
       setRows(content)
       setTotal(res.totalElements || 0)
       loadNames(content)
+      setLastRefreshed(new Date())
     } catch (err: any) {
       toast.error(err?.message || 'Failed to load voter roll overrides')
       setRows([])
@@ -221,7 +224,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
             getOptionLabel={(option) => option.fullName || ''}
             onInputChange={(_, value) => searchPeople(value)}
             onChange={(_, value) => setCheckPerson(value)}
-            renderInput={(params) => <TextField {...params} label="Person" placeholder="Search people" />}
+            renderInput={(params) => <TextField {...params} label="Person" placeholder="Search people" helperText="Type 2+ characters to search" />}
           />
           <Button variant="contained" onClick={handleCheck} disabled={checking}>Check Eligibility</Button>
         </Box>
@@ -244,20 +247,33 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
       </Paper>
 
       {/* Summary cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="caption" color="text.secondary">Eligible overrides</Typography>
-          <Typography variant="h5" sx={{ mt: 1 }}>{eligibleCount ?? '—'}</Typography>
-        </Paper>
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="caption" color="text.secondary">Ineligible overrides</Typography>
-          <Typography variant="h5" sx={{ mt: 1 }}>{ineligibleCount ?? '—'}</Typography>
-        </Paper>
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="caption" color="text.secondary">Total overrides</Typography>
-          <Typography variant="h5" sx={{ mt: 1 }}>{(eligibleCount ?? 0) + (ineligibleCount ?? 0)}</Typography>
-        </Paper>
-      </Box>
+      <Paper sx={{ p: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Box sx={{ display: 'grid' }}>
+            <Typography variant="caption" color="text.secondary">Eligible overrides</Typography>
+            <Typography variant="h5">{eligibleCount ?? '—'}</Typography>
+          </Box>
+          <Box sx={{ display: 'grid' }}>
+            <Typography variant="caption" color="text.secondary">Ineligible overrides</Typography>
+            <Typography variant="h5">{ineligibleCount ?? '—'}</Typography>
+          </Box>
+          <Box sx={{ display: 'grid' }}>
+            <Typography variant="caption" color="text.secondary">Total overrides</Typography>
+            <Typography variant="h5">{(eligibleCount ?? 0) + (ineligibleCount ?? 0)}</Typography>
+          </Box>
+          <Box sx={{ flex: 1 }} />
+          <Tooltip title="Refresh counts and overrides">
+            <span>
+              <Button startIcon={<RefreshIcon />} onClick={() => { loadCounts(); fetchOverrides() }} disabled={loading}>
+                Refresh
+              </Button>
+            </span>
+          </Tooltip>
+          {lastRefreshed && (
+            <Typography variant="caption" color="text.secondary">Updated {lastRefreshed.toLocaleTimeString()}</Typography>
+          )}
+        </Box>
+      </Paper>
 
       {/* Overrides table */}
       <Paper>
@@ -279,6 +295,8 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             sx={{ minWidth: 240 }}
+            placeholder="Search name, ID, or reason"
+            helperText="Type to filter within the loaded page"
           />
           {isAdmin && (
             <Button startIcon={<AddIcon />} variant="contained" onClick={openCreate} sx={{ ml: 'auto' }}>
@@ -292,7 +310,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
         ) : filteredRows.length === 0 ? (
           <EmptyState
             title="No overrides"
-            description="No voter roll overrides found for this filter."
+            description="No voter roll overrides found for this filter. Overrides only appear after an admin adds them."
             action={isAdmin ? <Button onClick={openCreate}>Add Override</Button> : undefined}
           />
         ) : (
@@ -452,7 +470,7 @@ const OverrideDialog: React.FC<OverrideDialogProps> = ({ open, onClose, onSaved,
             onInputChange={(_, value) => search(value)}
             value={person}
             onChange={(_, value) => setPerson(value)}
-            renderInput={(params) => <TextField {...params} label="Person" required />}
+            renderInput={(params) => <TextField {...params} label="Person" required helperText="Type 2+ characters to search" />}
           />
           <FormControlLabel
             control={<Switch checked={eligible} onChange={(e) => setEligible(e.target.checked)} />}
