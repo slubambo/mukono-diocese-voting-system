@@ -7,6 +7,7 @@ import com.mukono.voting.model.election.VotingPeriodStatus;
 import com.mukono.voting.repository.election.ElectionPositionRepository;
 import com.mukono.voting.repository.election.VotingPeriodPositionRepository;
 import com.mukono.voting.repository.election.VotingPeriodRepository;
+import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,14 +25,17 @@ public class VotingPeriodPositionService {
     private final VotingPeriodPositionRepository votingPeriodPositionRepository;
     private final VotingPeriodRepository votingPeriodRepository;
     private final ElectionPositionRepository electionPositionRepository;
+    private final EntityManager entityManager;
 
     public VotingPeriodPositionService(
             VotingPeriodPositionRepository votingPeriodPositionRepository,
             VotingPeriodRepository votingPeriodRepository,
-            ElectionPositionRepository electionPositionRepository) {
+            ElectionPositionRepository electionPositionRepository,
+            EntityManager entityManager) {
         this.votingPeriodPositionRepository = votingPeriodPositionRepository;
         this.votingPeriodRepository = votingPeriodRepository;
         this.electionPositionRepository = electionPositionRepository;
+        this.entityManager = entityManager;
     }
 
     /**
@@ -60,14 +64,34 @@ public class VotingPeriodPositionService {
                     votingPeriod.getStatus() + ". Only SCHEDULED periods can be modified.");
         }
 
-        // Validate all election positions exist and belong to the election
+        // Validate and deduplicate input
         if (electionPositionIds == null || electionPositionIds.isEmpty()) {
             throw new IllegalArgumentException("At least one election position must be assigned");
         }
 
-        List<ElectionPosition> electionPositions = electionPositionRepository.findAllById(electionPositionIds);
-        if (electionPositions.size() != electionPositionIds.size()) {
-            throw new IllegalArgumentException("One or more election position IDs are invalid");
+        // Remove duplicates from input list
+        List<Long> uniquePositionIds = new ArrayList<>(
+                new LinkedHashSet<>(electionPositionIds)  // LinkedHashSet preserves order while removing duplicates
+        );
+
+        if (uniquePositionIds.size() < electionPositionIds.size()) {
+            int duplicateCount = electionPositionIds.size() - uniquePositionIds.size();
+            throw new IllegalArgumentException(
+                    "Request contains " + duplicateCount + " duplicate position ID(s). " +
+                    "Each position can only be assigned once per voting period.");
+        }
+
+        // Validate all election positions exist and belong to the election
+        List<ElectionPosition> electionPositions = electionPositionRepository.findAllById(uniquePositionIds);
+        if (electionPositions.size() != uniquePositionIds.size()) {
+            Set<Long> foundIds = electionPositions.stream()
+                    .map(ElectionPosition::getId)
+                    .collect(Collectors.toSet());
+            List<Long> missingIds = uniquePositionIds.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .collect(Collectors.toList());
+            throw new IllegalArgumentException(
+                    "The following election position IDs are invalid: " + missingIds);
         }
 
         // Validate all positions belong to the election
@@ -81,6 +105,10 @@ public class VotingPeriodPositionService {
 
         // Delete existing assignments for this period (replace pattern)
         votingPeriodPositionRepository.deleteByVotingPeriodId(votingPeriodId);
+        
+        // Flush to ensure deletion is executed immediately before insertion
+        // This prevents "Duplicate entry" errors when updating assignments
+        entityManager.flush();
 
         // Create new assignments
         for (ElectionPosition electionPosition : electionPositions) {

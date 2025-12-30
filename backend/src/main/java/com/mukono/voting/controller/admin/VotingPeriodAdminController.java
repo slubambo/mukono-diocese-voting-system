@@ -208,16 +208,32 @@ public class VotingPeriodAdminController {
      *
      * POST /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}/positions
      *
+     * Request body: { electionPositionIds: [1, 2, 3] }
+     * Each position can only be assigned once.
+     *
      * @param electionId the election ID
      * @param votingPeriodId the voting period ID
-     * @param request positions assignment request
+     * @param request positions assignment request with list of election position IDs
      * @return voting period with assigned positions (200 OK)
+     * @throws IllegalArgumentException if request contains duplicate position IDs
      */
     @PostMapping("/{votingPeriodId}/positions")
     public ResponseEntity<VotingPeriodResponse> assignVotingPeriodPositions(
             @PathVariable @NotNull Long electionId,
             @PathVariable @NotNull Long votingPeriodId,
             @Valid @RequestBody AssignVotingPeriodPositionsRequest request) {
+        
+        // Validate no duplicate position IDs in request
+        if (request.getElectionPositionIds() != null) {
+            java.util.Set<Long> uniqueIds = new java.util.LinkedHashSet<>(request.getElectionPositionIds());
+            if (uniqueIds.size() != request.getElectionPositionIds().size()) {
+                int duplicateCount = request.getElectionPositionIds().size() - uniqueIds.size();
+                throw new IllegalArgumentException(
+                        "Request contains " + duplicateCount + " duplicate position ID(s). " +
+                        "Each position can only be assigned once per voting period.");
+            }
+        }
+        
         VotingPeriod updated = votingPeriodService.assignVotingPeriodPositions(electionId, votingPeriodId, request);
         return ResponseEntity.ok(votingPeriodService.toResponse(updated));
     }
