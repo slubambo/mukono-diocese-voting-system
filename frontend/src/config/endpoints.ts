@@ -95,3 +95,31 @@ export const USER_ENDPOINTS = {
   RESET_PASSWORD: (id: number) => `${API_ENV.API_V1}/users/${id}/reset-password`,
   ROLES: `${API_ENV.API_V1}/users/roles`,
 } as const
+
+// UI-E: Eligibility helpers
+export const ELIGIBILITY_ENDPOINTS = {
+  CHECK: (electionId: number | string) => `${API_ENV.API_V1}/elections/${electionId}/eligibility/me`,
+} as const
+
+// UI-E: Voter roll overrides
+export const VOTER_ROLL_ENDPOINTS = {
+  LIST: (electionId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voter-roll`,
+  COUNT: (electionId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voter-roll/count`,
+  UPSERT: (electionId: number | string, personId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voter-roll/${personId}`,
+  REMOVE: (electionId: number | string, personId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voter-roll/${personId}`,
+} as const
+
+// UI-E: Voting codes
+export const CODES_ENDPOINTS = {
+  LIST: (electionId: number | string, votingPeriodId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/${votingPeriodId}/codes`,
+  COUNT: (electionId: number | string, votingPeriodId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/${votingPeriodId}/codes/count`,
+  ISSUE: (electionId: number | string, votingPeriodId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/${votingPeriodId}/codes`,
+  REGENERATE: (electionId: number | string, votingPeriodId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/${votingPeriodId}/codes/regenerate`,
+  REVOKE: (electionId: number | string, votingPeriodId: number | string, codeId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/${votingPeriodId}/codes/${codeId}`,
+} as const
+
+// UI-E: Voting period positions overview
+export const VOTING_PERIOD_POSITION_ENDPOINTS = {
+  BY_PERIOD: (electionId: number | string, votingPeriodId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/${votingPeriodId}/positions`,
+  MAP: (electionId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/positions-map`,
+} as const

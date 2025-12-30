@@ -153,14 +153,22 @@ export const MENU_ITEMS: MenuItem[] = [
     path: '/admin/elections',
     icon: PollIcon,
     roles: ADMIN_ROLES,
-  },
-  // ADMIN: Eligibility & Codes (E)
-  {
-    id: 'eligibility',
-    label: 'Eligibility & Codes',
-    path: '/admin/eligibility',
-    icon: GroupIcon,
-    roles: ADMIN_ROLES,
+    children: [
+      {
+        id: 'elections-list',
+        label: 'Elections',
+        path: '/admin/elections',
+        icon: PollIcon,
+        roles: ADMIN_ROLES,
+      },
+      {
+        id: 'eligibility-codes',
+        label: 'Eligibility & Codes',
+        path: '/admin/elections/eligibility-codes',
+        icon: GroupIcon,
+        roles: ADMIN_ROLES,
+      },
+    ],
   },
   // ADMIN: Results & Tally (G)
   {
@@ -170,14 +178,6 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: CheckCircleIcon,
     roles: ADMIN_ROLES,
   },
-  // DS: Eligibility & Codes (E)
-  {
-    id: 'ds-eligibility',
-    label: 'Eligibility & Codes',
-    path: '/ds/eligibility',
-    icon: GroupIcon,
-    roles: DS_ROLES,
-  },
   // DS: Elections (D) - read-only
   {
     id: 'ds-elections',
@@ -185,6 +185,22 @@ export const MENU_ITEMS: MenuItem[] = [
     path: '/ds/elections',
     icon: PollIcon,
     roles: DS_ROLES,
+    children: [
+      {
+        id: 'ds-elections-list',
+        label: 'Elections',
+        path: '/ds/elections',
+        icon: PollIcon,
+        roles: DS_ROLES,
+      },
+      {
+        id: 'ds-eligibility-codes',
+        label: 'Eligibility & Codes',
+        path: '/ds/elections/eligibility-codes',
+        icon: GroupIcon,
+        roles: DS_ROLES,
+      },
+    ],
   },
   // DS: Results & Tally (G)
   {
