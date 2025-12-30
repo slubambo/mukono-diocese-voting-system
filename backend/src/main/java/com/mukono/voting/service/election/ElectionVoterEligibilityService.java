@@ -10,6 +10,7 @@ import com.mukono.voting.model.org.Church;
 import com.mukono.voting.model.org.Diocese;
 import com.mukono.voting.model.people.Person;
 import com.mukono.voting.repository.election.ElectionRepository;
+import com.mukono.voting.repository.election.ElectionPositionRepository;
 import com.mukono.voting.repository.election.ElectionVoterRollRepository;
 import com.mukono.voting.repository.leadership.LeadershipAssignmentRepository;
 import com.mukono.voting.repository.org.ArchdeaconryRepository;
@@ -48,6 +49,7 @@ public class ElectionVoterEligibilityService {
     private final DioceseRepository dioceseRepository;
     private final ArchdeaconryRepository archdeaconryRepository;
     private final ChurchRepository churchRepository;
+    private final ElectionPositionRepository electionPositionRepository;
 
     @Autowired
     public ElectionVoterEligibilityService(
@@ -57,7 +59,8 @@ public class ElectionVoterEligibilityService {
             LeadershipAssignmentRepository leadershipAssignmentRepository,
             DioceseRepository dioceseRepository,
             ArchdeaconryRepository archdeaconryRepository,
-            ChurchRepository churchRepository) {
+            ChurchRepository churchRepository,
+            ElectionPositionRepository electionPositionRepository) {
         this.electionRepository = electionRepository;
         this.electionVoterRollRepository = electionVoterRollRepository;
         this.personRepository = personRepository;
@@ -65,6 +68,7 @@ public class ElectionVoterEligibilityService {
         this.dioceseRepository = dioceseRepository;
         this.archdeaconryRepository = archdeaconryRepository;
         this.churchRepository = churchRepository;
+        this.electionPositionRepository = electionPositionRepository;
     }
 
     /**
@@ -115,19 +119,40 @@ public class ElectionVoterEligibilityService {
         }
 
         // === TIER 2: FELLOWSHIP MEMBERSHIP CHECK ===
-        // Check if voter belongs to the election's fellowship via active leadership assignment
-        // PERSON-SPECIFIC: Only fetch assignments for THIS voter
-        Long fellowshipId = election.getFellowship().getId();
-        List<LeadershipAssignment> voterFellowshipAssignments = leadershipAssignmentRepository
-                .findByPersonIdAndFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndStatus(
-                        voterPersonId,
-                        fellowshipId,
-                        election.getScope(),
-                        RecordStatus.ACTIVE);
+        // Get all fellowships from election positions (modern election structure)
+        // Election.fellowship field is deprecated; fellowships are derived from positions
+        List<com.mukono.voting.model.election.ElectionPosition> electionPositions = 
+                electionPositionRepository.findByElectionId(electionId);
+        
+        if (electionPositions.isEmpty()) {
+            return new EligibilityDecision(false, "NO_POSITIONS",
+                    "Election has no assigned positions");
+        }
+
+        // Collect unique fellowships from positions
+        java.util.Set<Long> fellowshipIds = electionPositions.stream()
+                .map(ep -> ep.getFellowship().getId())
+                .collect(java.util.stream.Collectors.toSet());
+
+        // Check if voter is eligible for ANY of the fellowships
+        List<LeadershipAssignment> voterFellowshipAssignments = new java.util.ArrayList<>();
+        
+        for (Long fellowshipId : fellowshipIds) {
+            List<LeadershipAssignment> assignments = leadershipAssignmentRepository
+                    .findByPersonIdAndFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndStatus(
+                            voterPersonId,
+                            fellowshipId,
+                            election.getScope(),
+                            RecordStatus.ACTIVE);
+            
+            if (!assignments.isEmpty()) {
+                voterFellowshipAssignments.addAll(assignments);
+            }
+        }
         
         if (voterFellowshipAssignments.isEmpty()) {
             return new EligibilityDecision(false, "FELLOWSHIP_CHECK",
-                    "Not a member of the required fellowship: " + election.getFellowship().getName());
+                    "Not a member of any fellowship required by this election");
         }
 
         // === TIER 3: SCOPE-TARGET MEMBERSHIP CHECK ===
