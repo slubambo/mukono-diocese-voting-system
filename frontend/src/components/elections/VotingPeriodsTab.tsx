@@ -12,6 +12,7 @@ import StatusChip from '../common/StatusChip'
 import { electionApi } from '../../api/election.api'
 import { useToast } from '../feedback/ToastProvider'
 import { useAuth } from '../../context/AuthContext'
+import { getErrorMessage } from '../../api/errorHandler'
 import type { Position, VotingPeriod, VotingPeriodPositionsMapResponse, VotingPeriodPositionsResponse } from '../../types/election'
 
 const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
@@ -208,7 +209,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       fetch()
       loadAssignments()
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to save voting period')
+      toast.error(getErrorMessage(err) || 'Failed to save voting period')
     }
   }
 
@@ -227,7 +228,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       setLifecyclePeriod(null)
     } catch (err: any) {
       const action = lifecycleAction === 'reactivate' ? 'reactivate' : lifecycleAction
-      toast.error(err?.message || `Failed to ${action} voting period`)
+      toast.error(getErrorMessage(err) || `Failed to ${action} voting period`)
     }
   }
 

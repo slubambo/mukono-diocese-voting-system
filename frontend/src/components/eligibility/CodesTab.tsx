@@ -32,6 +32,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import { codesApi } from '../../api/codes.api'
 import { peopleApi } from '../../api/people.api'
 import { useToast } from '../feedback/ToastProvider'
+import { getErrorMessage } from '../../api/errorHandler'
 import usePersonSearch from './usePersonSearch'
 import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
@@ -100,7 +101,7 @@ const CodesTab: React.FC<CodesTabProps> = ({ electionId, votingPeriodId, isAdmin
         EXPIRED: expired.count ?? 0,
       })
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to load code counts')
+      toast.error(getErrorMessage(err) || 'Failed to load code counts')
       setCounts({ ALL: 0, ACTIVE: 0, USED: 0, REVOKED: 0, EXPIRED: 0 })
     }
   }
@@ -143,7 +144,7 @@ const CodesTab: React.FC<CodesTabProps> = ({ electionId, votingPeriodId, isAdmin
       loadNames(content)
       setLastRefreshed(new Date())
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to load voting codes')
+      toast.error(getErrorMessage(err) || 'Failed to load voting codes')
       setRows([])
       setTotal(0)
     } finally {
@@ -182,7 +183,7 @@ const CodesTab: React.FC<CodesTabProps> = ({ electionId, votingPeriodId, isAdmin
       refreshCounts()
       fetchCodes()
     } catch (err: any) {
-      toast.error(err?.message || 'Unable to issue code. Please try again.')
+      toast.error(getErrorMessage(err) || 'Unable to issue code. Please try again.')
     } finally {
       setIssuing(false)
     }
@@ -227,7 +228,7 @@ const CodesTab: React.FC<CodesTabProps> = ({ electionId, votingPeriodId, isAdmin
       refreshCounts()
       fetchCodes()
     } catch (err: any) {
-      const msg = err?.message || (reasonDialog.mode === 'regenerate' ? 'Failed to regenerate code' : 'Failed to revoke code')
+      const msg = getErrorMessage(err) || (reasonDialog.mode === 'regenerate' ? 'Failed to regenerate code' : 'Failed to revoke code')
       toast.error(msg)
     } finally {
       setReasonBusy(false)

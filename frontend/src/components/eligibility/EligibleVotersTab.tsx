@@ -22,6 +22,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import { eligibleVotersApi } from '../../api/eligibleVoters.api'
 import type { EligibleVoterResponse, EligibleVoterStatus } from '../../types/eligibility'
 import { useToast } from '../feedback/ToastProvider'
+import { getErrorMessage } from '../../api/errorHandler'
 import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
 import StatusChip from '../common/StatusChip'
@@ -67,7 +68,7 @@ const EligibleVotersTab: React.FC<Props> = ({ electionId, votingPeriodId }) => {
         notVoted: notVotedRes.count ?? 0,
       })
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to load eligible voter counts')
+      toast.error(getErrorMessage(err) || 'Failed to load eligible voter counts')
       setCounts({ total: 0, voted: 0, notVoted: 0 })
     }
   }
@@ -87,7 +88,7 @@ const EligibleVotersTab: React.FC<Props> = ({ electionId, votingPeriodId }) => {
       setTotal(res.totalElements || content.length)
       setLastRefreshed(new Date())
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to load eligible voters')
+      toast.error(getErrorMessage(err) || 'Failed to load eligible voters')
       setRows([])
       setTotal(0)
     } finally {

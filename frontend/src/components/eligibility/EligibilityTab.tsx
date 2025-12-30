@@ -38,6 +38,7 @@ import StatusChip from '../common/StatusChip'
 import type { PersonResponse } from '../../types/leadership'
 import type { VoterRollEntryResponse } from '../../types/eligibility'
 import { useAuth } from '../../context/AuthContext'
+import { getErrorMessage } from '../../api/errorHandler'
 
 interface EligibilityTabProps {
   electionId: number | string
@@ -92,7 +93,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
       setEligibleCount(eligibleRes.count ?? 0)
       setIneligibleCount(ineligibleRes.count ?? 0)
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to load override counts')
+      toast.error(getErrorMessage(err) || 'Failed to load override counts')
       setEligibleCount(null)
       setIneligibleCount(null)
     }
@@ -137,7 +138,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
       loadNames(content)
       setLastRefreshed(new Date())
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to load voter roll overrides')
+      toast.error(getErrorMessage(err) || 'Failed to load voter roll overrides')
       setRows([])
       setTotal(0)
     } finally {
@@ -178,7 +179,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
       const res = await eligibilityApi.check(electionId, checkPerson.id)
       setDecision(res || null)
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to check eligibility')
+      toast.error(getErrorMessage(err) || 'Failed to check eligibility')
       setDecision(null)
     } finally {
       setChecking(false)
@@ -205,7 +206,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
       fetchOverrides()
       loadCounts()
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to remove override')
+      toast.error(getErrorMessage(err) || 'Failed to remove override')
     } finally {
       setDeleteBusy(false)
     }
@@ -451,7 +452,7 @@ const OverrideDialog: React.FC<OverrideDialogProps> = ({ open, onClose, onSaved,
       toast.success('Override saved')
       onSaved()
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to save override')
+      toast.error(getErrorMessage(err) || 'Failed to save override')
     } finally {
       setSaving(false)
     }

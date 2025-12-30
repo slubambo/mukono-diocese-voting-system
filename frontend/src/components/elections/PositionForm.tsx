@@ -5,6 +5,7 @@ import { electionApi } from '../../api/election.api'
 import { fellowshipPositionApi } from '../../api/fellowshipPosition.api'
 import { fellowshipApi } from '../../api/fellowship.api'
 import { useToast } from '../feedback/ToastProvider'
+import { getErrorMessage } from '../../api/errorHandler'
 import type { Position } from '../../types/election'
 import type { PositionScope } from '../../types/leadership'
 
@@ -67,7 +68,7 @@ const PositionForm: React.FC<Props> = ({ open, onClose, electionId, onSaved, pos
       toast.success('Position added')
       onSaved && onSaved()
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || 'Failed to add position')
+      toast.error(getErrorMessage(err) || 'Failed to add position')
     }
   }
 

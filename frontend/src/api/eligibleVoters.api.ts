@@ -1,6 +1,6 @@
 import axiosInstance from './axios'
 import { ELIGIBLE_VOTERS_ENDPOINTS } from '../config/endpoints'
-import type { EligibleVoterFilters, EligibleVoterResponse, EligibleVoterStatus, PagedResponseEligibleVoterResponse, CountResponse } from '../types/eligibility'
+import type { EligibleVoterFilters, EligibleVoterStatus, PagedResponseEligibleVoterResponse, CountResponse } from '../types/eligibility'
 
 export const eligibleVotersApi = {
   list: async (

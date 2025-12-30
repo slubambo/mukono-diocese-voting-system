@@ -7,6 +7,7 @@ import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
 import PositionForm from './PositionForm'
 import { useToast } from '../feedback/ToastProvider'
+import { getErrorMessage } from '../../api/errorHandler'
 import DeleteIcon from '@mui/icons-material/Delete'
 
 const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ electionId, isAdmin = false }) => {
@@ -72,7 +73,7 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
                               toast.success('Position removed')
                               fetch()
                             } catch (err: any) {
-                              toast.error(err?.response?.data?.message || err?.message || 'Failed to remove position')
+                              toast.error(getErrorMessage(err) || 'Failed to remove position')
                             }
                           }}><DeleteIcon fontSize="small" /></IconButton>
                         </>
