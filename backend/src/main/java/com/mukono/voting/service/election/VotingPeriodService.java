@@ -305,6 +305,37 @@ public class VotingPeriodService {
     }
 
     /**
+     * Reactivate a cancelled voting period.
+     * Only allowed from CANCELLED status.
+     * Transitions to SCHEDULED status, allowing the period to be used again.
+     * Does NOT restore expired voting codes - new codes must be issued.
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @return updated VotingPeriod entity with SCHEDULED status
+     * @throws IllegalArgumentException if transition not allowed or validation fails
+     */
+    public VotingPeriod reactivateVotingPeriod(Long electionId, Long votingPeriodId) {
+        VotingPeriod votingPeriod = getVotingPeriod(electionId, votingPeriodId);
+
+        // Only CANCELLED periods can be reactivated
+        if (votingPeriod.getStatus() != VotingPeriodStatus.CANCELLED) {
+            throw new IllegalArgumentException("Can only reactivate CANCELLED voting periods, current status: " + votingPeriod.getStatus());
+        }
+
+        // Validate that the voting period time window is still valid
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isAfter(votingPeriod.getEndTime())) {
+            throw new IllegalArgumentException("Cannot reactivate voting period that has already ended. End time: " + votingPeriod.getEndTime());
+        }
+
+        // Transition to SCHEDULED status
+        votingPeriod.setStatus(VotingPeriodStatus.SCHEDULED);
+        
+        return votingPeriodRepository.save(votingPeriod);
+    }
+
+    /**
      * Assign election positions to a voting period.
      *
      * @param electionId the election ID
@@ -320,7 +351,7 @@ public class VotingPeriodService {
         // Validate voting period exists
         VotingPeriod votingPeriod = getVotingPeriod(electionId, votingPeriodId);
         
-        // Delegate to position service for assignment logic
+        // Delegate to position service for assignment code...
         votingPeriodPositionService.assignPositions(
                 electionId, 
                 votingPeriodId, 

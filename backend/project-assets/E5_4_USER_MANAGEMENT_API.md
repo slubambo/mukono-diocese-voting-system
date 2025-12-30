@@ -47,6 +47,66 @@ Notes:
 - Role names are plain strings, e.g., ROLE_ADMIN, ROLE_DS.
 - Only ROLE_ADMIN can create/update/delete/activate/deactivate/reset passwords.
 
+# Voting Period Admin API
+
+Base path: `/api/v1/admin/elections/{electionId}/voting-periods`
+
+Security: Requires ROLE_ADMIN for all operations.
+
+## Status Transition Endpoints
+
+### Open Voting Period
+`POST /{votingPeriodId}/open`
+
+Transitions: `SCHEDULED → OPEN`
+
+Business rules:
+- Only one OPEN period per election at a time
+- Must have assigned positions
+
+### Close Voting Period  
+`POST /{votingPeriodId}/close`
+
+Transitions: `SCHEDULED → CLOSED` or `OPEN → CLOSED`
+
+Side effects:
+- Expires all ACTIVE voting codes for this period
+
+### Cancel Voting Period
+`POST /{votingPeriodId}/cancel`
+
+Transitions: `SCHEDULED → CANCELLED`
+
+Side effects:
+- Expires all ACTIVE voting codes for this period
+
+### Reactivate Voting Period ✨ **NEW**
+`POST /{votingPeriodId}/reactivate`
+
+Transitions: `CANCELLED → SCHEDULED`
+
+Business rules:
+- Only CANCELLED periods can be reactivated
+- End time must be in the future
+- Expired voting codes are NOT restored (must re-issue)
+
+Use case: Undo accidental cancellation or resume after temporary issues
+
+Example:
+```bash
+POST /api/v1/admin/elections/378/voting-periods/432/reactivate
+Authorization: Bearer <admin-jwt>
+
+Response 200 OK:
+{
+  "id": 432,
+  "status": "SCHEDULED",
+  ...
+}
+```
+
+---
+
 # Eligible Voters Endpoints (Admin)
 
 ## List eligible voters by voting period

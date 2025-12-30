@@ -183,6 +183,26 @@ public class VotingPeriodAdminController {
     }
 
     /**
+     * Reactivate a cancelled voting period.
+     * Only allowed from CANCELLED status.
+     * Transitions back to SCHEDULED status, allowing the period to be opened again.
+     * Note: Previously expired voting codes are NOT restored; new codes must be issued.
+     *
+     * POST /api/v1/admin/elections/{electionId}/voting-periods/{votingPeriodId}/reactivate
+     *
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @return updated voting period response (200 OK)
+     */
+    @PostMapping("/{votingPeriodId}/reactivate")
+    public ResponseEntity<VotingPeriodResponse> reactivateVotingPeriod(
+            @PathVariable @NotNull Long electionId,
+            @PathVariable @NotNull Long votingPeriodId) {
+        VotingPeriod reactivated = votingPeriodService.reactivateVotingPeriod(electionId, votingPeriodId);
+        return ResponseEntity.ok(votingPeriodService.toResponse(reactivated));
+    }
+
+    /**
      * Assign positions to a voting period.
      * Requires ADMIN role.
      *
