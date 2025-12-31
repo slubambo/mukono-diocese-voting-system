@@ -1,12 +1,17 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from '../pages/LoginPage'
 import VoteLoginPage from '../pages/VoteLoginPage'
+import VoteBallotPage from '../pages/VoteBallotPage'
+import VoteReviewPage from '../pages/VoteReviewPage'
+import VoteSuccessPage from '../pages/VoteSuccessPage'
+import VoteErrorPage from '../pages/VoteErrorPage'
 import AdminDashboard from '../pages/AdminDashboard'
 import DSMainPage from '../pages/DSMainPage'
 import VoterBallotPage from '../pages/VoterBallotPage'
 import UnauthorizedPage from '../pages/UnauthorizedPage'
 import RequireRole from './RequireRole'
 import RequireVoter from './RequireVoter'
+import VoterGuard from './VoterGuard'
 import { DiocesePage } from '../pages/configuration/DiocesePage'
 import { ArchdeaconryPage } from '../pages/configuration/ArchdeaconryPage'
 import { ChurchPage } from '../pages/configuration/ChurchPage'
@@ -28,8 +33,35 @@ const AppRoutes = () => (
     {/* System user login */}
     <Route path="/login" element={<LoginPage />} />
 
-    {/* Voter login (code-based) */}
+    {/* ===== VOTER VOTING FLOW (UI-F) ===== */}
+    {/* Voter code login */}
     <Route path="/vote/login" element={<VoteLoginPage />} />
+    
+    {/* Voter ballot - requires authentication */}
+    <Route
+      path="/vote/ballot"
+      element={
+        <VoterGuard>
+          <VoteBallotPage />
+        </VoterGuard>
+      }
+    />
+    
+    {/* Voter review - requires authentication */}
+    <Route
+      path="/vote/review"
+      element={
+        <VoterGuard>
+          <VoteReviewPage />
+        </VoterGuard>
+      }
+    />
+    
+    {/* Voter success */}
+    <Route path="/vote/success" element={<VoteSuccessPage />} />
+    
+    {/* Voter error */}
+    <Route path="/vote/error" element={<VoteErrorPage />} />
 
     {/* Admin area */}
     <Route

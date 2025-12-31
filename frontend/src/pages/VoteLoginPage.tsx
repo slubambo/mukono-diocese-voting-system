@@ -1,117 +1,187 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
-  Box,
-  Button,
-  Container,
-  Paper,
+  Card,
+  CardContent,
   TextField,
+  Button,
   Typography,
+  Box,
+  Alert,
+  CircularProgress,
+  InputAdornment,
 } from '@mui/material'
-import HowToVoteIcon from '@mui/icons-material/HowToVote'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { useToast } from '../components/feedback/ToastProvider'
-import { useAuth } from '../context/AuthContext'
+import VoterLayout from '../components/layout/VoterLayout'
+import { voteApi } from '../api/vote.api'
+import { useVoterAuth } from '../context/VoterAuthContext'
 
-const VoteLoginPage = () => {
+/**
+ * UI-F1: Voter Code Login
+ *
+ * Voters enter their voting code to access the ballot.
+ * Simple, bilingual interface with Luganda keywords.
+ */
+const VoteLoginPage: React.FC = () => {
+  const navigate = useNavigate()
+  const { setSession } = useVoterAuth()
+
   const [code, setCode] = useState('')
-  const [loading, setLoading] = useState(false)
-  const { loginVoter } = useAuth()
-  const toast = useToast()
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleVoterLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!code.trim() || code.length < 6) {
-      toast.error('Voting code must be at least 6 characters')
+
+    if (!code.trim()) {
+      setError('Please enter your voting code.')
       return
     }
 
-    setLoading(true)
+    setError(null)
+    setIsLoading(true)
+
     try {
-      await loginVoter({ code: code.trim() })
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Login failed'
-      toast.error(message)
-    } finally {
-      setLoading(false)
+      const response = await voteApi.login({ code: code.trim() })
+
+      // Calculate expiry time in milliseconds
+      const expiresAt = Date.now() + response.expiresIn * 1000
+
+      // Store session
+      setSession({
+        accessToken: response.accessToken,
+        tokenType: response.tokenType,
+        expiresAt,
+        personId: response.personId,
+        electionId: response.electionId,
+        votingPeriodId: response.votingPeriodId,
+      })
+
+      // Redirect to ballot
+      navigate('/vote/ballot')
+    } catch (err: unknown) {
+      console.error('Login error:', err)
+
+      // Handle specific error messages
+      if (err instanceof Error) {
+        if (err.message.includes('401') || err.message.includes('invalid')) {
+          setError('This voting code is invalid or has already been used.')
+        } else {
+          setError('Failed to log in. Please try again.')
+        }
+      } else {
+        setError('This voting code is invalid or has already been used.')
+      }
+
+      setCode('')
+      setIsLoading(false)
     }
   }
 
-  const handleBack = () => {
-    window.history.back()
-  }
-
   return (
-    <Container maxWidth="sm">
-      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', py: 4 }}>
-        <Paper elevation={3} sx={{ width: '100%' }}>
-          {/* Header */}
-          <Box
+    <VoterLayout>
+      {/* Login Card */}
+      <Card elevation={3}>
+        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+          {/* Title */}
+          <Typography
+            variant="h5"
             sx={{
-              background: 'linear-gradient(135deg, #0E61AD 0%, #D7B161 100%)',
-              color: 'white',
-              p: 3,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              fontWeight: 700,
+              mb: 1,
+              textAlign: 'center',
+              fontSize: { xs: '1.25rem', sm: '1.5rem' },
             }}
           >
-            <Box>
-              <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
-                Mukono Diocese
-              </Typography>
-              <Typography variant="body2">Voter Login</Typography>
-            </Box>
-            <HowToVoteIcon sx={{ fontSize: 48 }} />
-          </Box>
+            Vote <span style={{ fontSize: '0.9em', fontWeight: 400 }}>(Londa)</span>
+          </Typography>
 
-          {/* Content */}
-          <Box sx={{ p: 3 }}>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-              Enter your voting code to access the ballot. Your code was provided by the Diocese.
+          {/* Subtitle */}
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ mb: 3, textAlign: 'center', fontSize: { xs: '0.875rem', sm: '1rem' } }}
+          >
+            Enter your voting code to get started
+          </Typography>
+
+          {/* Error Alert */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
+          {/* Form */}
+          <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* Code Input */}
+            <TextField
+              id="voting-code"
+              label={
+                <span>
+                  Voting Code <span style={{ fontSize: '0.9em' }}>(Koodi y'Okulonda)</span>
+                </span>
+              }
+              value={code}
+              onChange={e => setCode(e.target.value)}
+              disabled={isLoading}
+              autoComplete="off"
+              autoFocus
+              placeholder="e.g., ABC123"
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  fontSize: { xs: '16px', sm: 'inherit' }, // Prevent iOS zoom on input
+                },
+              }}
+              InputProps={{
+                endAdornment: isLoading && (
+                  <InputAdornment position="end">
+                    <CircularProgress size={20} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            {/* Helper Text */}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+            >
+              Enter the voting code given to you by the polling officer.
             </Typography>
 
-            <form onSubmit={handleVoterLogin}>
-              <TextField
-                fullWidth
-                label="Voting Code"
-                placeholder="e.g., ABC123DEF456"
-                value={code}
-                onChange={e => setCode(e.target.value.toUpperCase())}
-                disabled={loading}
-                margin="normal"
-                required
-                inputProps={{
-                  maxLength: 32,
-                  style: { textTransform: 'uppercase', fontSize: '1.2rem', letterSpacing: '0.1em' },
-                }}
-                autoFocus
-              />
-
-              <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  startIcon={<ArrowBackIcon />}
-                  onClick={handleBack}
-                  disabled={loading}
-                >
-                  Back
-                </Button>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  type="submit"
-                  disabled={loading}
-                  sx={{ py: 1.5 }}
-                >
-                  {loading ? 'Verifying...' : 'Enter Ballot'}
-                </Button>
-              </Box>
-            </form>
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              size="large"
+              disabled={isLoading || !code.trim()}
+              sx={{
+                mt: 2,
+                py: { xs: 1.25, sm: 1.5 },
+                fontWeight: 600,
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+              }}
+            >
+              {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Continue (Weyongereyo)'}
+            </Button>
           </Box>
-        </Paper>
+        </CardContent>
+      </Card>
+
+      {/* Info Section */}
+      <Box sx={{ textAlign: 'center', mt: 2 }}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+        >
+          Your vote is secure and anonymous
+        </Typography>
       </Box>
-    </Container>
+    </VoterLayout>
   )
 }
 
