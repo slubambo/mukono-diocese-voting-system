@@ -3,6 +3,7 @@ import { Box, Paper, Typography, TextField, Button, MenuItem, Chip } from '@mui/
 import { electionApi } from '../../api/election.api'
 import LoadingState from '../common/LoadingState'
 import { useToast } from '../feedback/ToastProvider'
+import { getErrorMessage } from '../../api/errorHandler'
 import type { BallotPreviewResponse, Position } from '../../types/election'
 
 const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
@@ -20,7 +21,7 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       const res = await electionApi.ballotPreview(electionId, params)
       setPreview(res)
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Failed to load ballot preview'
+      const msg = getErrorMessage(err) || 'Failed to load ballot preview'
       toast.error(msg)
     } finally {
       setLoading(false)
