@@ -24,6 +24,7 @@ import UserManagementPage from '../pages/UserManagementPage'
 import ElectionsPage from '../pages/ElectionsPage'
 import ElectionDetailPage from '../pages/ElectionDetailPage'
 import EligibilityCodesPage from '../pages/EligibilityCodesPage'
+import ElectionResultsPage from '../pages/ElectionResultsPage'
 
 const DS_ROLES = ['ROLE_DS', 'ROLE_BISHOP', 'ROLE_SENIOR_STAFF', 'ROLE_POLLING_OFFICER']
 const CONFIG_ROLES = ['ROLE_ADMIN', ...DS_ROLES] // Admin has full CRUD, DS roles have read-only
@@ -186,6 +187,10 @@ const AppRoutes = () => (
       element={<RequireRole roles={['ROLE_ADMIN']}><ElectionDetailPage /></RequireRole>}
     />
     <Route
+      path="/admin/elections/:electionId/results"
+      element={<RequireRole roles={['ROLE_ADMIN']}><ElectionResultsPage /></RequireRole>}
+    />
+    <Route
       path="/admin/elections/eligibility-codes"
       element={
         <RequireRole roles={['ROLE_ADMIN']}>
@@ -229,6 +234,10 @@ const AppRoutes = () => (
     <Route
       path="/ds/elections/:electionId"
       element={<RequireRole roles={DS_ROLES}><ElectionDetailPage /></RequireRole>}
+    />
+    <Route
+      path="/ds/elections/:electionId/results"
+      element={<RequireRole roles={DS_ROLES}><ElectionResultsPage /></RequireRole>}
     />
     <Route
       path="/ds/elections/eligibility-codes"

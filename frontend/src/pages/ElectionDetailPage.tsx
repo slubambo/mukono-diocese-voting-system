@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Box, Paper, Tab, Tabs, Typography, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Chip, Stack } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import CancelIcon from '@mui/icons-material/Cancel'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { Button } from '@mui/material'
 import AppShell from '../components/layout/AppShell'
@@ -123,6 +124,13 @@ const ElectionDetailPage: React.FC = () => {
         actions={(
           <>
             <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(isAdmin ? '/admin/elections' : '/ds/elections')}>Back</Button>
+            <Button
+              variant="outlined"
+              startIcon={<CheckCircleIcon />}
+              onClick={() => navigate(isAdmin ? `/admin/elections/${electionId}/results` : `/ds/elections/${electionId}/results`)}
+            >
+              Results & Tally
+            </Button>
             {isAdmin ? (
               <>
                 <IconButton onClick={handleEdit}><EditIcon /></IconButton>
