@@ -24,7 +24,6 @@ import {
   TableRow,
   TextField,
   Typography,
-  Stack,
   Alert,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -37,7 +36,8 @@ import LoadingState from '../components/common/LoadingState'
 import EmptyState from '../components/common/EmptyState'
 import StatusChip from '../components/common/StatusChip'
 import { electionApi } from '../api/election.api'
-import resultsApi, {
+import resultsApi from '../api/results.api'
+import type {
   ElectionResultsSummaryResponse,
   PositionResultsResponse,
   RunTallyResponse,
@@ -46,8 +46,6 @@ import resultsApi, {
 import { useToast } from '../components/feedback/ToastProvider'
 import { useAuth } from '../context/AuthContext'
 import type { VotingPeriod } from '../types/election'
-
-const DS_ROLES = ['ROLE_DS', 'ROLE_BISHOP', 'ROLE_SENIOR_STAFF', 'ROLE_POLLING_OFFICER']
 
 interface RankedCandidate {
   candidateId?: number
@@ -108,7 +106,6 @@ const ElectionResultsPage: React.FC = () => {
   const navigate = useNavigate()
 
   const isAdmin = Boolean(user?.roles?.includes('ROLE_ADMIN'))
-  const isDs = Boolean(user?.roles?.some((r) => DS_ROLES.includes(r)))
 
   const [tab, setTab] = useState(0)
   const [loading, setLoading] = useState(true)

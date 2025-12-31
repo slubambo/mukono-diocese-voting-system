@@ -174,7 +174,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 'results',
     label: 'Results & Tally',
-    path: '/admin/elections',
+    path: '/admin/results',
     icon: CheckCircleIcon,
     roles: ADMIN_ROLES,
   },
@@ -206,7 +206,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 'ds-results',
     label: 'Results & Tally',
-    path: '/ds/elections',
+    path: '/ds/results',
     icon: CheckCircleIcon,
     roles: DS_ROLES,
   },

@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import EditIcon from '@mui/icons-material/Edit'
 import CancelIcon from '@mui/icons-material/Cancel'
+import StopCircleIcon from '@mui/icons-material/StopCircle'
 import AppShell from '../components/layout/AppShell'
 import PageLayout from '../components/layout/PageLayout'
 import LoadingState from '../components/common/LoadingState'
@@ -51,6 +52,8 @@ const ElectionsPage: React.FC = () => {
   const [editing, setEditing] = useState<Election | null>(null)
   const [canceling, setCanceling] = useState<Election | null>(null)
   const [cancelReason, setCancelReason] = useState('')
+  const [closingElectionId, setClosingElectionId] = useState<string | number | null>(null)
+  const [openPeriodMap, setOpenPeriodMap] = useState<Record<string, 'loading' | 'open' | 'none'>>({})
 
   const fetchElections = async () => {
     setLoading(true)
@@ -59,6 +62,25 @@ const ElectionsPage: React.FC = () => {
       const res = await electionApi.list(params as any)
       setElections(res.content || [])
       setTotal(res.totalElements || 0)
+
+      // Preload whether each election has an open voting period to inform close button state.
+      const statusMap: Record<string, 'loading' | 'open' | 'none'> = {}
+      const electionsList = res.content || []
+      await Promise.all(
+        electionsList.map(async (el: any) => {
+          const key = String(el.id)
+          statusMap[key] = 'loading'
+          try {
+            const periods = await electionApi.listVotingPeriods(el.id)
+            const items = (periods as any)?.content ?? periods ?? []
+            const hasOpen = (items as any[]).some((p) => (p.status || '').toUpperCase() === 'OPEN')
+            statusMap[key] = hasOpen ? 'open' : 'none'
+          } catch (err) {
+            statusMap[key] = 'none'
+          }
+        })
+      )
+      setOpenPeriodMap(statusMap)
     } catch (err: any) {
       toast.error(err?.message || 'Failed to load elections')
     } finally {
@@ -108,6 +130,26 @@ const ElectionsPage: React.FC = () => {
       fetchElections()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to cancel election')
+    }
+  }
+
+  const handleCloseVotingPeriod = async (election: Election) => {
+    setClosingElectionId(election.id)
+    try {
+      const res = await electionApi.listVotingPeriods(election.id)
+      const periods = (res as any)?.content ?? res ?? []
+      const openPeriod = (periods as any[]).find((p) => (p.status || '').toUpperCase() === 'OPEN')
+      if (!openPeriod) {
+        toast.info('No open voting period to close for this election')
+        return
+      }
+      await electionApi.closeVotingPeriod(election.id, openPeriod.id)
+      toast.success(`Closed voting period ${openPeriod.name || openPeriod.label || openPeriod.id}`)
+      fetchElections()
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to close voting period')
+    } finally {
+      setClosingElectionId(null)
     }
   }
 
@@ -190,6 +232,23 @@ const ElectionsPage: React.FC = () => {
                             <Tooltip title={e.status !== 'DRAFT' ? 'Only draft elections can be cancelled' : 'Cancel'}>
                               <span>
                                 <IconButton onClick={() => handleCancel(e)} size="small" disabled={e.status !== 'DRAFT'}><CancelIcon /></IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip
+                              title={
+                                openPeriodMap[String(e.id)] === 'none'
+                                  ? 'No open voting period to close'
+                                  : 'Close the current open voting period'
+                              }
+                            >
+                              <span>
+                                <IconButton
+                                  onClick={() => handleCloseVotingPeriod(e)}
+                                  size="small"
+                                  disabled={closingElectionId === e.id || openPeriodMap[String(e.id)] === 'none'}
+                                >
+                                  <StopCircleIcon />
+                                </IconButton>
                               </span>
                             </Tooltip>
                           </>
