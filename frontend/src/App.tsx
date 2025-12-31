@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { ThemeProvider, CssBaseline } from '@mui/material'
 import AppRoutes from './routes/AppRoutes'
 import { AuthProvider } from './context/AuthContext'
+import { VoterAuthProvider } from './context/VoterAuthContext'
 import ToastProvider from './components/feedback/ToastProvider'
 import ErrorBoundary from './components/feedback/ErrorBoundary'
 import { lightTheme } from './theme/theme'
@@ -28,7 +29,9 @@ function App() {
         <CssBaseline />
         <ToastProvider>
           <AuthProvider>
-            <AppRoutes />
+            <VoterAuthProvider>
+              <AppRoutes />
+            </VoterAuthProvider>
           </AuthProvider>
         </ToastProvider>
       </ThemeProvider>

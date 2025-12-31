@@ -7,6 +7,8 @@ export const AUTH_ENDPOINTS = {
 
 export const VOTE_ENDPOINTS = {
   LOGIN: `${API_ENV.API_V1}/vote/login`,
+  BALLOT: `${API_ENV.API_V1}/vote/ballot`,
+  SUBMIT: `${API_ENV.API_V1}/vote/submit`,
 } as const
 
 // UI-B: Organizational Structure Endpoints
