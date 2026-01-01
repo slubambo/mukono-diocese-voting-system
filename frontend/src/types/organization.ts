@@ -11,6 +11,8 @@ export interface Diocese {
   name: string
   code?: string
   status: EntityStatus
+  archdeaconryCount?: number
+  churchCount?: number
   createdAt: string
   updatedAt: string
 }

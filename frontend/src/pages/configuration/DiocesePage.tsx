@@ -224,6 +224,8 @@ export const DiocesePage: React.FC = () => {
     })
   }
 
+  const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
+
   return (
     <AppShell>
       <PageLayout title="Dioceses">
@@ -320,6 +322,8 @@ export const DiocesePage: React.FC = () => {
                   <TableRow>
                     <TableCell>Name</TableCell>
                     <TableCell>Code</TableCell>
+                    <TableCell align="right">Archdeaconries</TableCell>
+                    <TableCell align="right">Churches</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Created Date</TableCell>
                     {!isReadOnly && <TableCell align="right">Actions</TableCell>}
@@ -334,6 +338,8 @@ export const DiocesePage: React.FC = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>{diocese.code || '—'}</TableCell>
+                      <TableCell align="right">{renderCount(diocese.archdeaconryCount)}</TableCell>
+                      <TableCell align="right">{renderCount(diocese.churchCount)}</TableCell>
                       <TableCell>
                         <StatusChip status={diocese.status} />
                       </TableCell>
