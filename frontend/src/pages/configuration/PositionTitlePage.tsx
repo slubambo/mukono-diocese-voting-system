@@ -55,6 +55,7 @@ export const PositionTitlePage: React.FC = () => {
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selected, setSelected] = useState<PositionTitle | null>(null)
   const [formData, setFormData] = useState<CreatePositionTitleRequest & { status?: EntityStatus }>({ name: '' })
+  const [errors, setErrors] = useState<{ name?: string }>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [toDelete, setToDelete] = useState<PositionTitle | null>(null)
   
@@ -82,11 +83,19 @@ export const PositionTitlePage: React.FC = () => {
     fetchTitles()
   }, [page, rowsPerPage])
 
-  const handleSave = async () => {
+  const validateForm = () => {
+    const nextErrors: { name?: string } = {}
+
     if (!formData.name.trim()) {
-      showToast('Name is required', 'error')
-      return
+      nextErrors.name = 'Name is required'
     }
+
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
+  }
+
+  const handleSave = async () => {
+    if (!validateForm()) return
 
     try {
       if (dialogMode === 'create') {
@@ -123,7 +132,7 @@ export const PositionTitlePage: React.FC = () => {
         <MasterDataHeader
           title="Position Titles"
           subtitle="Manage position title templates"
-          onAddClick={isAdmin ? () => { setFormData({ name: '' }); setDialogMode('create'); } : undefined}
+          onAddClick={isAdmin ? () => { setFormData({ name: '' }); setErrors({}); setDialogMode('create'); } : undefined}
           addButtonLabel="Add Title"
           isAdmin={isAdmin}
           stats={[
@@ -175,7 +184,7 @@ export const PositionTitlePage: React.FC = () => {
                       <TableCell>{new Date(t.createdAt).toLocaleDateString()}</TableCell>
                       {isAdmin && (
                         <TableCell align="right">
-                          <IconButton size="small" onClick={() => { setFormData({ name: t.name, status: t.status }); setSelected(t); setDialogMode('edit'); }} color="primary"><EditIcon fontSize="small" /></IconButton>
+                          <IconButton size="small" onClick={() => { setFormData({ name: t.name, status: t.status }); setErrors({}); setSelected(t); setDialogMode('edit'); }} color="primary"><EditIcon fontSize="small" /></IconButton>
                           <IconButton size="small" onClick={() => { setToDelete(t); setDeleteDialogOpen(true); }} color="error"><DeleteIcon fontSize="small" /></IconButton>
                         </TableCell>
                       )}
@@ -192,10 +201,23 @@ export const PositionTitlePage: React.FC = () => {
       <Dialog open={dialogMode !== null} onClose={() => setDialogMode(null)} maxWidth="sm" fullWidth>
         <DialogTitle>{dialogMode === 'create' ? 'Create Position Title' : 'Edit Position Title'}</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <TextField label="Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required fullWidth autoFocus />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1.5 }}>
+            <TextField
+              label="Name"
+              value={formData.name}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value })
+                if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }))
+              }}
+              required
+              fullWidth
+              autoFocus
+              size="small"
+              error={Boolean(errors.name)}
+              helperText={errors.name}
+            />
             {dialogMode === 'edit' && (
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select value={formData.status || 'ACTIVE'} label="Status" onChange={(e) => setFormData({ ...formData, status: e.target.value as EntityStatus })}>
                   <MenuItem value="ACTIVE">Active</MenuItem>

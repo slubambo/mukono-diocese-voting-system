@@ -57,6 +57,7 @@ export const FellowshipPage: React.FC = () => {
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selected, setSelected] = useState<Fellowship | null>(null)
   const [formData, setFormData] = useState<CreateFellowshipRequest & { status?: EntityStatus }>({ name: '', code: '' })
+  const [errors, setErrors] = useState<{ name?: string; code?: string }>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [toDelete, setToDelete] = useState<Fellowship | null>(null)
   
@@ -86,12 +87,14 @@ export const FellowshipPage: React.FC = () => {
 
   const handleOpenCreate = () => {
     setFormData({ name: '', code: '' })
+    setErrors({})
     setSelected(null)
     setDialogMode('create')
   }
 
   const handleOpenEdit = (fellowship: Fellowship) => {
     setFormData({ name: fellowship.name, code: fellowship.code || '', status: fellowship.status })
+    setErrors({})
     setSelected(fellowship)
     setDialogMode('edit')
   }
@@ -99,13 +102,22 @@ export const FellowshipPage: React.FC = () => {
   const handleClose = () => {
     setDialogMode(null)
     setSelected(null)
+    setErrors({})
+  }
+
+  const validateForm = () => {
+    const nextErrors: { name?: string; code?: string } = {}
+
+    if (!formData.name.trim()) {
+      nextErrors.name = 'Name is required'
+    }
+
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
   }
 
   const handleSave = async () => {
-    if (!formData.name.trim()) {
-      showToast('Name is required', 'error')
-      return
-    }
+    if (!validateForm()) return
 
     try {
       if (dialogMode === 'create') {
@@ -217,11 +229,33 @@ export const FellowshipPage: React.FC = () => {
       <Dialog open={dialogMode !== null} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>{dialogMode === 'create' ? 'Create Fellowship' : 'Edit Fellowship'}</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <TextField label="Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required fullWidth />
-            <TextField label="Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} fullWidth />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1.5 }}>
+            <TextField
+              label="Name"
+              value={formData.name}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value })
+                if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }))
+              }}
+              required
+              fullWidth
+              size="small"
+              error={Boolean(errors.name)}
+              helperText={errors.name}
+            />
+            <TextField
+              label="Code"
+              value={formData.code}
+              onChange={(e) => {
+                setFormData({ ...formData, code: e.target.value })
+                if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }))
+              }}
+              fullWidth
+              size="small"
+              helperText={errors.code || 'Optional unique identifier'}
+            />
             {dialogMode === 'edit' && (
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select value={formData.status || 'ACTIVE'} label="Status" onChange={(e) => setFormData({ ...formData, status: e.target.value as EntityStatus })}>
                   <MenuItem value="ACTIVE">Active</MenuItem>

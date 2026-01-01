@@ -67,6 +67,7 @@ export const ChurchPage: React.FC = () => {
     name: '',
     code: '',
   })
+  const [errors, setErrors] = useState<{ archdeaconryId?: string; name?: string; code?: string }>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [churchToDelete, setChurchToDelete] = useState<Church | null>(null)
   
@@ -140,6 +141,7 @@ export const ChurchPage: React.FC = () => {
 
   const handleOpenCreateDialog = () => {
     setFormData({ archdeaconryId: selectedArchdeaconryId || 0, name: '', code: '' })
+    setErrors({})
     setSelectedChurch(null)
     setDialogMode('create')
   }
@@ -151,6 +153,7 @@ export const ChurchPage: React.FC = () => {
       code: church.code || '',
       status: church.status,
     })
+    setErrors({})
     setSelectedChurch(church)
     setDialogMode('edit')
   }
@@ -158,13 +161,25 @@ export const ChurchPage: React.FC = () => {
   const handleCloseDialog = () => {
     setDialogMode(null)
     setSelectedChurch(null)
+    setErrors({})
+  }
+
+  const validateForm = () => {
+    const nextErrors: { archdeaconryId?: string; name?: string; code?: string } = {}
+
+    if (!formData.archdeaconryId) {
+      nextErrors.archdeaconryId = 'Archdeaconry is required'
+    }
+    if (!formData.name.trim()) {
+      nextErrors.name = 'Name is required'
+    }
+
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
   }
 
   const handleSave = async () => {
-    if (!formData.name.trim() || !formData.archdeaconryId) {
-      showToast('All required fields must be filled', 'error')
-      return
-    }
+    if (!validateForm()) return
 
     try {
       if (dialogMode === 'create') {
@@ -310,19 +325,54 @@ export const ChurchPage: React.FC = () => {
       <Dialog open={dialogMode !== null} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{dialogMode === 'create' ? 'Create Church' : 'Edit Church'}</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1.5 }}>
             <Autocomplete
               options={archdeaconries}
               getOptionLabel={(opt) => opt.name}
               value={archdeaconries.find((a) => a.id === formData.archdeaconryId) || null}
-              onChange={(_, val) => setFormData({ ...formData, archdeaconryId: val?.id || 0 })}
+              onChange={(_, val) => {
+                setFormData({ ...formData, archdeaconryId: val?.id || 0 })
+                if (errors.archdeaconryId) setErrors((prev) => ({ ...prev, archdeaconryId: undefined }))
+              }}
               disabled={dialogMode === 'edit'}
-              renderInput={(params) => <TextField {...params} label="Archdeaconry" required />}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Archdeaconry"
+                  required
+                  size="small"
+                  error={Boolean(errors.archdeaconryId)}
+                  helperText={errors.archdeaconryId}
+                />
+              )}
+              size="small"
             />
-            <TextField label="Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required fullWidth />
-            <TextField label="Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} fullWidth />
+            <TextField
+              label="Name"
+              value={formData.name}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value })
+                if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }))
+              }}
+              required
+              fullWidth
+              size="small"
+              error={Boolean(errors.name)}
+              helperText={errors.name}
+            />
+            <TextField
+              label="Code"
+              value={formData.code}
+              onChange={(e) => {
+                setFormData({ ...formData, code: e.target.value })
+                if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }))
+              }}
+              fullWidth
+              size="small"
+              helperText={errors.code || 'Optional unique identifier'}
+            />
             {dialogMode === 'edit' && (
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select value={formData.status || 'ACTIVE'} label="Status" onChange={(e) => setFormData({ ...formData, status: e.target.value as EntityStatus })}>
                   <MenuItem value="ACTIVE">Active</MenuItem>

@@ -66,6 +66,7 @@ export const DiocesePage: React.FC = () => {
     name: '',
     code: '',
   })
+  const [errors, setErrors] = useState<{ name?: string; code?: string }>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [dioceseToDelete, setDioceseToDelete] = useState<Diocese | null>(null)
   
@@ -129,6 +130,7 @@ export const DiocesePage: React.FC = () => {
 
   const handleOpenCreateDialog = () => {
     setFormData({ name: '', code: '' })
+    setErrors({})
     setSelectedDiocese(null)
     setDialogMode('create')
   }
@@ -139,6 +141,7 @@ export const DiocesePage: React.FC = () => {
       code: diocese.code || '',
       status: diocese.status,
     })
+    setErrors({})
     setSelectedDiocese(diocese)
     setDialogMode('edit')
   }
@@ -147,13 +150,22 @@ export const DiocesePage: React.FC = () => {
     setDialogMode(null)
     setSelectedDiocese(null)
     setFormData({ name: '', code: '' })
+    setErrors({})
+  }
+
+  const validateForm = () => {
+    const nextErrors: { name?: string; code?: string } = {}
+
+    if (!formData.name.trim()) {
+      nextErrors.name = 'Name is required'
+    }
+
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
   }
 
   const handleSave = async () => {
-    if (!formData.name.trim()) {
-      showToast('Diocese name is required', 'error')
-      return
-    }
+    if (!validateForm()) return
 
     try {
       if (dialogMode === 'create') {
@@ -372,24 +384,34 @@ export const DiocesePage: React.FC = () => {
           {dialogMode === 'create' ? 'Create Diocese' : 'Edit Diocese'}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1.5 }}>
             <TextField
               label="Name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value })
+                if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }))
+              }}
               required
               fullWidth
               autoFocus
+              size="small"
+              error={Boolean(errors.name)}
+              helperText={errors.name}
             />
             <TextField
               label="Code"
               value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, code: e.target.value })
+                if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }))
+              }}
               fullWidth
-              helperText="Optional unique identifier"
+              helperText={errors.code || 'Optional unique identifier'}
+              size="small"
             />
             {dialogMode === 'edit' && (
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={formData.status || 'ACTIVE'}
