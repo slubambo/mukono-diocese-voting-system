@@ -83,11 +83,13 @@ const VoteLoginPage: React.FC = () => {
     <VoterLayout>
       {/* Login Card */}
       <Card 
-        elevation={8}
+        elevation={10}
         sx={{
           borderRadius: 3,
           overflow: 'hidden',
           position: 'relative',
+          boxShadow: '0 16px 40px rgba(143, 52, 147, 0.2)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           '&::before': {
             content: '""',
             position: 'absolute',
@@ -99,7 +101,7 @@ const VoteLoginPage: React.FC = () => {
           },
         }}
       >
-        <CardContent sx={{ p: { xs: 3, sm: 5 }, pt: { xs: 4, sm: 6 } }}>
+        <CardContent sx={{ p: { xs: 3.5, sm: 5 }, pt: { xs: 4, sm: 5.5 } }}>
           {/* Icon */}
           <Box
             sx={{
@@ -239,11 +241,14 @@ const VoteLoginPage: React.FC = () => {
                 fontSize: { xs: '1rem', sm: '1.1rem' },
                 borderRadius: 2,
                 textTransform: 'none',
-                boxShadow: '0 4px 12px rgba(143, 52, 147, 0.3)',
-                transition: 'all 0.3s ease',
+                boxShadow: '0 4px 12px rgba(143, 52, 147, 0.25)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  boxShadow: '0 6px 20px rgba(143, 52, 147, 0.4)',
-                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 24px rgba(143, 52, 147, 0.35)',
+                  transform: 'translateY(-3px)',
+                },
+                '&:active': {
+                  transform: 'translateY(-1px)',
                 },
                 '&:disabled': {
                   opacity: 0.6,
@@ -260,12 +265,17 @@ const VoteLoginPage: React.FC = () => {
       <Box 
         sx={{ 
           textAlign: 'center', 
-          mt: 3,
+          mt: 3.5,
           p: 2.5,
           bgcolor: 'rgba(67, 160, 71, 0.08)',
           borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'rgba(67, 160, 71, 0.2)',
+          border: '1.5px solid',
+          borderColor: 'rgba(67, 160, 71, 0.25)',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            bgcolor: 'rgba(67, 160, 71, 0.12)',
+            borderColor: 'rgba(67, 160, 71, 0.35)',
+          },
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 0.5 }}>

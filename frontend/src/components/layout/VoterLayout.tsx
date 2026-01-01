@@ -92,9 +92,11 @@ const VoterLayout: React.FC<VoterLayoutProps> = ({ children, showHeader = true }
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          minHeight: '100vh',
           p: { xs: 2, sm: 3, md: 4 },
           position: 'relative',
           zIndex: 1,
+          py: { xs: 3, sm: 4, md: 5 },
         }}
       >
         <Container
@@ -114,11 +116,14 @@ const VoterLayout: React.FC<VoterLayoutProps> = ({ children, showHeader = true }
       {/* Footer */}
       <Box
         sx={{
-          py: 2,
+          py: 2.5,
           px: 2,
           textAlign: 'center',
           borderTop: `1px solid ${theme.palette.divider}`,
           backgroundColor: theme.palette.background.paper,
+          mt: 'auto',
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         <Typography

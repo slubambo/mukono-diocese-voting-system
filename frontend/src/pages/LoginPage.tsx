@@ -84,10 +84,16 @@ const LoginPage = () => {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
+        minHeight: '100dvh',
         background: 'linear-gradient(135deg, #8F3493 0%, #5D248C 25%, #0E61AD 75%, #084A87 100%)',
         position: 'relative',
         overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        py: { xs: 3, sm: 5 },
+        px: { xs: 2, sm: 3 },
+        boxSizing: 'border-box',
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -115,16 +121,25 @@ const LoginPage = () => {
         },
       }}
     >
-      <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+      <Container
+        maxWidth="sm"
+        disableGutters
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          width: '100%',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
           <Paper 
-            elevation={8} 
+            elevation={12} 
             sx={{ 
               width: '100%', 
               overflow: 'hidden',
               borderRadius: 3,
               backdropFilter: 'blur(10px)',
-              background: 'rgba(255, 255, 255, 0.98)',
+              background: 'rgba(255, 255, 255, 0.99)',
+              boxShadow: '0 20px 60px rgba(143, 52, 147, 0.25)',
             }}
           >
             {/* Header with Logo */}
@@ -218,9 +233,9 @@ const LoginPage = () => {
 
           {/* Voter Entry Tab */}
           <TabPanel value={tab} index={0}>
-            <Box sx={{ px: { xs: 2, sm: 4 }, textAlign: 'center' }}>
+            <Box sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 3, sm: 3.5 }, pt: { xs: 1.5, sm: 2 }, textAlign: 'center' }}>
               {/* Welcome Section */}
-              <Box sx={{ mb: 3, mt: 0 }}>
+              <Box sx={{ mb: 2.5, mt: 0.5 }}>
                 <Typography 
                   variant="h5" 
                   sx={{ 
@@ -247,18 +262,19 @@ const LoginPage = () => {
               {/* Main Action Card */}
               <Card
                 sx={{
-                  p: { xs: 2.5, sm: 3.5 },
+                  p: { xs: 2, sm: 3 },
                   background: 'linear-gradient(135deg, #F8F7FF 0%, #FFF9F5 100%)',
                   border: '2px solid',
                   borderColor: 'primary.main',
                   borderRadius: 3,
-                  mb: 2,
+                  mb: 1.5,
                   position: 'relative',
                   overflow: 'hidden',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 6px 16px rgba(143, 52, 147, 0.12)',
                   '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 24px rgba(143, 52, 147, 0.15)',
+                    transform: 'translateY(-6px)',
+                    boxShadow: '0 16px 32px rgba(143, 52, 147, 0.2)',
                   },
                   '&::before': {
                     content: '""',
@@ -274,19 +290,19 @@ const LoginPage = () => {
               >
                 <Box
                   sx={{
-                    width: 72,
-                    height: 72,
+                    width: { xs: 60, sm: 68 },
+                    height: { xs: 60, sm: 68 },
                     borderRadius: '50%',
                     background: 'linear-gradient(135deg, #8F3493 0%, #6B2670 100%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     margin: '0 auto',
-                    mb: 2,
+                    mb: 1.5,
                     boxShadow: '0 8px 16px rgba(143, 52, 147, 0.3)',
                   }}
                 >
-                  <HowToVoteIcon sx={{ fontSize: 44, color: 'white' }} />
+                  <HowToVoteIcon sx={{ fontSize: { xs: 36, sm: 40 }, color: 'white' }} />
                 </Box>
                 
                 <Typography 
@@ -295,8 +311,8 @@ const LoginPage = () => {
                   sx={{ 
                     fontWeight: 700,
                     color: 'primary.dark',
-                    mb: 1.5,
-                    fontSize: { xs: '1.4rem', sm: '1.5rem' },
+                    mb: 1,
+                    fontSize: { xs: '1.3rem', sm: '1.45rem' },
                   }}
                 >
                   Ready to Vote?
@@ -305,11 +321,11 @@ const LoginPage = () => {
                   variant="body2" 
                   color="text.secondary" 
                   sx={{ 
-                    mb: 2.5,
+                    mb: 2,
                     lineHeight: 1.6,
                     maxWidth: '500px',
-                    margin: '0 auto 20px',
-                    fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                    margin: '0 auto',
+                    fontSize: { xs: '0.88rem', sm: '0.92rem' },
                   }}
                 >
                   Enter your unique voting code to access your ballot. Your code was provided by the Diocese and is required to proceed.
@@ -323,9 +339,9 @@ const LoginPage = () => {
                     gap: 0.75,
                     bgcolor: 'rgba(14, 97, 173, 0.08)',
                     px: 2,
-                    py: 1.25,
+                    py: 1,
                     borderRadius: 2,
-                    mb: 2.5,
+                    mb: 2,
                   }}
                 >
                   <LockIcon sx={{ fontSize: 18, color: 'secondary.main', flexShrink: 0 }} />
@@ -341,7 +357,7 @@ const LoginPage = () => {
                   size="large"
                   onClick={handleVoterEntry}
                   sx={{ 
-                    py: 1.75, 
+                    py: 1.5, 
                     fontSize: { xs: '0.95rem', sm: '1rem' },
                     fontWeight: 600,
                     borderRadius: 2,
@@ -361,8 +377,8 @@ const LoginPage = () => {
               {/* Help Text */}
               <Box
                 sx={{
-                  mt: 2,
-                  p: 1.5,
+                  mt: 1.5,
+                  p: 1.25,
                   bgcolor: 'rgba(0, 0, 0, 0.02)',
                   borderRadius: 2,
                 }}
@@ -379,14 +395,15 @@ const LoginPage = () => {
 
           {/* System Login Tab */}
           <TabPanel value={tab} index={1}>
-            <Box sx={{ px: { xs: 2, sm: 4 }, pb: 4 }}>
+            <Box sx={{ px: { xs: 2.5, sm: 4 }, pb: 4, pt: 2 }}>
               <Box
                 sx={{
                   textAlign: 'center',
-                  mb: 3,
-                  p: 2,
-                  bgcolor: 'rgba(14, 97, 173, 0.05)',
+                  mb: 3.5,
+                  p: 2.5,
+                  bgcolor: 'rgba(14, 97, 173, 0.06)',
                   borderRadius: 2,
+                  border: '1px solid rgba(14, 97, 173, 0.1)',
                 }}
               >
                 <LockIcon sx={{ fontSize: 32, color: 'secondary.main', mb: 1 }} />
@@ -460,9 +477,14 @@ const LoginPage = () => {
                     fontWeight: 600,
                     borderRadius: 2,
                     textTransform: 'none',
-                    boxShadow: '0 4px 12px rgba(14, 97, 173, 0.3)',
+                    boxShadow: '0 4px 12px rgba(14, 97, 173, 0.25)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
-                      boxShadow: '0 6px 20px rgba(14, 97, 173, 0.4)',
+                      boxShadow: '0 8px 24px rgba(14, 97, 173, 0.35)',
+                      transform: 'translateY(-2px)',
+                    },
+                    '&:active': {
+                      transform: 'translateY(0)',
                     },
                   }}
                 >
