@@ -147,6 +147,8 @@ export const FellowshipPage: React.FC = () => {
     }
   }
 
+  const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
+
   return (
     <AppShell>
       <PageLayout title="Fellowships">
@@ -198,6 +200,7 @@ export const FellowshipPage: React.FC = () => {
                   <TableRow>
                     <TableCell>Name</TableCell>
                     <TableCell>Code</TableCell>
+                    <TableCell align="right">Positions</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Created</TableCell>
                     {isAdmin && <TableCell align="right">Actions</TableCell>}
@@ -208,6 +211,7 @@ export const FellowshipPage: React.FC = () => {
                     <TableRow key={f.id} hover>
                       <TableCell><Typography variant="body2" fontWeight={500}>{f.name}</Typography></TableCell>
                       <TableCell>{f.code || '—'}</TableCell>
+                      <TableCell align="right">{renderCount(f.positionsCount)}</TableCell>
                       <TableCell><StatusChip status={f.status} /></TableCell>
                       <TableCell>{new Date(f.createdAt).toLocaleDateString()}</TableCell>
                       {isAdmin && (

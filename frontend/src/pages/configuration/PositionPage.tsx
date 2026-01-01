@@ -179,6 +179,8 @@ export const PositionPage: React.FC = () => {
     }
   }
 
+  const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
+
   // FellowshipPosition has nested fellowship and title objects
   const getFellowshipName = (position: FellowshipPosition) => position.fellowship.name
   const getTitleName = (position: FellowshipPosition) => position.title.name
@@ -247,6 +249,8 @@ export const PositionPage: React.FC = () => {
                     <TableCell>Position Title</TableCell>
                     <TableCell>Scope</TableCell>
                     <TableCell>Seats</TableCell>
+                    <TableCell align="right">Assigned</TableCell>
+                    <TableCell align="right">Available</TableCell>
                     <TableCell>Status</TableCell>
                     {isAdmin && <TableCell align="right">Actions</TableCell>}
                   </TableRow>
@@ -258,6 +262,8 @@ export const PositionPage: React.FC = () => {
                       <TableCell><Typography variant="body2" fontWeight={500}>{getTitleName(p)}</Typography></TableCell>
                       <TableCell><Typography variant="caption" color="text.secondary">{p.scope}</Typography></TableCell>
                       <TableCell>{p.seats}</TableCell>
+                      <TableCell align="right">{renderCount(p.currentAssignmentsCount)}</TableCell>
+                      <TableCell align="right">{renderCount(p.availableSeats)}</TableCell>
                       <TableCell><StatusChip status={p.status} /></TableCell>
                       {isAdmin && (
                         <TableCell align="right">

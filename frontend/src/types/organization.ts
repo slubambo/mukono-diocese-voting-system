@@ -140,6 +140,7 @@ export interface Fellowship {
   name: string
   code?: string
   status: EntityStatus
+  positionsCount?: number
   createdAt: string
   updatedAt: string
 }

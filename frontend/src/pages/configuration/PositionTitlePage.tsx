@@ -125,6 +125,8 @@ export const PositionTitlePage: React.FC = () => {
     }
   }
 
+  const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
+
   return (
     <AppShell>
       <PageLayout title="Position Titles">
@@ -171,6 +173,7 @@ export const PositionTitlePage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
+                    <TableCell align="right">Usage</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Created</TableCell>
                     {isAdmin && <TableCell align="right">Actions</TableCell>}
@@ -180,6 +183,7 @@ export const PositionTitlePage: React.FC = () => {
                   {titles.map((t) => (
                     <TableRow key={t.id} hover>
                       <TableCell><Typography variant="body2" fontWeight={500}>{t.name}</Typography></TableCell>
+                      <TableCell align="right">{renderCount(t.usageCount)}</TableCell>
                       <TableCell><StatusChip status={t.status} /></TableCell>
                       <TableCell>{new Date(t.createdAt).toLocaleDateString()}</TableCell>
                       {isAdmin && (
