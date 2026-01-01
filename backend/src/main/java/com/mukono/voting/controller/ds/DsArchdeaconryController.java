@@ -50,7 +50,8 @@ public class DsArchdeaconryController {
                                                            @RequestParam(name = "size", defaultValue = "20") int size,
                                                            @RequestParam(name = "sort", defaultValue = "id,desc") String sort) {
         Pageable pageable = toPageable(page, size, sort);
-        var result = archdeaconryService.list(dioceseId, q, pageable).map(ArchdeaconryResponse::fromEntity);
+        var result = archdeaconryService.listWithCounts(dioceseId, q, pageable)
+            .map(arc -> ArchdeaconryResponse.fromEntity(arc.getArchdeaconry(), arc.getChurchCount(), arc.getCurrentLeadersCount()));
         return ResponseEntity.ok(result);
     }
 

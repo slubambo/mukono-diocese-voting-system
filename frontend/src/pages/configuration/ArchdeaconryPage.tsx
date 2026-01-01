@@ -228,6 +228,8 @@ export const ArchdeaconryPage: React.FC = () => {
     })
   }
 
+  const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
+
   const stats = {
     total: totalElements,
     active: archdeaconries.filter((a) => a.status === 'ACTIVE').length,
@@ -314,6 +316,8 @@ export const ArchdeaconryPage: React.FC = () => {
                     <TableCell>Name</TableCell>
                     <TableCell>Code</TableCell>
                     <TableCell>Diocese</TableCell>
+                    <TableCell align="right">Churches</TableCell>
+                    <TableCell align="right">Leaders</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Created Date</TableCell>
                     {!isReadOnly && <TableCell align="right">Actions</TableCell>}
@@ -329,6 +333,8 @@ export const ArchdeaconryPage: React.FC = () => {
                       </TableCell>
                       <TableCell>{archdeaconry.code || '—'}</TableCell>
                       <TableCell>{archdeaconry.diocese.name}</TableCell>
+                      <TableCell align="right">{renderCount(archdeaconry.churchCount)}</TableCell>
+                      <TableCell align="right">{renderCount(archdeaconry.currentLeadersCount)}</TableCell>
                       <TableCell>
                         <StatusChip status={archdeaconry.status} />
                       </TableCell>

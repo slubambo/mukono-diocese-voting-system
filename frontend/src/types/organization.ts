@@ -51,6 +51,8 @@ export interface Archdeaconry {
   code?: string
   status: EntityStatus
   diocese: DioceseSummary
+  churchCount?: number
+  currentLeadersCount?: number
   createdAt: string
   updatedAt: string
 }
