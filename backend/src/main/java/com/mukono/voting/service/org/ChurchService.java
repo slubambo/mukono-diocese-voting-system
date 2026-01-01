@@ -3,12 +3,16 @@ package com.mukono.voting.service.org;
 import com.mukono.voting.model.common.RecordStatus;
 import com.mukono.voting.model.org.Archdeaconry;
 import com.mukono.voting.model.org.Church;
+import com.mukono.voting.repository.leadership.LeadershipAssignmentRepository;
 import com.mukono.voting.repository.org.ArchdeaconryRepository;
 import com.mukono.voting.repository.org.ChurchRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.stream.Collectors;
 
 /**
  * Service for Church entity.
@@ -20,11 +24,14 @@ public class ChurchService {
 
     private final ChurchRepository churchRepository;
     private final ArchdeaconryRepository archdeaconryRepository;
+    private final LeadershipAssignmentRepository leadershipAssignmentRepository;
 
     public ChurchService(ChurchRepository churchRepository,
-                         ArchdeaconryRepository archdeaconryRepository) {
+                         ArchdeaconryRepository archdeaconryRepository,
+                         LeadershipAssignmentRepository leadershipAssignmentRepository) {
         this.churchRepository = churchRepository;
         this.archdeaconryRepository = archdeaconryRepository;
+        this.leadershipAssignmentRepository = leadershipAssignmentRepository;
     }
 
     /**
@@ -119,6 +126,40 @@ public class ChurchService {
     }
 
     /**
+     * List churches within an archdeaconry with optional search and enriched data.
+     * 
+     * @param archdeaconryId the archdeaconry id (required)
+     * @param q the search query (optional)
+     * @param pageable pagination information
+     * @return page of churches with leader counts
+     * @throws IllegalArgumentException if archdeaconryId is null
+     */
+    @Transactional(readOnly = true)
+    public Page<ChurchWithCounts> listWithCounts(Long archdeaconryId, String q, Pageable pageable) {
+        if (archdeaconryId == null) {
+            throw new IllegalArgumentException("Archdeaconry id is required");
+        }
+
+        // Get the page of churches
+        Page<Church> page;
+        if (q == null || q.isBlank()) {
+            page = churchRepository.findByArchdeaconryId(archdeaconryId, pageable);
+        } else {
+            page = churchRepository.findByArchdeaconryIdAndNameContainingIgnoreCase(archdeaconryId, q.trim(), pageable);
+        }
+
+        // Enrich with counts using efficient queries
+        var content = page.getContent().stream()
+            .map(church -> new ChurchWithCounts(
+                church,
+                leadershipAssignmentRepository.countByChurchIdAndStatus(church.getId(), RecordStatus.ACTIVE)
+            ))
+            .collect(Collectors.toList());
+
+        return new PageImpl<>(content, pageable, page.getTotalElements());
+    }
+
+    /**
      * List churches within an archdeaconry with optional search.
      * 
      * @param archdeaconryId the archdeaconry id (required)
@@ -153,4 +194,26 @@ public class ChurchService {
         church.setStatus(RecordStatus.INACTIVE);
         churchRepository.save(church);
     }
+
+    /**
+     * Internal DTO class to hold Church with enriched counts.
+     */
+    public static class ChurchWithCounts {
+        private final Church church;
+        private final Long currentLeadersCount;
+
+        public ChurchWithCounts(Church church, Long currentLeadersCount) {
+            this.church = church;
+            this.currentLeadersCount = currentLeadersCount;
+        }
+
+        public Church getChurch() {
+            return church;
+        }
+
+        public Long getCurrentLeadersCount() {
+            return currentLeadersCount;
+        }
+    }
 }
+

@@ -4,11 +4,12 @@
 **Status:** ✅ All Completed
 
 ## Overview
-Successfully enhanced two organizational endpoints to include hierarchical statistics:
+Successfully enhanced three organizational endpoints to include hierarchical statistics and contextual information:
 1. **Diocese Endpoint** - Added archdeaconry and church counts
-2. **Archdeaconry Endpoint** - Added church and leader counts (previously completed)
+2. **Archdeaconry Endpoint** - Added church and leader counts (with diocese filtering fix)
+3. **Church Endpoint** - Added leader count and diocese context
 
-Both enhancements follow consistent patterns and maintain optimal performance.
+All enhancements follow consistent patterns and maintain optimal performance.
 
 ---
 
@@ -38,6 +39,9 @@ Both enhancements follow consistent patterns and maintain optimal performance.
 ### 2. Archdeaconry List Endpoint ✅
 **Endpoint:** `GET /api/v1/ds/org/archdeaconries?dioceseId={id}`
 
+**Bug Fix:**
+- ✅ Fixed diocese filtering (was not filtering by dioceseId)
+
 **New Fields:**
 - `churchCount` - Number of active churches in the archdeaconry
 - `currentLeadersCount` - Number of active leadership assignments
@@ -57,6 +61,28 @@ Both enhancements follow consistent patterns and maintain optimal performance.
 }
 ```
 
+### 3. Church List Endpoint ✅
+**Endpoint:** `GET /api/v1/ds/org/churches?archdeaconryId={id}`
+
+**New Fields:**
+- `diocese` - Diocese summary showing full hierarchy (Diocese > Archdeaconry > Church)
+- `currentLeadersCount` - Number of active leadership assignments at church level
+
+**Example Response:**
+```json
+{
+  "id": 1,
+  "name": "St. John's Church",
+  "code": "SJC",
+  "status": "ACTIVE",
+  "archdeaconry": {"id": 14, "name": "Mukono Archdeaconry"},
+  "diocese": {"id": 2, "name": "Mukono Diocese"},
+  "currentLeadersCount": 5,
+  "createdAt": "2026-01-01T10:00:00Z",
+  "updatedAt": "2026-01-01T10:00:00Z"
+}
+```
+
 ---
 
 ## 📊 Hierarchical Structure
@@ -71,6 +97,7 @@ Diocese
   │   └── Leadership Assignments (Archdeaconry-level)
   ├── Archdeaconry 2
   │   ├── Church 3
+  │   │   └── Leadership Assignments
   │   └── Leadership Assignments
   └── Archdeaconry 3
       └── Leadership Assignments
@@ -81,6 +108,8 @@ Diocese
 - Diocese `churchCount` = Total churches across all archdeaconries
 - Archdeaconry `churchCount` = Churches in that archdeaconry
 - Archdeaconry `currentLeadersCount` = Active leaders assigned to that archdeaconry
+- Church `currentLeadersCount` = Active leaders assigned to that church
+- Church `diocese` = Parent archdeaconry's diocese (full hierarchy visibility)
 
 ---
 
@@ -110,11 +139,14 @@ long countActiveByDioceseId(@Param("dioceseId") Long dioceseId);
 ```java
 // Count leaders in an archdeaconry
 long countByArchdeaconryIdAndStatus(Long archdeaconryId, RecordStatus status);
+
+// Count leaders in a church
+long countByChurchIdAndStatus(Long churchId, RecordStatus status);
 ```
 
 ### Service Layer Pattern
 
-Both services follow the same pattern:
+All three services follow the same pattern:
 
 ```java
 @Transactional(readOnly = true)
@@ -187,6 +219,12 @@ For page size = 20:
 - **20 queries**: Count leaders per archdeaconry
 - **Total**: 41 queries
 
+### Query Breakdown (Church Endpoint)
+For page size = 20:
+- **1 query**: Fetch page of churches
+- **20 queries**: Count leaders per church
+- **Total**: 21 queries (most efficient!)
+
 ### Performance Characteristics
 ✅ **Fast**: All count queries use indexed foreign keys  
 ✅ **Simple**: COUNT queries are highly optimized by database  
@@ -215,12 +253,18 @@ For page size = 20:
 5. `DsDioceseController.java` - Updated to use enriched data
 
 ### Archdeaconry Enhancement  
-1. `ArchdeaconryRepository.java` - Fixed diocese filtering
+1. `ArchdeaconryRepository.java` - Fixed diocese filtering, added count method
 2. `ChurchRepository.java` - Added count method
 3. `LeadershipAssignmentRepository.java` - Added count method
 4. `ArchdeaconryResponse.java` - Added count fields
 5. `ArchdeaconryService.java` - Added listWithCounts method
 6. `DsArchdeaconryController.java` - Updated to use enriched data
+
+### Church Enhancement
+1. `LeadershipAssignmentRepository.java` - Added count method for churches
+2. `ChurchResponse.java` - Added leader count and diocese fields
+3. `ChurchService.java` - Added listWithCounts method
+4. `DsChurchController.java` - Updated to use enriched data
 
 ---
 
@@ -247,6 +291,17 @@ curl "http://localhost:8080/api/v1/ds/org/archdeaconries?dioceseId=2&page=0&size
 
 # Search with counts
 curl "http://localhost:8080/api/v1/ds/org/archdeaconries?dioceseId=2&q=mukono" \
+  -H "Authorization: Bearer TOKEN"
+```
+
+#### Church List
+```bash
+# List churches with counts (filtered by archdeaconry)
+curl "http://localhost:8080/api/v1/ds/org/churches?archdeaconryId=14&page=0&size=20" \
+  -H "Authorization: Bearer TOKEN"
+
+# Search with counts
+curl "http://localhost:8080/api/v1/ds/org/churches?archdeaconryId=14&q=john" \
   -H "Authorization: Bearer TOKEN"
 ```
 

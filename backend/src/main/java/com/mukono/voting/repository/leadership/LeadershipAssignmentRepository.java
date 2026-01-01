@@ -258,4 +258,13 @@ public interface LeadershipAssignmentRepository extends JpaRepository<Leadership
      * @return count of active leadership assignments
      */
     long countByArchdeaconryIdAndStatus(Long archdeaconryId, RecordStatus status);
+
+    /**
+     * Count active leadership assignments for a church.
+     * 
+     * @param churchId the church ID
+     * @param status the record status
+     * @return count of active leadership assignments
+     */
+    long countByChurchIdAndStatus(Long churchId, RecordStatus status);
 }

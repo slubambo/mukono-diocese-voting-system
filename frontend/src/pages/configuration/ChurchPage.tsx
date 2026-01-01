@@ -217,6 +217,8 @@ export const ChurchPage: React.FC = () => {
     }
   }
 
+  const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
+
   return (
     <AppShell>
       <PageLayout title="Church Management">
@@ -284,7 +286,9 @@ export const ChurchPage: React.FC = () => {
                   <TableRow>
                     <TableCell>Name</TableCell>
                     <TableCell>Code</TableCell>
+                    <TableCell>Diocese</TableCell>
                     <TableCell>Archdeaconry</TableCell>
+                    <TableCell align="right">Leaders</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Created</TableCell>
                     {!isReadOnly && <TableCell align="right">Actions</TableCell>}
@@ -295,7 +299,9 @@ export const ChurchPage: React.FC = () => {
                     <TableRow key={church.id} hover>
                       <TableCell><Typography variant="body2" fontWeight={500}>{church.name}</Typography></TableCell>
                       <TableCell>{church.code || '—'}</TableCell>
+                      <TableCell>{church.diocese?.name || '—'}</TableCell>
                       <TableCell>{church.archdeaconry.name}</TableCell>
+                      <TableCell align="right">{renderCount(church.currentLeadersCount)}</TableCell>
                       <TableCell><StatusChip status={church.status} /></TableCell>
                       <TableCell>{new Date(church.createdAt).toLocaleDateString()}</TableCell>
                       {!isReadOnly && (

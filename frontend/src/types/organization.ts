@@ -97,6 +97,8 @@ export interface Church {
   code?: string
   status: EntityStatus
   archdeaconry: ArchdeaconrySummary
+  diocese?: DioceseSummary
+  currentLeadersCount?: number
   createdAt: string
   updatedAt: string
 }

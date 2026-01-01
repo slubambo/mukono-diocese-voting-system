@@ -50,7 +50,8 @@ public class DsChurchController {
                                                      @RequestParam(name = "size", defaultValue = "20") int size,
                                                      @RequestParam(name = "sort", defaultValue = "id,desc") String sort) {
         Pageable pageable = toPageable(page, size, sort);
-        var result = churchService.list(archdeaconryId, q, pageable).map(ChurchResponse::fromEntity);
+        var result = churchService.listWithCounts(archdeaconryId, q, pageable)
+            .map(cwc -> ChurchResponse.fromEntity(cwc.getChurch(), cwc.getCurrentLeadersCount()));
         return ResponseEntity.ok(result);
     }
 
