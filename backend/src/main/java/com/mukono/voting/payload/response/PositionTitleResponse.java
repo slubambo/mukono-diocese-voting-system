@@ -12,6 +12,7 @@ public class PositionTitleResponse {
     private Long id;
     private String name;
     private RecordStatus status;
+    private Long usageCount;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -21,6 +22,8 @@ public class PositionTitleResponse {
     public void setName(String name) { this.name = name; }
     public RecordStatus getStatus() { return status; }
     public void setStatus(RecordStatus status) { this.status = status; }
+    public Long getUsageCount() { return usageCount; }
+    public void setUsageCount(Long usageCount) { this.usageCount = usageCount; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
@@ -33,6 +36,12 @@ public class PositionTitleResponse {
         dto.setStatus(e.getStatus());
         dto.setCreatedAt(e.getCreatedAt());
         dto.setUpdatedAt(e.getUpdatedAt());
+        return dto;
+    }
+
+    public static PositionTitleResponse fromEntity(PositionTitle e, Long usageCount) {
+        PositionTitleResponse dto = fromEntity(e);
+        dto.setUsageCount(usageCount);
         return dto;
     }
 }

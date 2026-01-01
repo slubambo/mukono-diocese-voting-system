@@ -10,6 +10,7 @@ public class FellowshipResponse {
     private String name;
     private String code;
     private RecordStatus status;
+    private Long positionsCount;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -21,6 +22,8 @@ public class FellowshipResponse {
     public void setCode(String code) { this.code = code; }
     public RecordStatus getStatus() { return status; }
     public void setStatus(RecordStatus status) { this.status = status; }
+    public Long getPositionsCount() { return positionsCount; }
+    public void setPositionsCount(Long positionsCount) { this.positionsCount = positionsCount; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
@@ -34,6 +37,12 @@ public class FellowshipResponse {
         dto.setStatus(f.getStatus());
         dto.setCreatedAt(f.getCreatedAt());
         dto.setUpdatedAt(f.getUpdatedAt());
+        return dto;
+    }
+
+    public static FellowshipResponse fromEntity(Fellowship f, Long positionsCount) {
+        FellowshipResponse dto = fromEntity(f);
+        dto.setPositionsCount(positionsCount);
         return dto;
     }
 }

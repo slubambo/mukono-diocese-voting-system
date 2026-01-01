@@ -2,11 +2,15 @@ package com.mukono.voting.service.leadership;
 
 import com.mukono.voting.model.common.RecordStatus;
 import com.mukono.voting.model.leadership.PositionTitle;
+import com.mukono.voting.repository.leadership.FellowshipPositionRepository;
 import com.mukono.voting.repository.leadership.PositionTitleRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.stream.Collectors;
 
 /**
  * Service for PositionTitle entity.
@@ -17,9 +21,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class PositionTitleService {
 
     private final PositionTitleRepository positionTitleRepository;
+    private final FellowshipPositionRepository fellowshipPositionRepository;
 
-    public PositionTitleService(PositionTitleRepository positionTitleRepository) {
+    public PositionTitleService(PositionTitleRepository positionTitleRepository,
+                                FellowshipPositionRepository fellowshipPositionRepository) {
         this.positionTitleRepository = positionTitleRepository;
+        this.fellowshipPositionRepository = fellowshipPositionRepository;
     }
 
     /**
@@ -99,6 +106,32 @@ public class PositionTitleService {
     }
 
     /**
+     * List position titles with optional search query and enriched data.
+     * 
+     * @param q search query for name (optional)
+     * @param pageable pagination information
+     * @return a page of position titles with usage counts
+     */
+    @Transactional(readOnly = true)
+    public Page<PositionTitleWithCounts> listWithCounts(String q, Pageable pageable) {
+        Page<PositionTitle> page;
+        if (q == null || q.isBlank()) {
+            page = positionTitleRepository.findAll(pageable);
+        } else {
+            page = positionTitleRepository.findByNameContainingIgnoreCase(q.trim(), pageable);
+        }
+
+        var content = page.getContent().stream()
+            .map(title -> new PositionTitleWithCounts(
+                title,
+                fellowshipPositionRepository.countByTitleIdAndStatus(title.getId(), RecordStatus.ACTIVE)
+            ))
+            .collect(Collectors.toList());
+
+        return new PageImpl<>(content, pageable, page.getTotalElements());
+    }
+
+    /**
      * List position titles with optional search query.
      * 
      * @param q search query for name (optional)
@@ -122,5 +155,26 @@ public class PositionTitleService {
         PositionTitle title = getById(id);
         title.setStatus(RecordStatus.INACTIVE);
         positionTitleRepository.save(title);
+    }
+
+    /**
+     * Internal DTO class to hold PositionTitle with enriched counts.
+     */
+    public static class PositionTitleWithCounts {
+        private final PositionTitle title;
+        private final Long usageCount;
+
+        public PositionTitleWithCounts(PositionTitle title, Long usageCount) {
+            this.title = title;
+            this.usageCount = usageCount;
+        }
+
+        public PositionTitle getTitle() {
+            return title;
+        }
+
+        public Long getUsageCount() {
+            return usageCount;
+        }
     }
 }

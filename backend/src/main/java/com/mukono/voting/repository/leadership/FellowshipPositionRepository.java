@@ -42,4 +42,20 @@ public interface FellowshipPositionRepository extends JpaRepository<FellowshipPo
      * @return a page of fellowship positions
      */
     Page<FellowshipPosition> findByFellowshipIdAndScope(Long fellowshipId, PositionScope scope, Pageable pageable);
+
+    /**
+     * Count active positions for a fellowship.
+     * 
+     * @param fellowshipId the fellowship ID
+     * @return count of active positions
+     */
+    long countByFellowshipIdAndStatus(Long fellowshipId, com.mukono.voting.model.common.RecordStatus status);
+
+    /**
+     * Count usage of a position title (how many positions use this title).
+     * 
+     * @param titleId the position title ID
+     * @return count of positions using this title
+     */
+    long countByTitleIdAndStatus(Long titleId, com.mukono.voting.model.common.RecordStatus status);
 }

@@ -1,12 +1,14 @@
 package com.mukono.voting.repository.leadership;
 
-import com.mukono.voting.model.common.RecordStatus;
-import com.mukono.voting.model.leadership.LeadershipAssignment;
-import com.mukono.voting.model.leadership.PositionScope;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import com.mukono.voting.model.common.RecordStatus;
+import com.mukono.voting.model.leadership.LeadershipAssignment;
+import com.mukono.voting.model.leadership.PositionScope;
 
 import java.util.List;
 

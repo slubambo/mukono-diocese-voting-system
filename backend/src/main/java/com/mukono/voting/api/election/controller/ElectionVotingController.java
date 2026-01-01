@@ -1,10 +1,10 @@
 package com.mukono.voting.api.election.controller;
 
+import com.mukono.voting.model.election.ElectionVote;
 import com.mukono.voting.payload.request.voting.*;
 import com.mukono.voting.payload.response.voting.*;
-import com.mukono.voting.model.election.ElectionVote;
-import com.mukono.voting.service.election.EligibilityDecision;
 import com.mukono.voting.service.election.ElectionVotingService;
+import com.mukono.voting.service.election.EligibilityDecision;
 import com.mukono.voting.service.election.ElectionVoterEligibilityService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;

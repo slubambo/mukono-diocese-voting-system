@@ -82,7 +82,8 @@ public class DsPositionTitleController {
             @RequestParam(name = "size", defaultValue = "20") int size,
             @RequestParam(name = "sort", defaultValue = "id,desc") String sort) {
         Pageable pageable = toPageable(page, size, sort);
-        var result = positionTitleService.list(q, pageable).map(PositionTitleResponse::fromEntity);
+        var result = positionTitleService.listWithCounts(q, pageable)
+            .map(twc -> PositionTitleResponse.fromEntity(twc.getTitle(), twc.getUsageCount()));
         return ResponseEntity.ok(result);
     }
 

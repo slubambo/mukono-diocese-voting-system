@@ -49,7 +49,8 @@ public class DsFellowshipController {
                                                          @RequestParam(name = "size", defaultValue = "20") int size,
                                                          @RequestParam(name = "sort", defaultValue = "id,desc") String sort) {
         Pageable pageable = toPageable(page, size, sort);
-        var result = fellowshipService.list(q, pageable).map(FellowshipResponse::fromEntity);
+        var result = fellowshipService.listWithCounts(q, pageable)
+            .map(fwc -> FellowshipResponse.fromEntity(fwc.getFellowship(), fwc.getPositionsCount()));
         return ResponseEntity.ok(result);
     }
 
