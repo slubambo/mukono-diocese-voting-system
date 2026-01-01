@@ -13,6 +13,7 @@ import {
   InputLabel,
   MenuItem,
   Paper,
+  Stack,
   Select,
   Tab,
   Tabs,
@@ -25,11 +26,17 @@ import {
   TextField,
   Typography,
   Alert,
+  LinearProgress,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import HowToVoteIcon from '@mui/icons-material/HowToVote'
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn'
 import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import MilitaryTechIcon from '@mui/icons-material/MilitaryTech'
+import EventAvailableIcon from '@mui/icons-material/EventAvailable'
+import InsightsIcon from '@mui/icons-material/Insights'
 import AppShell from '../components/layout/AppShell'
 import PageLayout from '../components/layout/PageLayout'
 import LoadingState from '../components/common/LoadingState'
@@ -258,23 +265,222 @@ const ElectionResultsPage: React.FC = () => {
       return <EmptyState title="No results yet" description="Results are not available for this voting period." />
     }
 
-    const cards = [
-      { label: 'Total votes cast', value: summary.totalBallotsCast ?? 0 },
-      { label: 'Distinct voters', value: summary.totalDistinctVoters ?? 0 },
-      { label: 'Positions', value: summary.totalPositions ?? 0 },
-      { label: 'Selections cast', value: summary.totalSelectionsCast ?? 0 },
-      { label: 'Status', value: summary.periodStatus || '—' },
-      { label: 'Server time', value: summary.serverTime ? new Date(summary.serverTime).toLocaleString() : '—' },
+    const avgSelectionsPerBallot = (summary.totalBallotsCast ?? 0) > 0
+      ? (summary.totalSelectionsCast ?? 0) / (summary.totalBallotsCast ?? 1)
+      : null
+
+    const tieCount = positions.filter((p) => p.hasTie).length
+    const zeroVotePositions = positions.filter((p) => p.hasZeroVotes).length
+    const topPositions = positions.slice(0, 3)
+    const lastTallyCompletedAt = tallyStatus?.completedAt
+    const serverTimeLabel = summary.serverTime ? new Date(summary.serverTime).toLocaleString() : '—'
+
+    const metricCards = [
+      {
+        label: 'Votes cast',
+        value: summary.totalBallotsCast ?? 0,
+        icon: <HowToVoteIcon fontSize="small" />,
+      },
+      {
+        label: 'Distinct voters',
+        value: summary.totalDistinctVoters ?? 0,
+        icon: <SupervisorAccountIcon fontSize="small" />,
+      },
+      {
+        label: 'Selections cast',
+        value: summary.totalSelectionsCast ?? 0,
+        icon: <InsightsIcon fontSize="small" />,
+      },
+      {
+        label: 'Positions',
+        value: summary.totalPositions ?? 0,
+        icon: <EventAvailableIcon fontSize="small" />,
+      },
+      {
+        label: 'Avg selections / ballot',
+        value: avgSelectionsPerBallot !== null ? avgSelectionsPerBallot.toFixed(2) : '—',
+        icon: <TrendingUpIcon fontSize="small" />,
+      },
+      {
+        label: 'Ties detected',
+        value: tieCount,
+        icon: <MilitaryTechIcon fontSize="small" />,
+      },
+      {
+        label: 'Zero-vote positions',
+        value: zeroVotePositions,
+        icon: <AccessTimeIcon fontSize="small" />,
+      },
+      {
+        label: 'Period status',
+        value: summary.periodStatus || election?.status || '—',
+        icon: <EventAvailableIcon fontSize="small" />,
+      },
     ]
 
     return (
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' } }}>
-        {cards.map((card) => (
-          <Paper key={card.label} sx={{ p: 2 }}>
-            <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>{card.label}</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>{card.value}</Typography>
+      <Box sx={{ display: 'grid', gap: 2 }}>
+        <Paper
+          sx={{
+            p: { xs: 2, md: 3 },
+            position: 'relative',
+            overflow: 'hidden',
+            background: 'linear-gradient(135deg, #0d47a1 0%, #1976d2 50%, #42a5f5 100%)',
+            color: 'common.white',
+          }}
+        >
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'grid', gap: 0.5 }}>
+              <Typography variant="overline" sx={{ letterSpacing: 1 }}>Overview</Typography>
+              <Typography variant="h4" sx={{ fontWeight: 800 }}>{election.name || 'Election results'}</Typography>
+              <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                {summary.totalPositions ?? 0} positions · {summary.totalBallotsCast ?? 0} ballots · {summary.totalDistinctVoters ?? 0} voters
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap' }}>
+              <StatusChip status={(election.status || 'pending') as any} />
+              <Chip size="small" color="primary" variant="outlined" label={`Period: ${summary.periodStatus || '—'}`} sx={{ color: 'common.white', borderColor: 'rgba(255,255,255,0.4)' }} />
+              {lastTallyCompletedAt && (
+                <Chip
+                  size="small"
+                  color="secondary"
+                  variant="filled"
+                  label={`Last tally: ${new Date(lastTallyCompletedAt).toLocaleString()}`}
+                  icon={<AccessTimeIcon fontSize="small" />}
+                  sx={{ bgcolor: 'rgba(0,0,0,0.25)' }}
+                />
+              )}
+            </Stack>
+          </Box>
+
+          <Box
+            sx={{
+              mt: 3,
+              display: 'grid',
+              gap: 1.5,
+              gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+            }}
+          >
+            {metricCards.slice(0, 4).map((card) => (
+              <Box key={card.label} sx={{ p: 1.5, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.12)' }}>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'inherit' }}>
+                  {card.icon}
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>{card.label}</Typography>
+                </Stack>
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>{card.value}</Typography>
+              </Box>
+            ))}
+          </Box>
+        </Paper>
+
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' },
+            alignItems: 'stretch',
+          }}
+        >
+          <Paper sx={{ p: 2, display: 'grid', gap: 1.5 }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <InsightsIcon fontSize="small" />
+              <Typography variant="h6">Key metrics</Typography>
+            </Stack>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1,
+                gridTemplateColumns: { xs: 'repeat(1, minmax(0, 1fr))', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
+              }}
+            >
+              {metricCards.map((card) => (
+                <Paper key={card.label} elevation={0} sx={{ p: 1.5, bgcolor: 'grey.50', borderRadius: 2, border: '1px solid', borderColor: 'grey.100' }}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    {card.icon}
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>{card.label}</Typography>
+                  </Stack>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{card.value}</Typography>
+                </Paper>
+              ))}
+            </Box>
           </Paper>
-        ))}
+
+          <Paper sx={{ p: 2, display: 'grid', gap: 1.25 }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <AccessTimeIcon fontSize="small" />
+              <Typography variant="h6">Period health</Typography>
+            </Stack>
+            <Box sx={{ display: 'grid', gap: 1 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">Voting period</Typography>
+                <Chip size="small" label={summary.periodStatus || '—'} color="primary" variant="outlined" />
+              </Stack>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">Server time</Typography>
+                <Typography variant="body2">{serverTimeLabel}</Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">Tally status</Typography>
+                <Typography variant="body2">{tallyStatus?.status || 'Not started'}</Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">Positions certified</Typography>
+                <Typography variant="body2">{tallyStatus?.totalPositionsCertified ?? 0}</Typography>
+              </Stack>
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>Tally completion</Typography>
+                <LinearProgress
+                  variant={tallyStatus?.status ? 'determinate' : 'indeterminate'}
+                  value={tallyStatus?.status ? Math.min(100, ((tallyStatus?.totalPositionsCertified ?? 0) / Math.max(summary.totalPositions ?? 1, 1)) * 100) : undefined}
+                />
+              </Box>
+            </Box>
+          </Paper>
+        </Box>
+
+        <Paper sx={{ p: 2, display: 'grid', gap: 1.5 }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <MilitaryTechIcon fontSize="small" />
+            <Typography variant="h6">Highlights</Typography>
+          </Stack>
+          {topPositions.length === 0 ? (
+            <EmptyState title="No positions yet" description="Position results will appear once available." />
+          ) : (
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Position</TableCell>
+                    <TableCell>Leader</TableCell>
+                    <TableCell align="right">Votes</TableCell>
+                    <TableCell align="right">Vote %</TableCell>
+                    <TableCell>Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {topPositions.map((pos) => {
+                    const leader = pos.rankedCandidates[0]
+                    return (
+                      <TableRow key={pos.positionId} hover>
+                        <TableCell>{pos.positionName}</TableCell>
+                        <TableCell>{leader?.fullName || '—'}</TableCell>
+                        <TableCell align="right">{leader?.voteCount ?? 0}</TableCell>
+                        <TableCell align="right">{typeof leader?.voteSharePercent === 'number' ? `${leader.voteSharePercent.toFixed(2)}%` : '—'}</TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            {pos.hasTie && <Chip size="small" color="warning" label="Tie" />}
+                            {pos.hasZeroVotes && <Chip size="small" color="error" label="Zero votes" />}
+                            {!pos.hasTie && !pos.hasZeroVotes && <Chip size="small" color="success" label="Leading" />}
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Paper>
       </Box>
     )
   }
@@ -482,7 +688,7 @@ const ElectionResultsPage: React.FC = () => {
   }
 
   const tabs = [
-    { label: 'Summary', render: renderSummary },
+    { label: 'Dashboard', render: renderSummary },
     { label: 'Position Results', render: renderPositionResults },
     { label: 'Candidate Breakdown', render: renderCandidateBreakdown },
     ...(isAdmin ? [{ label: 'Tally & Certification', render: renderTally }] : []),
