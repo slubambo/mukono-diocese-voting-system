@@ -58,6 +58,8 @@ export const PositionPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
   const [selectedFellowshipId, setSelectedFellowshipId] = useState<number | null>(null)
+  const [selectedScope, setSelectedScope] = useState<PositionScope | null>(null)
+  const [availableScopes, setAvailableScopes] = useState<PositionScope[]>([])
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 })
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
@@ -84,12 +86,18 @@ export const PositionPage: React.FC = () => {
       setLoading(true)
       const response = await fellowshipPositionApi.list({ 
         fellowshipId: selectedFellowshipId, 
+        scope: selectedScope || undefined,
         page, 
         size: rowsPerPage, 
         sort: 'id,desc' 
       })
       setPositions(response.content)
       setTotalElements(response.totalElements)
+      setAvailableScopes((prev) => {
+        const next = new Set(prev)
+        response.content.forEach((p) => next.add(p.scope))
+        return Array.from(next)
+      })
       setStats({
         total: response.totalElements,
         active: response.content.filter((p) => p.status === 'ACTIVE').length,
@@ -128,7 +136,12 @@ export const PositionPage: React.FC = () => {
 
   useEffect(() => {
     fetchPositions()
-  }, [page, rowsPerPage, selectedFellowshipId])
+  }, [page, rowsPerPage, selectedFellowshipId, selectedScope])
+
+  useEffect(() => {
+    setAvailableScopes([])
+    setSelectedScope(null)
+  }, [selectedFellowshipId])
 
   useEffect(() => {
     loadFellowships()
@@ -181,6 +194,12 @@ export const PositionPage: React.FC = () => {
 
   const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
 
+  const scopeOptions = Array.from(new Set(availableScopes.length ? availableScopes : positions.map((p) => p.scope)))
+    .map((scope) => ({
+      id: scope,
+      name: scope.charAt(0) + scope.slice(1).toLowerCase(),
+    }))
+
   // FellowshipPosition has nested fellowship and title objects
   const getFellowshipName = (position: FellowshipPosition) => position.fellowship.name
   const getTitleName = (position: FellowshipPosition) => position.title.name
@@ -211,6 +230,18 @@ export const PositionPage: React.FC = () => {
                 setPage(0)
               },
               placeholder: 'Select Fellowship',
+            }
+            ,
+            {
+              id: 'scope',
+              label: 'Scope',
+              value: selectedScope ?? 'ALL',
+              options: [{ id: 'ALL', name: 'All' }, ...scopeOptions],
+              onChange: (value) => {
+                setSelectedScope(value === 'ALL' ? null : (value as PositionScope))
+                setPage(0)
+              },
+              placeholder: 'All scopes',
             }
           ]}
         />
