@@ -40,6 +40,15 @@ public interface ArchdeaconryRepository extends JpaRepository<Archdeaconry, Long
     );
 
     /**
+     * Find all archdeaconries by diocese id with pagination.
+     * 
+     * @param dioceseId the diocese id
+     * @param pageable pagination information
+     * @return page of archdeaconries in the diocese
+     */
+    Page<Archdeaconry> findByDioceseId(Long dioceseId, Pageable pageable);
+
+    /**
      * Find an archdeaconry by diocese id and name (exact match, case-insensitive).
      * 
      * @param dioceseId the diocese id

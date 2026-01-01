@@ -134,7 +134,7 @@ public class ArchdeaconryService {
         }
 
         if (q == null || q.isBlank()) {
-            return archdeaconryRepository.findAll(pageable).map(a -> a); // Filter by dioceseId after
+            return archdeaconryRepository.findByDioceseId(dioceseId, pageable);
         } else {
             return archdeaconryRepository.findByDioceseIdAndNameContainingIgnoreCase(dioceseId, q.trim(), pageable);
         }
