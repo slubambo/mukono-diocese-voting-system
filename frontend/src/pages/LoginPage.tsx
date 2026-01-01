@@ -241,7 +241,10 @@ const LoginPage = () => {
                   sx={{ 
                     fontWeight: 700, 
                     mb: 0.5,
-                    color: 'primary.main',
+                    background: 'linear-gradient(135deg, #8F3493 0%, #6B2670 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
                     fontSize: { xs: '1.5rem', sm: '1.75rem' },
                   }}
                 >
@@ -252,18 +255,19 @@ const LoginPage = () => {
                   color="text.secondary" 
                   sx={{ 
                     mb: 0,
-                    fontSize: { xs: '0.95rem', sm: '1rem' },
+                    fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                    fontWeight: 500,
                   }}
                 >
-                  Your voice matters. Cast your vote securely and confidentially.
+                  Your voice matters. Cast your vote securely.
                 </Typography>
               </Box>
 
               {/* Main Action Card */}
               <Card
                 sx={{
-                  p: { xs: 2, sm: 3 },
-                  background: 'linear-gradient(135deg, #F8F7FF 0%, #FFF9F5 100%)',
+                  p: { xs: 2.5, sm: 3 },
+                  background: 'linear-gradient(135deg, #FAF9FF 0%, #FFF8F4 100%)',
                   border: '2px solid',
                   borderColor: 'primary.main',
                   borderRadius: 3,
@@ -271,10 +275,11 @@ const LoginPage = () => {
                   position: 'relative',
                   overflow: 'hidden',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 6px 16px rgba(143, 52, 147, 0.12)',
+                  boxShadow: '0 4px 12px rgba(143, 52, 147, 0.15)',
                   '&:hover': {
-                    transform: 'translateY(-6px)',
-                    boxShadow: '0 16px 32px rgba(143, 52, 147, 0.2)',
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 28px rgba(143, 52, 147, 0.25)',
+                    borderColor: 'primary.dark',
                   },
                   '&::before': {
                     content: '""',
@@ -284,25 +289,27 @@ const LoginPage = () => {
                     width: '200px',
                     height: '200px',
                     borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(143, 52, 147, 0.08) 0%, transparent 70%)',
+                    background: 'radial-gradient(circle, rgba(143, 52, 147, 0.06) 0%, transparent 70%)',
                   },
                 }}
               >
                 <Box
                   sx={{
-                    width: { xs: 60, sm: 68 },
-                    height: { xs: 60, sm: 68 },
+                    width: { xs: 64, sm: 70 },
+                    height: { xs: 64, sm: 70 },
                     borderRadius: '50%',
                     background: 'linear-gradient(135deg, #8F3493 0%, #6B2670 100%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     margin: '0 auto',
-                    mb: 1.5,
-                    boxShadow: '0 8px 16px rgba(143, 52, 147, 0.3)',
+                    mb: 1.75,
+                    boxShadow: '0 6px 14px rgba(143, 52, 147, 0.35)',
+                    position: 'relative',
+                    zIndex: 1,
                   }}
                 >
-                  <HowToVoteIcon sx={{ fontSize: { xs: 36, sm: 40 }, color: 'white' }} />
+                  <HowToVoteIcon sx={{ fontSize: { xs: 34, sm: 38 }, color: 'white' }} />
                 </Box>
                 
                 <Typography 
@@ -311,8 +318,9 @@ const LoginPage = () => {
                   sx={{ 
                     fontWeight: 700,
                     color: 'primary.dark',
-                    mb: 1,
-                    fontSize: { xs: '1.3rem', sm: '1.45rem' },
+                    mb: 1.25,
+                    fontSize: { xs: '1.35rem', sm: '1.5rem' },
+                    letterSpacing: '-0.02em',
                   }}
                 >
                   Ready to Vote?
@@ -322,13 +330,13 @@ const LoginPage = () => {
                   color="text.secondary" 
                   sx={{ 
                     mb: 2,
-                    lineHeight: 1.6,
-                    maxWidth: '500px',
-                    margin: '0 auto',
+                    lineHeight: 1.55,
+                    maxWidth: '480px',
+                    margin: '0 auto 16px',
                     fontSize: { xs: '0.88rem', sm: '0.92rem' },
                   }}
                 >
-                  Enter your unique voting code to access your ballot. Your code was provided by the Diocese and is required to proceed.
+                  Enter your unique code to access your ballot. Your code was provided by the Diocese.
                 </Typography>
                 
                 {/* Info Box */}
@@ -337,15 +345,18 @@ const LoginPage = () => {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 0.75,
-                    bgcolor: 'rgba(14, 97, 173, 0.08)',
-                    px: 2,
-                    py: 1,
+                    bgcolor: 'rgba(14, 97, 173, 0.1)',
+                    px: 2.25,
+                    py: 1.1,
                     borderRadius: 2,
-                    mb: 2,
+                    mb: 2.25,
+                    border: '1px solid rgba(14, 97, 173, 0.2)',
+                    position: 'relative',
+                    zIndex: 1,
                   }}
                 >
-                  <LockIcon sx={{ fontSize: 18, color: 'secondary.main', flexShrink: 0 }} />
-                  <Typography variant="body2" sx={{ fontWeight: 500, color: 'secondary.dark', fontSize: { xs: '0.85rem', sm: '0.9rem' } }}>
+                  <LockIcon sx={{ fontSize: 17, color: 'secondary.dark', flexShrink: 0 }} />
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: 'secondary.dark', fontSize: { xs: '0.84rem', sm: '0.88rem' } }}>
                     Your vote is secure and anonymous
                   </Typography>
                 </Box>
@@ -357,16 +368,23 @@ const LoginPage = () => {
                   size="large"
                   onClick={handleVoterEntry}
                   sx={{ 
-                    py: 1.5, 
-                    fontSize: { xs: '0.95rem', sm: '1rem' },
+                    py: 1.65, 
+                    fontSize: { xs: '0.98rem', sm: '1.05rem' },
                     fontWeight: 600,
-                    borderRadius: 2,
+                    borderRadius: 2.5,
                     textTransform: 'none',
-                    boxShadow: '0 4px 12px rgba(143, 52, 147, 0.3)',
-                    transition: 'all 0.3s ease',
+                    boxShadow: '0 4px 14px rgba(143, 52, 147, 0.3)',
+                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    zIndex: 1,
+                    letterSpacing: '0.02em',
                     '&:hover': {
-                      boxShadow: '0 6px 20px rgba(143, 52, 147, 0.4)',
-                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 24px rgba(143, 52, 147, 0.4)',
+                      transform: 'translateY(-3px)',
+                    },
+                    '&:active': {
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 16px rgba(143, 52, 147, 0.35)',
                     },
                   }}
                 >
@@ -378,16 +396,17 @@ const LoginPage = () => {
               <Box
                 sx={{
                   mt: 1.5,
-                  p: 1.25,
-                  bgcolor: 'rgba(0, 0, 0, 0.02)',
+                  p: 1.5,
+                  bgcolor: 'rgba(0, 0, 0, 0.025)',
                   borderRadius: 2,
+                  border: '1px solid rgba(0, 0, 0, 0.04)',
                 }}
               >
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: { xs: '0.85rem', sm: '0.9rem' } }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, fontSize: { xs: '0.84rem', sm: '0.88rem' } }}>
                   💡 Don't have a voting code?
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25, fontSize: { xs: '0.75rem', sm: '0.8rem' } }}>
-                  Contact your polling officer or the Diocese office for assistance.
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.35, fontSize: { xs: '0.76rem', sm: '0.8rem' }, opacity: 0.85 }}>
+                  Contact your polling officer or the Diocese office.
                 </Typography>
               </Box>
             </Box>
