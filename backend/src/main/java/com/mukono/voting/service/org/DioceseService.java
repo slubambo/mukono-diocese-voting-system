@@ -2,11 +2,16 @@ package com.mukono.voting.service.org;
 
 import com.mukono.voting.model.common.RecordStatus;
 import com.mukono.voting.model.org.Diocese;
+import com.mukono.voting.repository.org.ArchdeaconryRepository;
+import com.mukono.voting.repository.org.ChurchRepository;
 import com.mukono.voting.repository.org.DioceseRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.stream.Collectors;
 
 /**
  * Service for Diocese entity.
@@ -17,9 +22,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class DioceseService {
 
     private final DioceseRepository dioceseRepository;
+    private final ArchdeaconryRepository archdeaconryRepository;
+    private final ChurchRepository churchRepository;
 
-    public DioceseService(DioceseRepository dioceseRepository) {
+    public DioceseService(DioceseRepository dioceseRepository,
+                          ArchdeaconryRepository archdeaconryRepository,
+                          ChurchRepository churchRepository) {
         this.dioceseRepository = dioceseRepository;
+        this.archdeaconryRepository = archdeaconryRepository;
+        this.churchRepository = churchRepository;
     }
 
     /**
@@ -116,6 +127,35 @@ public class DioceseService {
     }
 
     /**
+     * List all dioceses with optional search and enriched data.
+     * 
+     * @param q the search query (optional)
+     * @param pageable pagination information
+     * @return page of dioceses with archdeaconry and church counts
+     */
+    @Transactional(readOnly = true)
+    public Page<DioceseWithCounts> listWithCounts(String q, Pageable pageable) {
+        // Get the page of dioceses
+        Page<Diocese> page;
+        if (q == null || q.isBlank()) {
+            page = dioceseRepository.findAll(pageable);
+        } else {
+            page = dioceseRepository.findByNameContainingIgnoreCase(q.trim(), pageable);
+        }
+
+        // Enrich with counts using efficient queries
+        var content = page.getContent().stream()
+            .map(diocese -> new DioceseWithCounts(
+                diocese,
+                archdeaconryRepository.countActiveByDioceseId(diocese.getId()),
+                churchRepository.countActiveByDioceseId(diocese.getId())
+            ))
+            .collect(Collectors.toList());
+
+        return new PageImpl<>(content, pageable, page.getTotalElements());
+    }
+
+    /**
      * List all dioceses with optional search.
      * 
      * @param q the search query (optional)
@@ -141,5 +181,32 @@ public class DioceseService {
         Diocese diocese = getById(id);
         diocese.setStatus(RecordStatus.INACTIVE);
         dioceseRepository.save(diocese);
+    }
+
+    /**
+     * Internal DTO class to hold Diocese with enriched counts.
+     */
+    public static class DioceseWithCounts {
+        private final Diocese diocese;
+        private final Long archdeaconryCount;
+        private final Long churchCount;
+
+        public DioceseWithCounts(Diocese diocese, Long archdeaconryCount, Long churchCount) {
+            this.diocese = diocese;
+            this.archdeaconryCount = archdeaconryCount;
+            this.churchCount = churchCount;
+        }
+
+        public Diocese getDiocese() {
+            return diocese;
+        }
+
+        public Long getArchdeaconryCount() {
+            return archdeaconryCount;
+        }
+
+        public Long getChurchCount() {
+            return churchCount;
+        }
     }
 }

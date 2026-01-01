@@ -60,4 +60,13 @@ public interface ArchdeaconryRepository extends JpaRepository<Archdeaconry, Long
         @Param("dioceseId") Long dioceseId,
         @Param("name") String name
     );
+
+    /**
+     * Count active archdeaconries in a diocese.
+     * 
+     * @param dioceseId the diocese id
+     * @return count of active archdeaconries
+     */
+    @Query("SELECT COUNT(a) FROM Archdeaconry a WHERE a.diocese.id = :dioceseId AND a.status = 'ACTIVE'")
+    long countActiveByDioceseId(@Param("dioceseId") Long dioceseId);
 }

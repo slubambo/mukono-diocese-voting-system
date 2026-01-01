@@ -10,6 +10,8 @@ public class DioceseResponse {
     private String name;
     private String code;
     private RecordStatus status;
+    private Long archdeaconryCount;
+    private Long churchCount;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -21,6 +23,10 @@ public class DioceseResponse {
     public void setCode(String code) { this.code = code; }
     public RecordStatus getStatus() { return status; }
     public void setStatus(RecordStatus status) { this.status = status; }
+    public Long getArchdeaconryCount() { return archdeaconryCount; }
+    public void setArchdeaconryCount(Long archdeaconryCount) { this.archdeaconryCount = archdeaconryCount; }
+    public Long getChurchCount() { return churchCount; }
+    public void setChurchCount(Long churchCount) { this.churchCount = churchCount; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
@@ -34,6 +40,13 @@ public class DioceseResponse {
         dto.setStatus(diocese.getStatus());
         dto.setCreatedAt(diocese.getCreatedAt());
         dto.setUpdatedAt(diocese.getUpdatedAt());
+        return dto;
+    }
+
+    public static DioceseResponse fromEntity(Diocese diocese, Long archdeaconryCount, Long churchCount) {
+        DioceseResponse dto = fromEntity(diocese);
+        dto.setArchdeaconryCount(archdeaconryCount);
+        dto.setChurchCount(churchCount);
         return dto;
     }
 }
