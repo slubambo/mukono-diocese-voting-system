@@ -85,7 +85,7 @@ const LoginPage = () => {
     <Box
       sx={{
         minHeight: '100dvh',
-        background: 'linear-gradient(135deg, #8F3493 0%, #5D248C 25%, #0E61AD 75%, #084A87 100%)',
+        background: 'linear-gradient(135deg, #7A2B7E 0%, #5D248C 20%, #8F3493 35%, #0E61AD 65%, #1976D2 85%, #084A87 100%)',
         position: 'relative',
         overflow: 'hidden',
         display: 'flex',
@@ -102,22 +102,46 @@ const LoginPage = () => {
           right: 0,
           bottom: 0,
           backgroundImage: `
-            radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
-            radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-            radial-gradient(circle at 50% 50%, rgba(14, 97, 173, 0.1) 0%, transparent 70%)
+            radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 85% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 45%),
+            radial-gradient(circle at 50% 50%, rgba(215, 177, 97, 0.12) 0%, transparent 60%),
+            radial-gradient(circle at 30% 70%, rgba(14, 97, 173, 0.08) 0%, transparent 50%),
+            radial-gradient(circle at 70% 30%, rgba(143, 52, 147, 0.08) 0%, transparent 50%)
           `,
           pointerEvents: 'none',
+          animation: 'subtle-float 20s ease-in-out infinite',
         },
         '&::after': {
           content: '""',
           position: 'absolute',
-          top: '-50%',
-          right: '-10%',
-          width: '600px',
-          height: '600px',
+          top: '-30%',
+          right: '-15%',
+          width: '700px',
+          height: '700px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(215, 177, 97, 0.15) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(215, 177, 97, 0.12) 0%, rgba(143, 52, 147, 0.08) 40%, transparent 70%)',
           pointerEvents: 'none',
+          animation: 'subtle-pulse 15s ease-in-out infinite',
+        },
+        '@keyframes subtle-float': {
+          '0%, 100%': {
+            transform: 'translateY(0) scale(1)',
+            opacity: 1,
+          },
+          '50%': {
+            transform: 'translateY(-20px) scale(1.02)',
+            opacity: 0.9,
+          },
+        },
+        '@keyframes subtle-pulse': {
+          '0%, 100%': {
+            transform: 'scale(1)',
+            opacity: 1,
+          },
+          '50%': {
+            transform: 'scale(1.05)',
+            opacity: 0.85,
+          },
         },
       }}
     >
@@ -137,15 +161,36 @@ const LoginPage = () => {
               width: '100%', 
               overflow: 'hidden',
               borderRadius: 3,
-              backdropFilter: 'blur(10px)',
-              background: 'rgba(255, 255, 255, 0.99)',
-              boxShadow: '0 20px 60px rgba(143, 52, 147, 0.25)',
+              backdropFilter: 'blur(20px) saturate(180%)',
+              background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%)',
+              boxShadow: `
+                0 20px 60px rgba(143, 52, 147, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8)
+              `,
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                borderRadius: 3,
+                padding: '2px',
+                background: 'linear-gradient(135deg, rgba(143, 52, 147, 0.3) 0%, rgba(14, 97, 173, 0.3) 100%)',
+                WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                WebkitMaskComposite: 'xor',
+                maskComposite: 'exclude',
+                pointerEvents: 'none',
+                opacity: 0.6,
+              },
             }}
           >
             {/* Header with Logo */}
             <Box
               sx={{
-                background: 'linear-gradient(135deg, #8F3493 0%, #6B2670 50%, #0E61AD 100%)',
+                background: 'linear-gradient(135deg, #8F3493 0%, #7A2B7E 25%, #6B2670 50%, #0E61AD 85%, #1976D2 100%)',
                 color: 'white',
                 p: { xs: 3, sm: 4 },
                 display: 'flex',
@@ -154,15 +199,37 @@ const LoginPage = () => {
                 gap: 2,
                 position: 'relative',
                 overflow: 'hidden',
+                borderBottom: '2px solid rgba(215, 177, 97, 0.25)',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
                 '&::before': {
                   content: '""',
                   position: 'absolute',
                   top: '-50%',
                   right: '-20%',
-                  width: '300px',
-                  height: '300px',
+                  width: '350px',
+                  height: '350px',
                   borderRadius: '50%',
-                  background: 'rgba(255, 255, 255, 0.1)',
+                  background: 'radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, rgba(215, 177, 97, 0.08) 50%, transparent 70%)',
+                  animation: 'gentle-spin 25s linear infinite',
+                },
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  bottom: '-10%',
+                  left: '-10%',
+                  width: '250px',
+                  height: '250px',
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, rgba(14, 97, 173, 0.1) 0%, transparent 70%)',
+                  animation: 'gentle-spin 30s linear infinite reverse',
+                },
+                '@keyframes gentle-spin': {
+                  '0%': {
+                    transform: 'rotate(0deg)',
+                  },
+                  '100%': {
+                    transform: 'rotate(360deg)',
+                  },
                 },
               }}
             >
