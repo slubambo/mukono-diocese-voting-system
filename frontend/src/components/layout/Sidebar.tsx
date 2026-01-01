@@ -106,22 +106,26 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
     }
   }, [navigate, isMobile, onClose, onNavigate, logout])
 
-  const isActive = useCallback((path: string) => {
-    return location.pathname === path || (path !== '/admin' && location.pathname.startsWith(path))
+  const isExactActive = useCallback((path: string) => {
+    return location.pathname === path
+  }, [location.pathname])
+
+  const isSectionActive = useCallback((path: string) => {
+    return location.pathname === path || location.pathname.startsWith(`${path}/`)
   }, [location.pathname])
   
   const isParentActive = useCallback((item: MenuItem) => {
     if (!item.children) return false
-    return item.children.some(child => isActive(child.path))
-  }, [isActive])
+    return item.children.some(child => isExactActive(child.path))
+  }, [isExactActive])
 
   const renderMenuItem = useCallback((item: MenuItem, level: number = 0) => {
     const Icon = item.icon
-    const active = isActive(item.path)
     const hasChildren = item.children && item.children.length > 0
     const isExpanded = expandedItems[item.id] || false
     const parentActive = isParentActive(item)
     const isChildItem = level > 0
+    const active = isChildItem ? isExactActive(item.path) : isSectionActive(item.path)
 
     return (
       <React.Fragment key={item.id}>
@@ -133,33 +137,45 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
             onClick={() => handleMenuItemClick(item.path, item.id, hasChildren)}
             selected={active || parentActive}
             sx={{
-              mx: collapsed ? 0.5 : 1,
+              mx: 0,
               mb: 0.5,
-              pl: collapsed ? 1 : level > 0 ? 4 : 2,
-              borderRadius: 1,
+              pl: collapsed ? 1.5 : level > 0 ? 3.5 : 1.75,
+              py: 1,
+              borderRadius: 1.25,
               justifyContent: collapsed ? 'center' : 'flex-start',
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              // Different styling for parent vs child items
-              bgcolor: isChildItem && active
-                ? 'transparent'
-                : (active || parentActive)
-                ? 'rgba(143, 52, 147, 0.12)'
+              position: 'relative',
+              // Modern active styling
+              bgcolor: (active || parentActive)
+                ? 'linear-gradient(90deg, rgba(143, 52, 147, 0.08) 0%, rgba(143, 52, 147, 0.04) 100%)'
                 : 'transparent',
               color: (active || parentActive) ? 'primary.main' : 'text.primary',
               fontWeight: (active || parentActive) ? 600 : 500,
-              borderLeft: isChildItem && active ? `3px solid ${theme.palette.primary.main}` : 'none',
-              ml: isChildItem && active ? 'calc(8px - 3px)' : collapsed ? 0.5 : 1,
+              // Modern left indicator for active items
+              '&::before': (active || parentActive) ? {
+                content: '""',
+                position: 'absolute',
+                left: 0,
+                top: '20%',
+                bottom: '20%',
+                width: 3,
+                bgcolor: 'primary.main',
+                borderRadius: '0 4px 4px 0',
+                boxShadow: '2px 0 6px rgba(143, 52, 147, 0.3)',
+              } : {},
+              // Subtle right border for active parent items
+              borderRight: (active || parentActive) && !isChildItem ? '2px solid' : 'none',
+              borderRightColor: 'rgba(143, 52, 147, 0.15)',
               '&:hover': {
-                bgcolor: 'rgba(143, 52, 147, 0.08)',
-                transform: 'translateX(2px)',
+                bgcolor: (active || parentActive)
+                  ? 'linear-gradient(90deg, rgba(143, 52, 147, 0.12) 0%, rgba(143, 52, 147, 0.06) 100%)'
+                  : 'rgba(143, 52, 147, 0.04)',
+                transform: 'translateX(3px)',
               },
               '&.Mui-selected': {
-                bgcolor: isChildItem ? 'transparent' : 'rgba(143, 52, 147, 0.12)',
-                borderLeft: isChildItem && active ? `3px solid ${theme.palette.primary.main}` : `4px solid ${theme.palette.primary.main}`,
-                paddingLeft: isChildItem && active ? 'calc(32px - 3px)' : collapsed ? 'calc(8px - 4px)' : level > 0 ? 'calc(32px - 4px)' : 'calc(16px - 4px)',
-                ml: isChildItem && active ? 'calc(8px - 3px)' : collapsed ? 'calc(4px - 4px)' : 'calc(8px - 4px)',
+                bgcolor: 'linear-gradient(90deg, rgba(143, 52, 147, 0.08) 0%, rgba(143, 52, 147, 0.04) 100%)',
                 '&:hover': {
-                  bgcolor: 'rgba(143, 52, 147, 0.16)',
+                  bgcolor: 'linear-gradient(90deg, rgba(143, 52, 147, 0.12) 0%, rgba(143, 52, 147, 0.06) 100%)',
                 },
               },
             }}
@@ -167,11 +183,12 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
             <ListItemIcon
               sx={{
                 color: active || parentActive ? 'primary.main' : 'inherit',
-                minWidth: collapsed ? 'auto' : 40,
+                minWidth: collapsed ? 'auto' : 36,
                 justifyContent: 'center',
+                transition: 'all 0.2s ease',
               }}
             >
-              <Icon />
+              <Icon fontSize="small" />
             </ListItemIcon>
             {!collapsed && (
               <>
@@ -180,10 +197,17 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
                   primaryTypographyProps={{
                     variant: 'body2',
                     fontWeight: active || parentActive ? 600 : 500,
+                    fontSize: '0.85rem',
                   }}
                 />
                 {hasChildren && (
-                  isExpanded ? <ExpandLess /> : <ExpandMore />
+                  <Box
+                    sx={{
+                      transition: 'transform 0.2s ease',
+                    }}
+                  >
+                    {isExpanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                  </Box>
                 )}
               </>
             )}
@@ -200,29 +224,38 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
         )}
       </React.Fragment>
     )
-  }, [collapsed, expandedItems, isActive, isParentActive, handleMenuItemClick, theme.palette.primary.main])
+  }, [collapsed, expandedItems, isExactActive, isSectionActive, isParentActive, handleMenuItemClick, theme.palette.primary.main])
 
   const sidebarContent = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
       {/* Header with branding and avatar */}
-      <Box sx={{ p: collapsed ? 1 : 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: collapsed ? 0 : 2 }}>
+      <Box 
+        sx={{ 
+          p: collapsed ? 1.5 : 2, 
+          borderBottom: `1px solid ${theme.palette.divider}`,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: collapsed ? 0 : 1.5, justifyContent: collapsed ? 'center' : 'flex-start' }}>
           <Avatar
             sx={{
               bgcolor: 'primary.main',
               color: 'primary.contrastText',
               fontWeight: 700,
-              fontSize: '1.25rem',
+              fontSize: collapsed ? '1rem' : '1.15rem',
+              width: collapsed ? 36 : 42,
+              height: collapsed ? 36 : 42,
+              boxShadow: '0 3px 10px rgba(143, 52, 147, 0.25)',
+              transition: 'all 0.3s ease',
             }}
           >
             M
           </Avatar>
           {!collapsed && (
-            <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'primary.main', lineHeight: 1.2, fontSize: '0.95rem' }}>
                 Mukono Diocese
               </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.7rem' }}>
                 Voting System
               </Typography>
             </Box>
@@ -231,11 +264,34 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
 
         {/* User role info */}
         {!collapsed && user?.roles && user.roles.length > 0 && (
-          <Box sx={{ bgcolor: 'action.hover', p: 1, borderRadius: 1 }}>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-              Role
-            </Typography>
-            <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+          <Box 
+            sx={{ 
+              bgcolor: 'primary.main',
+              background: 'linear-gradient(135deg, #8F3493 0%, #6B2670 100%)',
+              color: 'white',
+              p: 1.5,
+              borderRadius: 1.25,
+              boxShadow: '0 2px 8px rgba(143, 52, 147, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 0.5,
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="caption" sx={{ fontWeight: 600, opacity: 0.85, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.65rem' }}>
+                Role
+              </Typography>
+              <Box 
+                sx={{ 
+                  width: 6, 
+                  height: 6, 
+                  borderRadius: '50%', 
+                  bgcolor: 'rgba(255, 255, 255, 0.9)',
+                  boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.3)',
+                }}
+              />
+            </Box>
+            <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.9rem', letterSpacing: '0.3px' }}>
               {user.roles[0] === 'ROLE_ADMIN'
                 ? 'Administrator'
                 : user.roles[0] === 'ROLE_DS'
@@ -247,13 +303,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
       </Box>
 
       {/* Menu items */}
-      <List sx={{ flex: 1, pt: 1 }}>
+      <List sx={{ flex: 1, minHeight: 0, pt: 1, px: 0.75, overflowY: 'auto' }}>
         {visibleMenuItems.map(item => renderMenuItem(item))}
       </List>
 
       {/* Divider + Logout */}
-      <Divider sx={{ my: 1 }} />
-      <List>
+      <Divider sx={{ my: 0.75 }} />
+      <Box sx={{ px: 0.75, pb: 1 }}>
         <Tooltip
           title={collapsed ? LOGOUT_MENU_ITEM.label : ''}
           placement="right"
@@ -261,44 +317,56 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
           <ListItemButton
             onClick={() => handleMenuItemClick(LOGOUT_MENU_ITEM.path, LOGOUT_MENU_ITEM.id)}
             sx={{
-              mx: collapsed ? 0.5 : 1,
-              borderRadius: 1,
+              mx: 0,
+              py: 1.1,
+              borderRadius: 1.25,
               justifyContent: collapsed ? 'center' : 'flex-start',
               color: 'error.main',
+              bgcolor: 'rgba(229, 57, 53, 0.06)',
+              border: '1px solid rgba(229, 57, 53, 0.2)',
+              transition: 'all 0.2s ease',
               '&:hover': {
-                bgcolor: 'rgba(229, 57, 53, 0.08)',
+                bgcolor: 'rgba(229, 57, 53, 0.12)',
+                borderColor: 'rgba(229, 57, 53, 0.4)',
+                transform: 'translateX(3px)',
+                boxShadow: '0 2px 6px rgba(229, 57, 53, 0.2)',
               },
             }}
           >
-            <ListItemIcon sx={{ color: 'error.main', minWidth: collapsed ? 'auto' : 40, justifyContent: 'center' }}>
-              <LOGOUT_MENU_ITEM.icon />
+            <ListItemIcon sx={{ color: 'error.main', minWidth: collapsed ? 'auto' : 36, justifyContent: 'center' }}>
+              <LOGOUT_MENU_ITEM.icon fontSize="small" />
             </ListItemIcon>
             {!collapsed && (
               <ListItemText
                 primary={LOGOUT_MENU_ITEM.label}
-                primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
+                primaryTypographyProps={{ variant: 'body2', fontWeight: 600, fontSize: '0.85rem' }}
               />
             )}
           </ListItemButton>
         </Tooltip>
-      </List>
+      </Box>
 
       {/* Collapse toggle button - desktop only */}
       {!isMobile && onToggleCollapse && (
-        <Box sx={{ p: 1, borderTop: `1px solid ${theme.palette.divider}` }}>
+        <Box sx={{ p: 1, borderTop: `1px solid ${theme.palette.divider}`, bgcolor: 'rgba(0, 0, 0, 0.01)' }}>
           <Tooltip title={collapsed ? 'Expand' : 'Collapse'} placement="right">
             <IconButton
               onClick={onToggleCollapse}
               sx={{
                 width: '100%',
                 color: 'text.secondary',
+                borderRadius: 1.25,
+                bgcolor: 'action.hover',
+                py: 0.75,
+                transition: 'all 0.2s ease',
                 '&:hover': {
-                  bgcolor: 'action.hover',
+                  bgcolor: 'action.selected',
+                  color: 'primary.main',
                 },
               }}
               size="small"
             >
-              {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+              {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
             </IconButton>
           </Tooltip>
         </Box>
@@ -313,22 +381,24 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
         variant="permanent"
         sx={{
           display: { xs: 'none', md: 'block' },
-          width: collapsed ? 80 : 280,
+          width: collapsed ? 68 : 260,
           flexShrink: 0,
           transition: theme.transitions.create('width', {
             easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen,
+            duration: theme.transitions.duration.shorter,
           }),
           '& .MuiDrawer-paper': {
-            width: collapsed ? 80 : 280,
+            width: collapsed ? 68 : 260,
             boxSizing: 'border-box',
             top: 'auto',
             borderRight: `1px solid ${theme.palette.divider}`,
+            boxShadow: '2px 0 8px rgba(0, 0, 0, 0.02)',
             transition: theme.transitions.create('width', {
               easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.enteringScreen,
+              duration: theme.transitions.duration.shorter,
             }),
             overflowX: 'hidden',
+            bgcolor: 'background.paper',
           },
         }}
       >
@@ -344,8 +414,9 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
         sx={{
           display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': {
-            width: 280,
+            width: 260,
             boxSizing: 'border-box',
+            boxShadow: '4px 0 20px rgba(0, 0, 0, 0.1)',
           },
         }}
       >

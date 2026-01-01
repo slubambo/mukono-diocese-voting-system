@@ -29,7 +29,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
         sx={{
           bgcolor: 'background.paper',
           borderBottom: `1px solid ${theme.palette.divider}`,
-          p: { xs: 2, sm: 3 },
+          p: { xs: 2, sm: 2.5 },
         }}
       >
         <Box sx={{ maxWidth, mx: 'auto' }}>
@@ -50,12 +50,23 @@ const PageLayout: React.FC<PageLayoutProps> = ({
                   fontWeight: 700,
                   color: 'text.primary',
                   mb: subtitle ? 0.5 : 0,
+                  fontSize: { xs: '1.35rem', sm: '1.5rem', md: '1.75rem' },
+                  letterSpacing: '-0.02em',
+                  lineHeight: 1.2,
                 }}
               >
                 {title}
               </Typography>
               {subtitle && (
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: 'text.secondary',
+                    fontSize: { xs: '0.8rem', sm: '0.85rem' },
+                    fontWeight: 500,
+                    lineHeight: 1.4,
+                  }}
+                >
                   {subtitle}
                 </Typography>
               )}
@@ -85,7 +96,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
       <Box
         sx={{
           flex: 1,
-          p: { xs: 2, sm: 3 },
+          p: { xs: 2, sm: 2.5 },
           bgcolor: 'background.default',
         }}
       >

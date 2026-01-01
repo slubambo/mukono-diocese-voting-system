@@ -63,18 +63,41 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuOpen, showMenuButton = true, titl
 
   return (
     <>
-      <AppBar position="static" sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>
-        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', minHeight: '64px' }}>
+      <AppBar 
+        position="static" 
+        elevation={0}
+        sx={{ 
+          bgcolor: 'background.paper', 
+          color: 'text.primary',
+          borderBottom: `1px solid ${theme.palette.divider}`,
+        }}
+      >
+        <Toolbar 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            minHeight: { xs: '56px', sm: '60px' },
+            px: { xs: 2, sm: 2.5 },
+          }}
+        >
           {/* Left: Menu icon + Logo + Title */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
             {showMenuButton && isMobile && (
               <IconButton
                 color="inherit"
                 aria-label="open menu"
                 onClick={onMenuOpen}
-                sx={{ mr: 0.5 }}
+                size="small"
+                sx={{ 
+                  mr: 0.5,
+                  bgcolor: 'action.hover',
+                  borderRadius: 1.25,
+                  '&:hover': {
+                    bgcolor: 'action.selected',
+                  },
+                }}
               >
-                <MenuIcon />
+                <MenuIcon fontSize="small" />
               </IconButton>
             )}
 
@@ -84,19 +107,44 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuOpen, showMenuButton = true, titl
               src={logoSrc}
               alt="Church of Uganda Logo"
               sx={{
-                width: 40,
-                height: 40,
+                width: { xs: 32, sm: 36 },
+                height: { xs: 32, sm: 36 },
                 display: { xs: 'none', sm: 'block' },
+                transition: 'transform 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                },
               }}
             />
 
             {/* Title section */}
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 700, 
+                  background: 'linear-gradient(135deg, #8F3493 0%, #0E61AD 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  fontSize: { xs: '0.95rem', sm: '1.1rem' },
+                  letterSpacing: '-0.01em',
+                  lineHeight: 1.2,
+                }}
+              >
                 Mukono Diocese
               </Typography>
               {title && (
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: 'text.secondary', 
+                    display: 'block',
+                    fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                    fontWeight: 500,
+                    lineHeight: 1.2,
+                  }}
+                >
                   {title}
                 </Typography>
               )}
@@ -110,13 +158,18 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuOpen, showMenuButton = true, titl
                   onClick={onToggleSidebarCollapse}
                   sx={{
                     color: 'text.secondary',
-                    ml: 1,
+                    ml: 0.5,
+                    bgcolor: 'action.hover',
+                    borderRadius: 1.25,
+                    transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: 'action.hover',
+                      bgcolor: 'action.selected',
+                      color: 'primary.main',
+                      transform: 'scale(1.05)',
                     },
                   }}
                 >
-                  {sidebarCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+                  {sidebarCollapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
                 </IconButton>
               </Tooltip>
             )}
@@ -124,7 +177,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuOpen, showMenuButton = true, titl
 
           {/* Right: User info + Actions */}
           {user && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
               {/* Role badge - only show if user has roles */}
               {user.roles && user.roles.length > 0 && (
                 <Box sx={{ display: { xs: 'none', sm: 'flex' }, gap: 0.5 }}>
@@ -135,33 +188,54 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuOpen, showMenuButton = true, titl
                       size="small"
                       color={getRoleColor(role)}
                       variant="outlined"
-                      sx={{ fontWeight: 600 }}
+                      sx={{ 
+                        fontWeight: 600,
+                        borderWidth: 1.5,
+                        borderRadius: 1.25,
+                        px: 0.25,
+                        height: 26,
+                        fontSize: '0.75rem',
+                      }}
                     />
                   ))}
                 </Box>
               )}
 
               {/* Username */}
-              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: 'text.primary',
+                  display: { xs: 'none', sm: 'block' },
+                  fontSize: '0.85rem',
+                }}
+              >
                 {user.username}
               </Typography>
 
               {/* Logout button */}
-              <IconButton
-                color="inherit"
-                aria-label="logout menu"
-                onClick={handleMenuOpen}
-                sx={{
-                  p: 1.5,
-                  bgcolor: 'action.hover',
-                  borderRadius: 1,
-                  '&:hover': {
-                    bgcolor: 'action.selected',
-                  },
-                }}
-              >
-                <LogoutIcon fontSize="small" />
-              </IconButton>
+              <Tooltip title="Logout" placement="bottom">
+                <IconButton
+                  color="inherit"
+                  aria-label="logout menu"
+                  onClick={handleMenuOpen}
+                  size="small"
+                  sx={{
+                    p: 1,
+                    bgcolor: 'action.hover',
+                    borderRadius: 1.25,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: 'error.light',
+                      color: 'error.main',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <LogoutIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
 
               {/* Dropdown Menu */}
               <Menu
@@ -170,14 +244,43 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuOpen, showMenuButton = true, titl
                 onClose={handleMenuClose}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                slotProps={{
+                  paper: {
+                    elevation: 8,
+                    sx: {
+                      borderRadius: 1.5,
+                      mt: 1,
+                      minWidth: 180,
+                    },
+                  },
+                }}
               >
-                <MenuItem disabled>
-                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                    {user.username}
-                  </Typography>
+                <MenuItem disabled sx={{ opacity: 1, cursor: 'default', py: 1 }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.85rem' }}>
+                      {user.username}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                      {getRoleLabel(user.roles[0])}
+                    </Typography>
+                  </Box>
                 </MenuItem>
-                <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
-                  <LogoutIcon sx={{ mr: 1, fontSize: 20 }} />
+                <MenuItem 
+                  onClick={handleLogout} 
+                  sx={{ 
+                    color: 'error.main',
+                    mt: 0.5,
+                    borderRadius: 1,
+                    mx: 0.75,
+                    py: 1,
+                    fontSize: '0.85rem',
+                    '&:hover': {
+                      bgcolor: 'error.light',
+                      color: 'error.dark',
+                    },
+                  }}
+                >
+                  <LogoutIcon sx={{ mr: 1.25, fontSize: 18 }} />
                   Logout
                 </MenuItem>
               </Menu>
