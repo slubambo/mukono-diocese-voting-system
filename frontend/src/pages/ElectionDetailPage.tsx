@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Box, Paper, Tab, Tabs, Typography, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Chip, Stack } from '@mui/material'
+import { Box, Paper, Tab, Tabs, Typography, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Chip, Stack, Card, CardContent } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import CancelIcon from '@mui/icons-material/Cancel'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import HowToVoteIcon from '@mui/icons-material/HowToVote'
+import PeopleIcon from '@mui/icons-material/People'
+import AssignmentIcon from '@mui/icons-material/Assignment'
+import EventIcon from '@mui/icons-material/Event'
 import { Button } from '@mui/material'
 import AppShell from '../components/layout/AppShell'
 import PageLayout from '../components/layout/PageLayout'
@@ -32,7 +36,12 @@ const ElectionDetailPage: React.FC = () => {
   const [cancelOpen, setCancelOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [periodSummaries, setPeriodSummaries] = useState<Array<{ id: number | string; name: string; positionsCount: number }>>([])
-
+  const [stats, setStats] = useState({
+    positions: 0,
+    applicants: 0,
+    candidates: 0,
+    votingPeriods: 0,
+  })
   const fetch = async () => {
     if (!electionId) return
     setLoading(true)
@@ -47,6 +56,30 @@ const ElectionDetailPage: React.FC = () => {
   }
 
   useEffect(() => { fetch() }, [electionId])
+
+  useEffect(() => {
+    const loadStats = async () => {
+      if (!electionId) return
+      try {
+        const [positionsRes, applicantsRes, candidatesRes, periodsRes] = await Promise.all([
+          electionApi.listPositions(electionId).catch(() => ({ content: [] })),
+          electionApi.listApplicants(electionId).catch(() => ({ content: [] })),
+          electionApi.listCandidates(electionId).catch(() => ({ content: [] })),
+          electionApi.listVotingPeriods(electionId).catch(() => ({ content: [] })),
+        ])
+        
+        setStats({
+          positions: (positionsRes as any)?.content?.length ?? 0,
+          applicants: (applicantsRes as any)?.content?.length ?? 0,
+          candidates: (candidatesRes as any)?.content?.length ?? 0,
+          votingPeriods: (periodsRes as any)?.content?.length ?? 0,
+        })
+      } catch (err) {
+        // Stats are optional, don't show error
+      }
+    }
+    loadStats()
+  }, [electionId])
 
   useEffect(() => {
     const loadSummaries = async () => {
@@ -301,17 +334,210 @@ const ElectionDetailPage: React.FC = () => {
         <Paper sx={{ p: 2 }}>
           {tab === 0 && (
             <Box>
-              <Typography variant="h6">Overview</Typography>
-              <Typography>{election.description}</Typography>
+              {/* Header */}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5, color: 'primary.main' }}>
+                  Overview
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  {election.description || 'No description provided'}
+                </Typography>
+              </Box>
+
+              {/* Stats Cards */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, 1fr)' }, gap: 1.5, mb: 2.5 }}>
+                <Card sx={{ 
+                  background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.95) 0%, rgba(88, 28, 135, 0.85) 100%)',
+                  color: 'white',
+                  transition: 'all 0.2s ease',
+                  '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(88, 28, 135, 0.3)' }
+                }}>
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box>
+                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.25 }}>
+                          {stats.positions}
+                        </Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.95, fontSize: '0.75rem' }}>
+                          Position{stats.positions === 1 ? '' : 's'}
+                        </Typography>
+                      </Box>
+                      <AssignmentIcon sx={{ fontSize: 32, opacity: 0.7 }} />
+                    </Box>
+                  </CardContent>
+                </Card>
+
+                <Card sx={{ 
+                  background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.95) 0%, rgba(109, 40, 217, 0.85) 100%)',
+                  color: 'white',
+                  transition: 'all 0.2s ease',
+                  '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)' }
+                }}>
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box>
+                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.25 }}>
+                          {stats.applicants}
+                        </Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.95, fontSize: '0.75rem' }}>
+                          Applicant{stats.applicants === 1 ? '' : 's'}
+                        </Typography>
+                      </Box>
+                      <PeopleIcon sx={{ fontSize: 32, opacity: 0.7 }} />
+                    </Box>
+                  </CardContent>
+                </Card>
+
+                <Card sx={{ 
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.95) 0%, rgba(124, 58, 237, 0.85) 100%)',
+                  color: 'white',
+                  transition: 'all 0.2s ease',
+                  '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)' }
+                }}>
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box>
+                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.25 }}>
+                          {stats.candidates}
+                        </Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.95, fontSize: '0.75rem' }}>
+                          Candidate{stats.candidates === 1 ? '' : 's'}
+                        </Typography>
+                      </Box>
+                      <HowToVoteIcon sx={{ fontSize: 32, opacity: 0.7 }} />
+                    </Box>
+                  </CardContent>
+                </Card>
+
+                <Card sx={{ 
+                  background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.95) 0%, rgba(147, 51, 234, 0.85) 100%)',
+                  color: 'white',
+                  transition: 'all 0.2s ease',
+                  '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(168, 85, 247, 0.3)' }
+                }}>
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box>
+                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.25 }}>
+                          {stats.votingPeriods}
+                        </Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.95, fontSize: '0.75rem' }}>
+                          Voting Period{stats.votingPeriods === 1 ? '' : 's'}
+                        </Typography>
+                      </Box>
+                      <EventIcon sx={{ fontSize: 32, opacity: 0.7 }} />
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Box>
+
+              {/* Election Details Section */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1.5, mb: 2 }}>
+                {/* Term Information */}
+                <Paper sx={{ p: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.15)' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5, color: 'primary.main', fontSize: '1rem' }}>
+                    Term Information
+                  </Typography>
+                  <Box sx={{ display: 'grid', gap: 1.5 }}>
+                    <Box>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.7rem' }}>
+                        Start Date
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.25 }}>
+                        {election.termStartDate ? formatDateTime(election.termStartDate) : '—'}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.7rem' }}>
+                        End Date
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.25 }}>
+                        {election.termEndDate ? formatDateTime(election.termEndDate) : '—'}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.7rem' }}>
+                        Duration
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.25 }}>
+                        {formatTermDuration(election.termStartDate, election.termEndDate)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Paper>
+
+                {/* Voting Information */}
+                <Paper sx={{ p: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.15)' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5, color: 'primary.main', fontSize: '1rem' }}>
+                    Voting Window
+                  </Typography>
+                  <Box sx={{ display: 'grid', gap: 1.5 }}>
+                    <Box>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.7rem' }}>
+                        Opens
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.25 }}>
+                        {election.votingStartAt ? formatDateTime(election.votingStartAt) : '—'}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.7rem' }}>
+                        Closes
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.25 }}>
+                        {election.votingEndAt ? formatDateTime(election.votingEndAt) : '—'}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.7rem' }}>
+                        Duration
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.25 }}>
+                        {formatVotingDuration(election.votingStartAt, election.votingEndAt)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Paper>
+              </Box>
+
+              {/* Voting Period Positions (Admin Only) */}
               {isAdmin && periodSummaries.length > 0 && (
-                <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
-                  <Typography variant="subtitle2">Voting period positions</Typography>
-                  {periodSummaries.map((p) => (
-                    <Typography key={String(p.id)} variant="body2">
-                      {p.name}: {p.positionsCount} position{p.positionsCount === 1 ? '' : 's'}
-                    </Typography>
-                  ))}
-                </Box>
+                <Paper sx={{ p: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.15)' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5, color: 'primary.main', fontSize: '1rem' }}>
+                    Voting Period Positions
+                  </Typography>
+                  <Box sx={{ display: 'grid', gap: 1 }}>
+                    {periodSummaries.map((p) => (
+                      <Box
+                        key={String(p.id)}
+                        sx={{
+                          p: 1.25,
+                          borderRadius: 1,
+                          backgroundColor: 'rgba(88, 28, 135, 0.04)',
+                          border: '1px solid rgba(88, 28, 135, 0.1)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {p.name}
+                        </Typography>
+                        <Chip
+                          label={`${p.positionsCount} position${p.positionsCount === 1 ? '' : 's'}`}
+                          size="small"
+                          sx={{ 
+                            backgroundColor: 'primary.main', 
+                            color: 'white', 
+                            fontWeight: 600,
+                            height: 24,
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                      </Box>
+                    ))}
+                  </Box>
+                </Paper>
               )}
             </Box>
           )}
