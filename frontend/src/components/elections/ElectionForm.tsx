@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, MenuItem, FormControl, InputLabel, Select } from '@mui/material'
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, MenuItem } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
@@ -22,23 +22,25 @@ interface Props {
   election?: Election
 }
 
+const defaultValues: Partial<Election> = {
+  name: '',
+  description: '',
+  fellowshipId: undefined,
+  scope: '',
+  dioceseId: undefined,
+  archdeaconryId: undefined,
+  churchId: undefined,
+  termStartDate: '',
+  termEndDate: '',
+  nominationStartAt: undefined,
+  nominationEndAt: undefined,
+  votingStartAt: undefined,
+  votingEndAt: undefined,
+}
+
 const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => {
   const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<Partial<Election>>({
-    defaultValues: {
-      name: '',
-      description: '',
-      fellowshipId: undefined,
-      scope: '',
-      dioceseId: undefined,
-      archdeaconryId: undefined,
-      churchId: undefined,
-      termStartDate: '',
-      termEndDate: '',
-      nominationStartAt: '',
-      nominationEndAt: '',
-      votingStartAt: '',
-      votingEndAt: '',
-    },
+    defaultValues,
   })
   const toast = useToast()
   const [fellowships, setFellowships] = useState<Fellowship[]>([])
@@ -78,14 +80,16 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
         churchId,
         termStartDate: election.termStartDate ?? '',
         termEndDate: election.termEndDate ?? '',
-        nominationStartAt: formatLocalDateTime(election.nominationStartAt),
-        nominationEndAt: formatLocalDateTime(election.nominationEndAt),
-        votingStartAt: formatLocalDateTime(election.votingStartAt),
-        votingEndAt: formatLocalDateTime(election.votingEndAt),
+        nominationStartAt: formatLocalDateTime(election.nominationStartAt) as any,
+        nominationEndAt: formatLocalDateTime(election.nominationEndAt) as any,
+        votingStartAt: formatLocalDateTime(election.votingStartAt) as any,
+        votingEndAt: formatLocalDateTime(election.votingEndAt) as any,
       }
       reset(values)
     } else {
-      reset()
+      reset(defaultValues)
+      setArchdeaconries([])
+      setChurches([])
     }
   }, [election, open, reset])
 
@@ -190,14 +194,14 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
       const payload: Partial<Election> = {
         name: data.name?.trim(),
         description: data.description?.trim() || undefined,
-        fellowshipId: data.fellowshipId ? Number(data.fellowshipId) : null,
+        fellowshipId: data.fellowshipId ? Number(data.fellowshipId) : (undefined as any),
         scope: scopeValue || undefined,
-        termStartDate: toDateOrUndefined(data.termStartDate as string | undefined),
-        termEndDate: toDateOrUndefined(data.termEndDate as string | undefined),
-        nominationStartAt: toIsoOrUndefined(data.nominationStartAt as string | undefined),
-        nominationEndAt: toIsoOrUndefined(data.nominationEndAt as string | undefined),
-        votingStartAt: toIsoOrUndefined(data.votingStartAt as string | undefined),
-        votingEndAt: toIsoOrUndefined(data.votingEndAt as string | undefined),
+        termStartDate: toDateOrUndefined(data.termStartDate as any),
+        termEndDate: toDateOrUndefined(data.termEndDate as any),
+        nominationStartAt: toIsoOrUndefined(data.nominationStartAt),
+        nominationEndAt: toIsoOrUndefined(data.nominationEndAt),
+        votingStartAt: toIsoOrUndefined(data.votingStartAt),
+        votingEndAt: toIsoOrUndefined(data.votingEndAt),
       }
       normalizeTargets(payload)
       if (!election?.id) {

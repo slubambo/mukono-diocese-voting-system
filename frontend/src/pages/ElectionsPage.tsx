@@ -30,7 +30,6 @@ import AppShell from '../components/layout/AppShell'
 import PageLayout from '../components/layout/PageLayout'
 import LoadingState from '../components/common/LoadingState'
 import EmptyState from '../components/common/EmptyState'
-import StatusChip from '../components/common/StatusChip'
 import MasterDataHeader from '../components/common/MasterDataHeader'
 import { useAuth } from '../context/AuthContext'
 import { electionApi } from '../api/election.api'
@@ -308,7 +307,7 @@ const ElectionsPage: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {displayElections.map((e) => {
-                    const votingDays = calcDays(e.votingStartAt, e.votingEndAt)
+                    const votingDays = calcDays(e.votingStartAt ?? undefined, e.votingEndAt ?? undefined)
                     return (
                       <TableRow key={e.id} hover>
                         <TableCell><Typography variant="body2" sx={{ fontWeight: 500 }}>{e.name}</Typography></TableCell>
@@ -318,6 +317,7 @@ const ElectionsPage: React.FC = () => {
                             size="small"
                             color={e.status === 'ACTIVE' ? 'success' : e.status === 'CANCELLED' ? 'error' : 'default'}
                             variant={e.status === 'DRAFT' ? 'outlined' : 'filled'}
+                            sx={{ fontWeight: 400, height: 20, fontSize: '0.7rem', '& .MuiChip-label': { px: 0.75 } }}
                           />
                         </TableCell>
                         <TableCell>{e.scope || '—'}</TableCell>
@@ -374,7 +374,7 @@ const ElectionsPage: React.FC = () => {
                                   onClick={() => handleCloseVotingPeriod(e)}
                                   size="small"
                                   color="error"
-                                  disabled={closingElectionId === e.id || openPeriodMap[String(e.id)] === 'none'}
+                                  disabled={closingElectionId === e.id || (openPeriodMap[String(e.id)] ?? 'none') === 'none'}
                                 >
                                   <StopCircleIcon fontSize="small" />
                                 </IconButton>
