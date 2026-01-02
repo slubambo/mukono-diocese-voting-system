@@ -22,6 +22,8 @@ import {
   Select,
   FormControl,
   InputLabel,
+  TableSortLabel,
+  Link,
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
@@ -59,6 +61,7 @@ const PeopleRegistryPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [total, setTotal] = useState(0)
   const [query, setQuery] = useState<string>('')
+  const [debouncedQuery, setDebouncedQuery] = useState<string>('')
   const [sort, setSort] = useState('fullName,asc')
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -78,7 +81,7 @@ const PeopleRegistryPage: React.FC = () => {
   const fetchPeople = async () => {
     try {
       setLoading(true)
-      const resp = await peopleApi.list({ q: query || undefined, page, size: rowsPerPage, sort: 'id,desc' })
+      const resp = await peopleApi.list({ q: debouncedQuery || undefined, page, size: rowsPerPage, sort: 'id,desc' })
       setPeople(resp.content)
       setTotal(resp.totalElements)
     } catch (error: any) {
@@ -132,7 +135,12 @@ const PeopleRegistryPage: React.FC = () => {
 
   
 
-  useEffect(() => { fetchPeople() }, [page, rowsPerPage, query])
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 350)
+    return () => clearTimeout(timer)
+  }, [query])
+
+  useEffect(() => { fetchPeople() }, [page, rowsPerPage, debouncedQuery])
 
   const sortOptions = [
     { id: 'fullName,asc', name: 'Name (A-Z)' },
@@ -178,6 +186,30 @@ const PeopleRegistryPage: React.FC = () => {
       }
     })
   }, [people, sort])
+
+  const getSortDirection = (column: 'fullName' | 'dateOfBirth') => {
+    if (sort.startsWith(`${column},`)) return sort.endsWith('asc') ? 'asc' : 'desc'
+    return false
+  }
+
+  const toggleSort = (column: 'fullName' | 'dateOfBirth') => {
+    const direction = getSortDirection(column)
+    if (!direction) {
+      setSort(`${column},asc`)
+    } else if (direction === 'asc') {
+      setSort(`${column},desc`)
+    } else {
+      setSort(`${column},asc`)
+    }
+    setPage(0)
+  }
+
+  const formatAge = (dob?: string | null) => {
+    if (!dob) return '—'
+    const d = dayjs(dob)
+    if (!d.isValid()) return '—'
+    return `${dayjs().diff(d, 'year')}`
+  }
 
   const openCreate = () => { setEditing(null); reset({ fullName: '', email: '', phoneNumber: '', gender: '', dateOfBirth: '' }); setDialogOpen(true) }
   const openEdit = (p: PersonResponse) => { setEditing(p); reset({ fullName: p.fullName, email: p.email || '', phoneNumber: p.phoneNumber || '', gender: p.gender || '', dateOfBirth: p.dateOfBirth || '' }); setDialogOpen(true) }
@@ -251,14 +283,23 @@ const PeopleRegistryPage: React.FC = () => {
           ) : (
             <>
               <TableContainer>
-                <Table sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
+                <Table size="small" sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Full Name</TableCell>
+                      <TableCell sortDirection={getSortDirection('fullName') || false}>
+                        <TableSortLabel active={Boolean(getSortDirection('fullName'))} direction={(getSortDirection('fullName') as any) || 'asc'} onClick={() => toggleSort('fullName')}>
+                          Full Name
+                        </TableSortLabel>
+                      </TableCell>
                       <TableCell>Email</TableCell>
                       <TableCell>Phone</TableCell>
                       <TableCell>Gender</TableCell>
-                      <TableCell>Date of Birth</TableCell>
+                      <TableCell sortDirection={getSortDirection('dateOfBirth') || false}>
+                        <TableSortLabel active={Boolean(getSortDirection('dateOfBirth'))} direction={(getSortDirection('dateOfBirth') as any) || 'asc'} onClick={() => toggleSort('dateOfBirth')}>
+                          Date of Birth
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell>Age</TableCell>
                       <TableCell>Status</TableCell>
                       {isAdmin && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
@@ -267,10 +308,11 @@ const PeopleRegistryPage: React.FC = () => {
                     {displayPeople.map((p) => (
                       <TableRow key={p.id} hover>
                         <TableCell><Typography variant="body2">{p.fullName}</Typography></TableCell>
-                        <TableCell>{p.email}</TableCell>
-                        <TableCell>{p.phoneNumber}</TableCell>
+                        <TableCell>{p.email ? <Link href={`mailto:${p.email}`} underline="hover" color="inherit">{p.email}</Link> : ''}</TableCell>
+                        <TableCell>{p.phoneNumber ? <Link href={`tel:${p.phoneNumber}`} underline="hover" color="inherit">{p.phoneNumber}</Link> : ''}</TableCell>
                         <TableCell>{p.gender ? p.gender.charAt(0) + p.gender.slice(1).toLowerCase() : ''}</TableCell>
                         <TableCell>{p.dateOfBirth ? new Date(p.dateOfBirth).toLocaleDateString() : ''}</TableCell>
+                        <TableCell>{formatAge(p.dateOfBirth)}</TableCell>
                         <TableCell><StatusChip status={(p.status as any) ?? 'INACTIVE'} /></TableCell>
                         {isAdmin && (
                           <TableCell align="right">
