@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Box, Paper, Tab, Tabs, Typography, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Chip, Stack } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
@@ -90,17 +90,94 @@ const ElectionDetailPage: React.FC = () => {
     return Math.ceil((e - s) / (1000 * 60 * 60 * 24))
   }
 
-  const calcDuration = (start?: string, end?: string): string => {
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return '—'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return '—'
+    const weekday = date.toLocaleDateString('en-GB', { weekday: 'long' })
+    const month = date.toLocaleDateString('en-GB', { month: 'long' })
+    const day = date.getDate()
+    const time = date
+      .toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true })
+      .toLowerCase()
+      .replace(':00', '')
+    const ordinal = (n: number) => {
+      const mod100 = n % 100
+      if (mod100 >= 11 && mod100 <= 13) return `${n}th`
+      switch (n % 10) {
+        case 1: return `${n}st`
+        case 2: return `${n}nd`
+        case 3: return `${n}rd`
+        default: return `${n}th`
+      }
+    }
+    return `${weekday}, ${ordinal(day)} ${month} ${time}`
+  }
+
+  const formatTermDuration = (start?: string | null, end?: string | null) => {
+    const days = calcDays(start ?? undefined, end ?? undefined)
+    if (days === null) return '—'
+    if (days >= 365) {
+      const years = Math.round(days / 365)
+      return `${years} ${years === 1 ? 'Year' : 'Years'}`
+    }
+    if (days >= 30) {
+      const months = Math.round(days / 30)
+      return `${months} ${months === 1 ? 'Month' : 'Months'}`
+    }
+    if (days >= 7) {
+      const weeks = Math.round(days / 7)
+      return `${weeks} ${weeks === 1 ? 'Week' : 'Weeks'}`
+    }
+    return `${days} ${days === 1 ? 'Day' : 'Days'}`
+  }
+
+  const formatVotingDuration = (start?: string | null, end?: string | null) => {
     if (!start || !end) return '—'
     const s = new Date(start).getTime()
     const e = new Date(end).getTime()
     if (Number.isNaN(s) || Number.isNaN(e)) return '—'
     const ms = e - s
     const hours = ms / (1000 * 60 * 60)
-    if (hours < 24) return `${Math.round(hours)} hour${Math.round(hours) === 1 ? '' : 's'}`
+    if (hours < 24) {
+      const rounded = Math.round(hours)
+      return `${rounded} ${rounded === 1 ? 'Hour' : 'Hours'}`
+    }
     const days = Math.round(hours / 24)
-    return `${days} day${days === 1 ? '' : 's'}`
+    if (days >= 7) {
+      const weeks = Math.round(days / 7)
+      return `${weeks} ${weeks === 1 ? 'Week' : 'Weeks'}`
+    }
+    return `${days} ${days === 1 ? 'Day' : 'Days'}`
   }
+
+  const statusChipProps = useMemo(() => {
+    const status = String(election?.status || '').toUpperCase()
+    if (status === 'ACTIVE') return { color: 'success' as const, variant: 'filled' as const }
+    if (status === 'DRAFT') return { color: 'default' as const, variant: 'outlined' as const }
+    if (status === 'CANCELLED') return { color: 'error' as const, variant: 'filled' as const }
+    if (status === 'VOTING_OPEN') return { color: 'primary' as const, variant: 'filled' as const }
+    if (status === 'VOTING_CLOSED') return { color: 'warning' as const, variant: 'filled' as const }
+    return { color: 'default' as const, variant: 'outlined' as const }
+  }, [election?.status])
+
+  const scopeChipColor = useMemo(() => {
+    const scope = String(election?.scope || '').toUpperCase()
+    if (scope === 'DIOCESE') return 'primary' as const
+    if (scope === 'ARCHDEACONRY') return 'warning' as const
+    if (scope === 'CHURCH') return 'secondary' as const
+    return 'default' as const
+  }, [election?.scope])
+
+  const targetChipColor = useMemo(() => {
+    const scope = String(election?.scope || '').toUpperCase()
+    if (scope === 'DIOCESE') return 'primary' as const
+    if (scope === 'ARCHDEACONRY') return 'warning' as const
+    if (scope === 'CHURCH') return 'secondary' as const
+    return 'default' as const
+  }, [election?.scope])
+
+  const fellowshipChipColor = election?.fellowship?.name || election?.fellowshipName ? ('info' as const) : ('default' as const)
 
   const handleEdit = () => {
     // navigate to admin edit route - reuse list edit dialog would be better; for now redirect to list and open edit
@@ -160,12 +237,22 @@ const ElectionDetailPage: React.FC = () => {
           </>
         )}
       >
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3 }}>
-          <StatusChip status={election.status || 'pending'} />
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3, flexWrap: 'wrap' }}>
+          <Chip
+            label={String(election.status || 'PENDING')}
+            size="small"
+            color={statusChipProps.color}
+            variant={statusChipProps.variant}
+          />
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            <Chip label={`Scope: ${election.scope || '—'}`} size="small" />
-            <Chip label={`Target: ${getTargetLabel()}`} size="small" />
-            <Chip label={`Fellowship: ${election.fellowship?.name || election.fellowshipName || 'All'}`} size="small" />
+            <Chip label={`Scope: ${election.scope || '—'}`} size="small" color={scopeChipColor} variant="outlined" />
+            <Chip label={`Target: ${getTargetLabel()}`} size="small" color={targetChipColor} variant="outlined" />
+            <Chip
+              label={`Fellowship: ${election.fellowship?.name || election.fellowshipName || 'All'}`}
+              size="small"
+              color={fellowshipChipColor}
+              variant={fellowshipChipColor === 'default' ? 'outlined' : 'filled'}
+            />
           </Stack>
         </Box>
 
@@ -175,13 +262,13 @@ const ElectionDetailPage: React.FC = () => {
               <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>Term Dates</Typography>
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                 {election.termStartDate && election.termEndDate
-                  ? `${new Date(election.termStartDate).toLocaleDateString()} – ${new Date(election.termEndDate).toLocaleDateString()}`
+                  ? `${formatDateTime(election.termStartDate)} – ${formatDateTime(election.termEndDate)}`
                   : election.termStartDate
-                    ? new Date(election.termStartDate).toLocaleDateString()
+                    ? formatDateTime(election.termStartDate)
                     : '—'}
               </Typography>
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                Duration: {calcDays(election.termStartDate, election.termEndDate)} days
+                Duration: {formatTermDuration(election.termStartDate, election.termEndDate)}
               </Typography>
             </Box>
 
@@ -189,13 +276,13 @@ const ElectionDetailPage: React.FC = () => {
               <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>Voting Period</Typography>
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                 {election.votingStartAt && election.votingEndAt
-                  ? `${new Date(election.votingStartAt).toLocaleString()} – ${new Date(election.votingEndAt).toLocaleString()}`
+                  ? `${formatDateTime(election.votingStartAt)} – ${formatDateTime(election.votingEndAt)}`
                   : election.votingStartAt
-                    ? new Date(election.votingStartAt).toLocaleString()
+                    ? formatDateTime(election.votingStartAt)
                     : '—'}
               </Typography>
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                Duration: {calcDuration(election.votingStartAt, election.votingEndAt)}
+                Duration: {formatVotingDuration(election.votingStartAt, election.votingEndAt)}
               </Typography>
             </Box>
           </Box>
