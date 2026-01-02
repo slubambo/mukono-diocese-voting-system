@@ -80,16 +80,22 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
   useEffect(() => {
     if (assignment) {
       // prefill
+      const scope = (assignment.fellowshipPosition as any)?.scope ?? null
+      if (scope) {
+        setSelectedLevel(scope)
+        if (onLevelChange) onLevelChange(scope)
+      }
       const startMonth = assignment.termStartDate ? assignment.termStartDate.slice(0,7) : ''
       const endMonth = assignment.termEndDate ? assignment.termEndDate.slice(0,7) : ''
       reset({ personId: assignment.person.id, fellowshipPositionId: assignment.fellowshipPosition?.id ?? assignment.fellowshipPositionId, termStartDate: assignment.termStartDate ?? '', termEndDate: assignment.termEndDate ?? '' })
       setValue('termStartDateMonth', startMonth)
       setValue('termEndDateMonth', endMonth)
-      if (assignment.diocese?.id) setValue('dioceseId', assignment.diocese.id)
-      if (assignment.archdeaconry?.id) setValue('archdeaconryId', assignment.archdeaconry.id)
-      if (assignment.church?.id) setValue('churchId', assignment.church.id)
-      // load positions for fellowship
+      if (assignment.diocese?.id || assignment.dioceseId) setValue('dioceseId', assignment.diocese?.id ?? assignment.dioceseId ?? undefined)
+      if (assignment.archdeaconry?.id || assignment.archdeaconryId) setValue('archdeaconryId', assignment.archdeaconry?.id ?? assignment.archdeaconryId ?? undefined)
+      if (assignment.church?.id || assignment.churchId) setValue('churchId', assignment.church?.id ?? assignment.churchId ?? undefined)
       const fid = (assignment.fellowshipPosition as any)?.fellowshipId ?? assignment.fellowship?.id
+      if (fid) setValue('fellowshipId' as any, fid)
+      // load positions for fellowship
       if (fid) fellowshipPositionApi.list({ fellowshipId: fid, page: 0, size: 1000 }).then(r => setPositions(r.content)).catch(() => {})
     } else if (personId) {
       reset({ personId, fellowshipPositionId: 0, termStartDate: '', termEndDate: '' })
@@ -175,7 +181,14 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
       <Box component="form" onSubmit={handleSubmit(submit)} sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
         {showPersonSelector && (
           <Controller name="personId" control={control} render={({ field }) => (
-            <Autocomplete options={people} getOptionLabel={(p: any) => p.fullName} onChange={(_, v) => field.onChange(v?.id ?? 0)} renderInput={(params) => <TextField {...params} label="Person" required size="small" />} sx={{ gridColumn: '1 / -1' }} />
+            <Autocomplete
+              options={people}
+              getOptionLabel={(p: any) => p.fullName}
+              value={people.find((p) => p.id === field.value) || null}
+              onChange={(_, v) => field.onChange(v?.id ?? 0)}
+              renderInput={(params) => <TextField {...params} label="Person" required size="small" />}
+              sx={{ gridColumn: '1 / -1' }}
+            />
           )} />
         )}
 
@@ -201,6 +214,7 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
           <Autocomplete
             options={positions}
             getOptionLabel={(p: any) => ((p.title && p.title.name) || p.titleName) + ' — ' + ((p.fellowship && p.fellowship.name) || p.fellowshipName)}
+            value={positions.find((p) => p.id === field.value) || null}
             onChange={(_, v) => field.onChange(v?.id ?? 0)}
             renderInput={(params) => <TextField {...params} label="Position" required size="small" />}
             sx={{ gridColumn: '1 / -1' }}
