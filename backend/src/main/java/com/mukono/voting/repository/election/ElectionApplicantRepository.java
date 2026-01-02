@@ -185,6 +185,15 @@ public interface ElectionApplicantRepository extends JpaRepository<ElectionAppli
      */
     long countByElectionPositionIdAndStatus(Long electionPositionId, ApplicantStatus status);
 
+    /**
+     * Count all applicants for a position regardless of status.
+     * Used for determining if position can be deleted.
+     * 
+     * @param electionPositionId the election position ID
+     * @return total count of applicants
+     */
+    long countByElectionPositionId(Long electionPositionId);
+
     // =========================================================================
     // H) CUSTOM JPQL QUERIES
     // =========================================================================

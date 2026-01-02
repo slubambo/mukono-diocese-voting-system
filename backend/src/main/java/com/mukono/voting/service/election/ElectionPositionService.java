@@ -3,10 +3,13 @@ package com.mukono.voting.service.election;
 import com.mukono.voting.model.election.Election;
 import com.mukono.voting.model.election.ElectionPosition;
 import com.mukono.voting.model.election.ElectionStatus;
+import com.mukono.voting.model.election.ApplicantStatus;
 import com.mukono.voting.model.leadership.FellowshipPosition;
 import com.mukono.voting.repository.election.ElectionPositionRepository;
 import com.mukono.voting.repository.election.ElectionRepository;
+import com.mukono.voting.repository.election.ElectionApplicantRepository;
 import com.mukono.voting.repository.leadership.FellowshipPositionRepository;
+import com.mukono.voting.payload.response.ElectionPositionResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,14 +26,17 @@ public class ElectionPositionService {
     private final ElectionRepository electionRepository;
     private final ElectionPositionRepository electionPositionRepository;
     private final FellowshipPositionRepository fellowshipPositionRepository;
+    private final ElectionApplicantRepository electionApplicantRepository;
 
     public ElectionPositionService(
             ElectionRepository electionRepository,
             ElectionPositionRepository electionPositionRepository,
-            FellowshipPositionRepository fellowshipPositionRepository) {
+            FellowshipPositionRepository fellowshipPositionRepository,
+            ElectionApplicantRepository electionApplicantRepository) {
         this.electionRepository = electionRepository;
         this.electionPositionRepository = electionPositionRepository;
         this.fellowshipPositionRepository = fellowshipPositionRepository;
+        this.electionApplicantRepository = electionApplicantRepository;
     }
 
     /**
@@ -191,5 +197,35 @@ public class ElectionPositionService {
                     "Cannot modify positions for election in " + status + " status. " +
                     "Positions can only be modified when election is in DRAFT status.");
         }
+    }
+
+    /**
+     * Enrich an ElectionPositionResponse with canDelete flag and applicant counts.
+     * 
+     * @param electionPosition the election position entity
+     * @return enriched ElectionPositionResponse
+     */
+    public ElectionPositionResponse toEnrichedResponse(ElectionPosition electionPosition) {
+        ElectionPositionResponse response = ElectionPositionResponse.fromEntity(electionPosition);
+        
+        // Count applicants by status
+        long totalApplicants = electionApplicantRepository.countByElectionPositionId(
+            electionPosition.getId());
+        long approvedApplicants = electionApplicantRepository.countByElectionPositionIdAndStatus(
+            electionPosition.getId(), ApplicantStatus.APPROVED);
+        long pendingApplicants = electionApplicantRepository.countByElectionPositionIdAndStatus(
+            electionPosition.getId(), ApplicantStatus.PENDING);
+        long rejectedApplicants = electionApplicantRepository.countByElectionPositionIdAndStatus(
+            electionPosition.getId(), ApplicantStatus.REJECTED);
+        
+        response.setTotalApplicants(totalApplicants);
+        response.setApprovedApplicants(approvedApplicants);
+        response.setPendingApplicants(pendingApplicants);
+        response.setRejectedApplicants(rejectedApplicants);
+        
+        // Can only delete if there are no applicants
+        response.setCanDelete(totalApplicants == 0);
+        
+        return response;
     }
 }

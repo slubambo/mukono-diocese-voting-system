@@ -9,12 +9,21 @@ type StatusType =
   | 'revoked'
   | 'expired'
   | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'reverted'
+  | 'withdrawn'
   | 'completed'
   | 'ACTIVE'
   | 'INACTIVE'
   | 'USED'
   | 'REVOKED'
   | 'EXPIRED'
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'REVERTED'
+  | 'WITHDRAWN'
 
 interface StatusChipProps extends Omit<ChipProps, 'label' | 'variant'> {
   status: StatusType
@@ -38,6 +47,15 @@ const StatusChip: React.FC<StatusChipProps> = ({ status, label, ...props }) => {
     expired: { color: 'warning', label: 'Expired' },
     EXPIRED: { color: 'warning', label: 'Expired' },
     pending: { color: 'default', label: 'Pending' },
+    PENDING: { color: 'warning', label: 'Pending' },
+    approved: { color: 'success', label: 'Approved' },
+    APPROVED: { color: 'success', label: 'Approved' },
+    rejected: { color: 'error', label: 'Rejected' },
+    REJECTED: { color: 'error', label: 'Rejected' },
+    reverted: { color: 'info', label: 'Reverted' },
+    REVERTED: { color: 'info', label: 'Reverted' },
+    withdrawn: { color: 'default', label: 'Withdrawn' },
+    WITHDRAWN: { color: 'default', label: 'Withdrawn' },
     completed: { color: 'success', label: 'Completed' },
   }
 

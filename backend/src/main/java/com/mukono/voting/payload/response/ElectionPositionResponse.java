@@ -15,6 +15,12 @@ public class ElectionPositionResponse {
     private PositionScope positionScope;
     private Long fellowshipId;
     private String fellowshipName;
+    // New: deletion and applicant info
+    private Boolean canDelete;
+    private Long totalApplicants;
+    private Long approvedApplicants;
+    private Long pendingApplicants;
+    private Long rejectedApplicants;
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -37,6 +43,21 @@ public class ElectionPositionResponse {
 
     public String getFellowshipName() { return fellowshipName; }
     public void setFellowshipName(String fellowshipName) { this.fellowshipName = fellowshipName; }
+
+    public Boolean getCanDelete() { return canDelete; }
+    public void setCanDelete(Boolean canDelete) { this.canDelete = canDelete; }
+
+    public Long getTotalApplicants() { return totalApplicants; }
+    public void setTotalApplicants(Long totalApplicants) { this.totalApplicants = totalApplicants; }
+
+    public Long getApprovedApplicants() { return approvedApplicants; }
+    public void setApprovedApplicants(Long approvedApplicants) { this.approvedApplicants = approvedApplicants; }
+
+    public Long getPendingApplicants() { return pendingApplicants; }
+    public void setPendingApplicants(Long pendingApplicants) { this.pendingApplicants = pendingApplicants; }
+
+    public Long getRejectedApplicants() { return rejectedApplicants; }
+    public void setRejectedApplicants(Long rejectedApplicants) { this.rejectedApplicants = rejectedApplicants; }
 
     public static ElectionPositionResponse fromEntity(ElectionPosition ep) {
         ElectionPositionResponse response = new ElectionPositionResponse();

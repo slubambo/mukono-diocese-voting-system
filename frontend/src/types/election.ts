@@ -32,6 +32,14 @@ export interface Position {
   title?: string
   description?: string
   seats?: number
+  positionScope?: string
+  fellowshipId?: number
+  fellowshipName?: string
+  canDelete?: boolean
+  totalApplicants?: number
+  approvedApplicants?: number
+  pendingApplicants?: number
+  rejectedApplicants?: number
   fellowshipPosition?: {
     id: number
     scope?: string

@@ -1,21 +1,27 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, IconButton, Checkbox, FormControlLabel, Typography, Divider, Tooltip } from '@mui/material'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, IconButton, Checkbox, FormControlLabel, Typography, Divider, Tooltip, Chip, Accordion, AccordionSummary, AccordionDetails, InputAdornment, Stack } from '@mui/material'
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import dayjs from 'dayjs'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser'
 import CloseIcon from '@mui/icons-material/Close'
 import CancelIcon from '@mui/icons-material/Cancel'
 import RestoreIcon from '@mui/icons-material/Restore'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import SearchIcon from '@mui/icons-material/Search'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
-import StatusChip from '../common/StatusChip'
 import { electionApi } from '../../api/election.api'
 import { useToast } from '../feedback/ToastProvider'
 import { useAuth } from '../../context/AuthContext'
 import { getErrorMessage } from '../../api/errorHandler'
 import type { Position, VotingPeriod, VotingPeriodPositionsMapResponse, VotingPeriodPositionsResponse } from '../../types/election'
 
-const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
+const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | null; electionEnd?: string | null }> = ({ electionId, electionStart, electionEnd }) => {
   const [loading, setLoading] = useState(true)
   const [periods, setPeriods] = useState<VotingPeriod[]>([])
   const [showDialog, setShowDialog] = useState(false)
@@ -28,6 +34,9 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const [assignedByPeriod, setAssignedByPeriod] = useState<Record<string, number[]>>({})
   const [positionToPeriod, setPositionToPeriod] = useState<Record<number, string>>({})
   const [loadingPositions, setLoadingPositions] = useState(false)
+  const [positionSearch, setPositionSearch] = useState('')
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [saving, setSaving] = useState(false)
   const [lifecycleAction, setLifecycleAction] = useState<'open' | 'close' | 'cancel' | 'reactivate' | null>(null)
   const [lifecyclePeriod, setLifecyclePeriod] = useState<VotingPeriod | null>(null)
   const [electionWindow, setElectionWindow] = useState<{ start?: string; end?: string }>({})
@@ -98,6 +107,8 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
     setEndTime(p?.endTime ?? '')
     setFieldErrors({})
     if (!p) setAssigned([])
+    setPositionSearch('')
+    setExpanded({})
     setShowDialog(true)
   }
 
@@ -154,11 +165,29 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
     originalValuesRef.current = { name: editing.name ?? '', start: startLocal, end: endLocal }
   }, [editing, showDialog])
 
+  const groupedPositions = useMemo(() => {
+    const search = positionSearch.trim().toLowerCase()
+    const grouped = positions.reduce<Record<string, Position[]>>((acc, pos) => {
+      const fellowshipName = pos.fellowshipPosition?.fellowshipName || 'Other'
+      const label = `${pos.fellowshipPosition?.titleName || pos.title || 'Position'} ${fellowshipName}`.toLowerCase()
+      if (search && !label.includes(search)) return acc
+      acc[fellowshipName] = acc[fellowshipName] || []
+      acc[fellowshipName].push(pos)
+      return acc
+    }, {})
+    return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b))
+  }, [positions, positionSearch])
+
   const submit = async () => {
+    if (saving) return
     const nextErrors: { name?: string; startTime?: string; endTime?: string } = {}
     if (!name.trim()) nextErrors.name = 'Name is required'
     if (!startTime.trim()) nextErrors.startTime = 'Start time is required'
     if (!endTime.trim()) nextErrors.endTime = 'End time is required'
+    if (assigned.length === 0) {
+      toast.error('Select at least one position for this voting day')
+      return
+    }
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors)
       return
@@ -184,6 +213,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       return
     }
     try {
+      setSaving(true)
       const payload = {
         name,
         startTime: startIso,
@@ -210,6 +240,8 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       loadAssignments()
     } catch (err: any) {
       toast.error(getErrorMessage(err) || 'Failed to save voting period')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -234,63 +266,121 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
 
   if (loading) return <LoadingState />
 
+  const calcDuration = (start?: string, end?: string): string => {
+    if (!start || !end) return '—'
+    const s = new Date(start).getTime()
+    const e = new Date(end).getTime()
+    if (Number.isNaN(s) || Number.isNaN(e)) return '—'
+    const ms = e - s
+    const hours = ms / (1000 * 60 * 60)
+    if (hours < 24) return `${Math.round(hours)} hour${Math.round(hours) === 1 ? '' : 's'}`
+    const days = Math.round(hours / 24)
+    return `${days} day${days === 1 ? '' : 's'}`
+  }
+
   return (
     <Box>
       <Box sx={{ mb: 2 }}>
-        {isAdmin && <Button startIcon={<AddIcon />} variant="contained" onClick={() => openDialog()}>Create Voting Period</Button>}
+        {isAdmin && <Button startIcon={<AddIcon />} variant="contained" onClick={() => openDialog()}>Create Voting Day</Button>}
       </Box>
 
       {periods.length === 0 ? (
-        <EmptyState title="No voting periods" description="No voting periods have been created for this election." action={isAdmin ? <Button onClick={() => openDialog()}>Create Voting Period</Button> : undefined} />
+        <EmptyState title="No voting days" description="No voting days have been created for this election." action={isAdmin ? <Button onClick={() => openDialog()}>Create Voting Day</Button> : undefined} />
       ) : (
-        <Paper>
+        <Paper sx={{ width: '100%', borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
           <TableContainer>
-            <Table>
+            <Table size="small" sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Name</TableCell>
-                  <TableCell>Start</TableCell>
-                  <TableCell>End</TableCell>
+                  <TableCell>Start – End</TableCell>
+                  <TableCell>Duration</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell align="right">Positions</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                  {isAdmin && <TableCell align="right">Actions</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {periods.map(p => (
                   <TableRow key={String(p.id)} hover>
-                    <TableCell>{p.name || p.label}</TableCell>
-                    <TableCell>{p.startTime ? new Date(p.startTime).toLocaleString() : '—'}</TableCell>
-                    <TableCell>{p.endTime ? new Date(p.endTime).toLocaleString() : '—'}</TableCell>
-                    <TableCell><StatusChip status={(p.status || 'pending') as any} /></TableCell>
-                    <TableCell align="right">{p.positionsCount ?? assignedByPeriod[String(p.id)]?.length ?? 0}</TableCell>
-                    <TableCell align="right">
-                      {isAdmin && (
-                        <>
-                          <Tooltip title="Edit">
-                            <IconButton size="small" onClick={() => openDialog(p)}><EditIcon /></IconButton>
-                          </Tooltip>
-                          {p.status !== 'CANCELLED' && (
-                            <>
-                              <Tooltip title="Open">
-                                <IconButton size="small" onClick={() => { setLifecycleAction('open'); setLifecyclePeriod(p) }}><OpenInBrowserIcon /></IconButton>
-                              </Tooltip>
-                              <Tooltip title="Close">
-                                <IconButton size="small" onClick={() => { setLifecycleAction('close'); setLifecyclePeriod(p) }}><CloseIcon /></IconButton>
-                              </Tooltip>
-                              <Tooltip title="Cancel">
-                                <IconButton size="small" onClick={() => { setLifecycleAction('cancel'); setLifecyclePeriod(p) }}><CancelIcon /></IconButton>
-                              </Tooltip>
-                            </>
-                          )}
-                          {p.status === 'CANCELLED' && (
-                            <Tooltip title="Reactivate">
-                              <IconButton size="small" onClick={() => { setLifecycleAction('reactivate'); setLifecyclePeriod(p) }}><RestoreIcon /></IconButton>
-                            </Tooltip>
-                          )}
-                        </>
-                      )}
+                    <TableCell><Typography variant="body2">{p.name || p.label}</Typography></TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {p.startTime && p.endTime
+                          ? `${new Date(p.startTime).toLocaleString()} – ${new Date(p.endTime).toLocaleString()}`
+                          : p.startTime
+                            ? new Date(p.startTime).toLocaleString()
+                            : '—'}
+                      </Typography>
                     </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>{calcDuration(p.startTime, p.endTime)}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={p.status || 'PENDING'}
+                        size="small"
+                        color={p.status === 'OPEN' ? 'success' : p.status === 'CANCELLED' ? 'error' : 'default'}
+                        variant={p.status === 'DRAFT' ? 'outlined' : 'filled'}
+                      />
+                    </TableCell>
+                    <TableCell align="right"><Typography variant="body2">{p.positionsCount ?? assignedByPeriod[String(p.id)]?.length ?? 0}</Typography></TableCell>
+                    {isAdmin && (
+                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                        <Tooltip title={p.status === 'CLOSED' ? 'Closed periods cannot be edited' : 'Edit'}>
+                          <span>
+                            <IconButton size="small" color="primary" onClick={() => openDialog(p)} disabled={p.status === 'CLOSED'}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                        {p.status !== 'CANCELLED' && (
+                          <>
+                            <Tooltip title={p.status !== 'SCHEDULED' ? 'Only scheduled periods can be opened' : 'Open'}>
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  color="success"
+                                  onClick={() => { setLifecycleAction('open'); setLifecyclePeriod(p) }}
+                                  disabled={p.status !== 'SCHEDULED'}
+                                >
+                                  <OpenInBrowserIcon fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title={!(p.status === 'SCHEDULED' || p.status === 'OPEN') ? 'Only scheduled or open periods can be closed' : 'Close'}>
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  color="warning"
+                                  onClick={() => { setLifecycleAction('close'); setLifecyclePeriod(p) }}
+                                  disabled={!(p.status === 'SCHEDULED' || p.status === 'OPEN')}
+                                >
+                                  <CloseIcon fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title={p.status !== 'SCHEDULED' ? 'Only scheduled periods can be cancelled' : 'Cancel'}>
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => { setLifecycleAction('cancel'); setLifecyclePeriod(p) }}
+                                  disabled={p.status !== 'SCHEDULED'}
+                                >
+                                  <CancelIcon fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          </>
+                        )}
+                        {p.status === 'CANCELLED' && (
+                          <Tooltip title="Reactivate">
+                            <IconButton size="small" color="info" onClick={() => { setLifecycleAction('reactivate'); setLifecyclePeriod(p) }}><RestoreIcon fontSize="small" /></IconButton>
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -299,100 +389,149 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
         </Paper>
       )}
 
-      <Dialog open={showDialog} onClose={() => setShowDialog(false)} fullWidth>
-        <DialogTitle>{editing ? 'Edit Voting Period' : 'Create Voting Period'}</DialogTitle>
+      <Dialog open={showDialog} onClose={() => setShowDialog(false)} fullWidth maxWidth="sm">
+        <DialogTitle>{editing ? 'Edit Voting Day' : 'Create Voting Day'}</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'grid', gap: 2 }}>
-            <TextField
-              label="Name"
-              value={name}
-              onChange={(e) => { setName(e.target.value); setFieldErrors((prev) => ({ ...prev, name: undefined })) }}
-              fullWidth
-              required
-              error={Boolean(fieldErrors.name)}
-              helperText={fieldErrors.name}
-            />
-            <TextField
-              label="Start Time"
-              type="datetime-local"
-              value={startTime}
-              onChange={(e) => { setStartTime(e.target.value); setFieldErrors((prev) => ({ ...prev, startTime: undefined })) }}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ min: electionWindow.start ? formatLocalDateTime(electionWindow.start) : undefined, max: electionWindow.end ? formatLocalDateTime(electionWindow.end) : undefined }}
-              required
-              error={Boolean(fieldErrors.startTime)}
-              helperText={fieldErrors.startTime || (electionWindow.start && electionWindow.end ? `Must be within ${new Date(electionWindow.start).toLocaleString()} — ${new Date(electionWindow.end).toLocaleString()}` : undefined)}
-            />
-            <TextField
-              label="End Time"
-              type="datetime-local"
-              value={endTime}
-              onChange={(e) => { setEndTime(e.target.value); setFieldErrors((prev) => ({ ...prev, endTime: undefined })) }}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ min: electionWindow.start ? formatLocalDateTime(electionWindow.start) : undefined, max: electionWindow.end ? formatLocalDateTime(electionWindow.end) : undefined }}
-              required
-              error={Boolean(fieldErrors.endTime)}
-              helperText={fieldErrors.endTime}
-            />
-            <Divider />
-            <Typography variant="subtitle2">Positions for this voting period</Typography>
-            {loadingPositions ? (
-              <Typography variant="body2">Loading positions...</Typography>
-            ) : positions.length === 0 ? (
-              <Typography variant="body2">No positions available for this election.</Typography>
-            ) : (
-              <Box sx={{ display: 'grid', gap: 1 }}>
-                {Object.entries(
-                  positions.reduce<Record<string, Position[]>>((acc, pos) => {
-                    const name = pos.fellowshipPosition?.fellowshipName || 'Other'
-                    acc[name] = acc[name] || []
-                    acc[name].push(pos)
-                    return acc
-                  }, {})
-                ).map(([fellowshipName, items]) => (
-                  <Box key={fellowshipName}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>{fellowshipName}</Typography>
-                    {items.map((pos) => {
-                      const id = Number(pos.id)
-                      const assignedElsewhere = Boolean(positionToPeriod[id] && positionToPeriod[id] !== String(editing?.id ?? ''))
-                      const checked = assigned.includes(id)
-                      const fellowshipLabel = pos.fellowshipPosition?.fellowshipName ? ` — ${pos.fellowshipPosition.fellowshipName}` : ''
-                      const label = `${pos.fellowshipPosition?.titleName || pos.title || 'Position'}${fellowshipLabel} (${pos.seats ?? 1} seat${(pos.seats ?? 1) === 1 ? '' : 's'})`
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Box sx={{ display: 'grid', gap: 1.5, mt: 2 }}>
+              <TextField
+                label="Name"
+                value={name}
+                onChange={(e) => { setName(e.target.value); setFieldErrors((prev) => ({ ...prev, name: undefined })) }}
+                fullWidth
+                required
+                size="small"
+                error={Boolean(fieldErrors.name)}
+                helperText={fieldErrors.name}
+              />
+              <DateTimePicker
+                label="Start Time"
+                value={startTime ? dayjs(startTime) : null}
+                onChange={(v) => {
+                  setStartTime(v ? v.toISOString() : '')
+                  setFieldErrors((prev) => ({ ...prev, startTime: undefined }))
+                }}
+                minDateTime={electionStart ? dayjs(electionStart) : undefined}
+                maxDateTime={electionEnd ? dayjs(electionEnd) : undefined}
+                slotProps={{ textField: { fullWidth: true, size: 'small', error: Boolean(fieldErrors.startTime), helperText: fieldErrors.startTime } }}
+              />
+              <DateTimePicker
+                label="End Time"
+                value={endTime ? dayjs(endTime) : null}
+                onChange={(v) => {
+                  setEndTime(v ? v.toISOString() : '')
+                  setFieldErrors((prev) => ({ ...prev, endTime: undefined }))
+                }}
+                minDateTime={startTime ? dayjs(startTime).add(3, 'hours') : (electionStart ? dayjs(electionStart) : undefined)}
+                maxDateTime={electionEnd ? dayjs(electionEnd) : undefined}
+                slotProps={{ textField: { fullWidth: true, size: 'small', error: Boolean(fieldErrors.endTime), helperText: fieldErrors.endTime } }}
+              />
+              <Divider />
+              <Typography variant="subtitle2">Positions for this voting period</Typography>
+              {loadingPositions ? (
+                <Typography variant="body2">Loading positions...</Typography>
+              ) : positions.length === 0 ? (
+                <Typography variant="body2">No positions available for this election.</Typography>
+              ) : (
+                <Box sx={{ display: 'grid', gap: 1.5 }}>
+                  <TextField
+                    value={positionSearch}
+                    onChange={(e) => setPositionSearch(e.target.value)}
+                    placeholder="Search positions or fellowships"
+                    size="small"
+                    InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+                  />
+                  <Box sx={{ maxHeight: 360, overflow: 'auto', pr: 0.5, display: 'grid', gap: 1 }}>
+                    {groupedPositions.length === 0 ? (
+                      <Typography variant="body2">No matches found.</Typography>
+                    ) : groupedPositions.map(([fellowshipName, items]) => {
+                      const selectedCount = items.filter((pos) => assigned.includes(Number(pos.id))).length
+                      const totalCount = items.length
+                      const allSelected = selectedCount === totalCount
+                      const isExpanded = expanded[fellowshipName] ?? true
                       return (
-                        <Tooltip
-                          key={id}
-                          title={assignedElsewhere ? `Assigned to period #${positionToPeriod[id]}` : ''}
-                          disableHoverListener={!assignedElsewhere}
+                        <Accordion
+                          key={fellowshipName}
+                          expanded={isExpanded}
+                          onChange={() => setExpanded((prev) => ({ ...prev, [fellowshipName]: !isExpanded }))}
+                          disableGutters
+                          elevation={0}
+                          sx={{ border: '1px solid rgba(88, 28, 135, 0.12)', borderRadius: 1.5, '&:before': { display: 'none' } }}
                         >
-                          <FormControlLabel
-                            control={<Checkbox
-                              checked={checked}
-                              disabled={assignedElsewhere}
-                              onChange={() => {
-                                setAssigned((prev) => (
-                                  prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
-                                ))
-                              }}
-                            />}
-                            label={label}
-                          />
-                        </Tooltip>
+                          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 1.5 }}>
+                            <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1, justifyContent: 'space-between' }}>
+                              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{fellowshipName}</Typography>
+                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                  {selectedCount} of {totalCount} selected
+                                </Typography>
+                              </Box>
+                              <Button
+                                size="small"
+                                variant={allSelected ? 'outlined' : 'text'}
+                                startIcon={<CheckCircleIcon fontSize="small" />}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setAssigned((prev) => {
+                                    const ids = items.map((p) => Number(p.id))
+                                    if (allSelected) return prev.filter((id) => !ids.includes(id))
+                                    const merged = new Set([...prev, ...ids.filter((id) => !positionToPeriod[id] || positionToPeriod[id] === String(editing?.id ?? ''))])
+                                    return Array.from(merged)
+                                  })
+                                }}
+                                disabled={items.every((p) => positionToPeriod[Number(p.id)] && positionToPeriod[Number(p.id)] !== String(editing?.id ?? ''))}
+                              >
+                                {allSelected ? 'Clear' : 'Select all'}
+                              </Button>
+                            </Stack>
+                          </AccordionSummary>
+                          <AccordionDetails sx={{ pt: 0, pb: 1.5, px: 1.5, display: 'grid', gap: 0.5 }}>
+                            {items.map((pos) => {
+                              const id = Number(pos.id)
+                              const assignedElsewhere = Boolean(positionToPeriod[id] && positionToPeriod[id] !== String(editing?.id ?? ''))
+                              const checked = assigned.includes(id)
+                              const label = `${pos.fellowshipPosition?.titleName || pos.title || 'Position'} (${pos.seats ?? 1} seat${(pos.seats ?? 1) === 1 ? '' : 's'})`
+                              return (
+                                <Tooltip
+                                  key={id}
+                                  title={assignedElsewhere ? `Assigned to period #${positionToPeriod[id]}` : ''}
+                                  disableHoverListener={!assignedElsewhere}
+                                >
+                                  <FormControlLabel
+                                    control={<Checkbox
+                                      checked={checked}
+                                      disabled={assignedElsewhere}
+                                      onChange={() => {
+                                        setAssigned((prev) => (
+                                          prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
+                                        ))
+                                      }}
+                                    />}
+                                    label={label}
+                                  />
+                                </Tooltip>
+                              )
+                            })}
+                          </AccordionDetails>
+                        </Accordion>
                       )
                     })}
                   </Box>
-                ))}
-              </Box>
-            )}
-          </Box>
+                </Box>
+              )}
+            </Box>
+          </LocalizationProvider>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={submit}>Save</Button>
+          <Button variant="contained" onClick={submit} disabled={saving || assigned.length === 0}>
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={Boolean(lifecycleAction)} onClose={() => { setLifecycleAction(null); setLifecyclePeriod(null) }}>
-        <DialogTitle>{lifecycleAction ? `${lifecycleAction.toUpperCase()} Voting Period` : 'Voting Period'}</DialogTitle>
+        <DialogTitle>{lifecycleAction ? `${lifecycleAction.toUpperCase()} Voting Day` : 'Voting Day'}</DialogTitle>
         <DialogContent>
           {lifecyclePeriod ? `Are you sure you want to ${lifecycleAction} "${lifecyclePeriod.name || lifecyclePeriod.label || 'this period'}"?` : ''}
         </DialogContent>
