@@ -311,39 +311,116 @@ public class LeadershipAssignmentService {
 
     /**
      * List leadership assignments with optional filters.
+     * Supports dynamic filtering by status, person, fellowship, scope, and organizational hierarchy.
      * 
      * @param status filter by status (optional)
+     * @param dioceseId filter by diocese ID (optional)
+     * @param archdeaconryId filter by archdeaconry ID (optional)
+     * @param churchId filter by church ID (optional)
      * @param fellowshipId filter by fellowship ID (optional)
      * @param personId filter by person ID (optional)
-     * @param archdeaconryId filter by archdeaconry ID (optional)
+     * @param scope filter by position scope (optional)
      * @param pageable pagination information
      * @return a page of leadership assignments
      */
     public Page<LeadershipAssignment> list(
             RecordStatus status,
+            Long dioceseId,
+            Long archdeaconryId,
+            Long churchId,
             Long fellowshipId,
             Long personId,
-            Long archdeaconryId,
+            PositionScope scope,
             Pageable pageable) {
 
-        // Apply filters in priority order
+        // Apply filters in priority order, most specific first
+        
+        // 1. Person filter (highest priority - most specific)
         if (personId != null) {
+            if (scope != null) {
+                // Filter by person + scope
+                if (dioceseId != null) {
+                    return assignmentRepository
+                        .findByPersonIdAndFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndDioceseIdAndArchdeaconryIdAndChurchIdAndStatus(
+                            personId, fellowshipId != null ? fellowshipId : null, scope, dioceseId, null, null, status != null ? status : RecordStatus.ACTIVE, pageable);
+                } else if (archdeaconryId != null) {
+                    return assignmentRepository
+                        .findByPersonIdAndFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndDioceseIdAndArchdeaconryIdAndChurchIdAndStatus(
+                            personId, fellowshipId != null ? fellowshipId : null, scope, null, archdeaconryId, null, status != null ? status : RecordStatus.ACTIVE, pageable);
+                } else if (churchId != null) {
+                    return assignmentRepository
+                        .findByPersonIdAndFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndDioceseIdAndArchdeaconryIdAndChurchIdAndStatus(
+                            personId, fellowshipId != null ? fellowshipId : null, scope, null, null, churchId, status != null ? status : RecordStatus.ACTIVE, pageable);
+                }
+            }
             return assignmentRepository.findByPersonId(personId, pageable);
         }
-        
+
+        // 2. Fellowship + Scope filter
+        if (fellowshipId != null && scope != null) {
+            if (dioceseId != null) {
+                // Fellowship + Scope + Diocese
+                return assignmentRepository.findByFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndDioceseIdAndStatus(
+                    fellowshipId, scope, dioceseId, status != null ? status : RecordStatus.ACTIVE, pageable);
+            } else if (archdeaconryId != null) {
+                // Fellowship + Scope + Archdeaconry
+                return assignmentRepository.findByFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndArchdeaconryIdAndStatus(
+                    fellowshipId, scope, archdeaconryId, status != null ? status : RecordStatus.ACTIVE, pageable);
+            } else if (churchId != null) {
+                // Fellowship + Scope + Church
+                return assignmentRepository.findByFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndChurchIdAndStatus(
+                    fellowshipId, scope, churchId, status != null ? status : RecordStatus.ACTIVE, pageable);
+            } else {
+                // Fellowship + Scope only
+                return assignmentRepository.findByFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndStatus(
+                    fellowshipId, scope, status != null ? status : RecordStatus.ACTIVE, pageable);
+            }
+        }
+
+        // 3. Scope-specific filtering (without fellowship)
+        if (scope != null) {
+            if (dioceseId != null) {
+                return assignmentRepository.findByFellowshipPositionScopeAndDioceseIdAndStatus(
+                    scope, dioceseId, status != null ? status : RecordStatus.ACTIVE, pageable);
+            } else if (archdeaconryId != null) {
+                return assignmentRepository.findByFellowshipPositionScopeAndArchdeaconryIdAndStatus(
+                    scope, archdeaconryId, status != null ? status : RecordStatus.ACTIVE, pageable);
+            } else if (churchId != null) {
+                return assignmentRepository.findByFellowshipPositionScopeAndChurchIdAndStatus(
+                    scope, churchId, status != null ? status : RecordStatus.ACTIVE, pageable);
+            } else {
+                return assignmentRepository.findByFellowshipPositionScopeAndStatus(
+                    scope, status != null ? status : RecordStatus.ACTIVE, pageable);
+            }
+        }
+
+        // 4. Fellowship only filter
         if (fellowshipId != null) {
             return assignmentRepository.findByFellowshipPositionFellowshipId(fellowshipId, pageable);
         }
-        
-        if (archdeaconryId != null) {
-            return assignmentRepository.findByArchdeaconryId(archdeaconryId, pageable);
+
+        // 5. Organizational hierarchy filters (Diocese/Archdeaconry/Church)
+        if (dioceseId != null) {
+            return assignmentRepository.findByDioceseIdAndStatus(
+                dioceseId, status != null ? status : RecordStatus.ACTIVE, pageable);
         }
-        
+
+        if (archdeaconryId != null) {
+            return assignmentRepository.findByArchdeaconryIdAndStatus(
+                archdeaconryId, status != null ? status : RecordStatus.ACTIVE, pageable);
+        }
+
+        if (churchId != null) {
+            return assignmentRepository.findByChurchIdAndStatus(
+                churchId, status != null ? status : RecordStatus.ACTIVE, pageable);
+        }
+
+        // 6. Status-only filter
         if (status != null) {
             return assignmentRepository.findByStatus(status, pageable);
         }
 
-        // No filters - return all
+        // 7. No filters - return all
         return assignmentRepository.findAll(pageable);
     }
 

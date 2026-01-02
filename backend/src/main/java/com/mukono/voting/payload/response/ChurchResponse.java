@@ -11,6 +11,8 @@ public class ChurchResponse {
     private String code;
     private RecordStatus status;
     private ArchdeaconrySummary archdeaconry;
+    private DioceseSummary diocese;
+    private Long currentLeadersCount;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -24,6 +26,10 @@ public class ChurchResponse {
     public void setStatus(RecordStatus status) { this.status = status; }
     public ArchdeaconrySummary getArchdeaconry() { return archdeaconry; }
     public void setArchdeaconry(ArchdeaconrySummary archdeaconry) { this.archdeaconry = archdeaconry; }
+    public DioceseSummary getDiocese() { return diocese; }
+    public void setDiocese(DioceseSummary diocese) { this.diocese = diocese; }
+    public Long getCurrentLeadersCount() { return currentLeadersCount; }
+    public void setCurrentLeadersCount(Long currentLeadersCount) { this.currentLeadersCount = currentLeadersCount; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
@@ -38,6 +44,14 @@ public class ChurchResponse {
         dto.setCreatedAt(c.getCreatedAt());
         dto.setUpdatedAt(c.getUpdatedAt());
         dto.setArchdeaconry(c.getArchdeaconry() != null ? ArchdeaconrySummary.fromEntity(c.getArchdeaconry()) : null);
+        dto.setDiocese(c.getArchdeaconry() != null && c.getArchdeaconry().getDiocese() != null 
+            ? DioceseSummary.fromEntity(c.getArchdeaconry().getDiocese()) : null);
+        return dto;
+    }
+
+    public static ChurchResponse fromEntity(Church c, Long currentLeadersCount) {
+        ChurchResponse dto = fromEntity(c);
+        dto.setCurrentLeadersCount(currentLeadersCount);
         return dto;
     }
 }

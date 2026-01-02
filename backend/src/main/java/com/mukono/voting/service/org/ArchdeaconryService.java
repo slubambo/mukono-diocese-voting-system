@@ -3,12 +3,17 @@ package com.mukono.voting.service.org;
 import com.mukono.voting.model.common.RecordStatus;
 import com.mukono.voting.model.org.Archdeaconry;
 import com.mukono.voting.model.org.Diocese;
+import com.mukono.voting.repository.leadership.LeadershipAssignmentRepository;
 import com.mukono.voting.repository.org.ArchdeaconryRepository;
+import com.mukono.voting.repository.org.ChurchRepository;
 import com.mukono.voting.repository.org.DioceseRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.stream.Collectors;
 
 /**
  * Service for Archdeaconry entity.
@@ -20,11 +25,17 @@ public class ArchdeaconryService {
 
     private final ArchdeaconryRepository archdeaconryRepository;
     private final DioceseRepository dioceseRepository;
+    private final ChurchRepository churchRepository;
+    private final LeadershipAssignmentRepository leadershipAssignmentRepository;
 
     public ArchdeaconryService(ArchdeaconryRepository archdeaconryRepository,
-                               DioceseRepository dioceseRepository) {
+                               DioceseRepository dioceseRepository,
+                               ChurchRepository churchRepository,
+                               LeadershipAssignmentRepository leadershipAssignmentRepository) {
         this.archdeaconryRepository = archdeaconryRepository;
         this.dioceseRepository = dioceseRepository;
+        this.churchRepository = churchRepository;
+        this.leadershipAssignmentRepository = leadershipAssignmentRepository;
     }
 
     /**
@@ -119,6 +130,41 @@ public class ArchdeaconryService {
     }
 
     /**
+     * List archdeaconries within a diocese with optional search and enriched data.
+     * 
+     * @param dioceseId the diocese id (required)
+     * @param q the search query (optional)
+     * @param pageable pagination information
+     * @return page of archdeaconries with church and leader counts
+     * @throws IllegalArgumentException if dioceseId is null
+     */
+    @Transactional(readOnly = true)
+    public Page<ArchdeaconryWithCounts> listWithCounts(Long dioceseId, String q, Pageable pageable) {
+        if (dioceseId == null) {
+            throw new IllegalArgumentException("Diocese id is required");
+        }
+
+        // Get the page of archdeaconries
+        Page<Archdeaconry> page;
+        if (q == null || q.isBlank()) {
+            page = archdeaconryRepository.findByDioceseId(dioceseId, pageable);
+        } else {
+            page = archdeaconryRepository.findByDioceseIdAndNameContainingIgnoreCase(dioceseId, q.trim(), pageable);
+        }
+
+        // Enrich with counts using bulk queries (efficient)
+        var content = page.getContent().stream()
+            .map(archdeaconry -> new ArchdeaconryWithCounts(
+                archdeaconry,
+                churchRepository.countActiveByArchdeaconryId(archdeaconry.getId()),
+                leadershipAssignmentRepository.countByArchdeaconryIdAndStatus(archdeaconry.getId(), RecordStatus.ACTIVE)
+            ))
+            .collect(Collectors.toList());
+
+        return new PageImpl<>(content, pageable, page.getTotalElements());
+    }
+
+    /**
      * List archdeaconries within a diocese with optional search.
      * 
      * @param dioceseId the diocese id (required)
@@ -134,7 +180,7 @@ public class ArchdeaconryService {
         }
 
         if (q == null || q.isBlank()) {
-            return archdeaconryRepository.findAll(pageable).map(a -> a); // Filter by dioceseId after
+            return archdeaconryRepository.findByDioceseId(dioceseId, pageable);
         } else {
             return archdeaconryRepository.findByDioceseIdAndNameContainingIgnoreCase(dioceseId, q.trim(), pageable);
         }
@@ -151,4 +197,32 @@ public class ArchdeaconryService {
         archdeaconry.setStatus(RecordStatus.INACTIVE);
         archdeaconryRepository.save(archdeaconry);
     }
+
+    /**
+     * Internal DTO class to hold Archdeaconry with enriched counts.
+     */
+    public static class ArchdeaconryWithCounts {
+        private final Archdeaconry archdeaconry;
+        private final Long churchCount;
+        private final Long currentLeadersCount;
+
+        public ArchdeaconryWithCounts(Archdeaconry archdeaconry, Long churchCount, Long currentLeadersCount) {
+            this.archdeaconry = archdeaconry;
+            this.churchCount = churchCount;
+            this.currentLeadersCount = currentLeadersCount;
+        }
+
+        public Archdeaconry getArchdeaconry() {
+            return archdeaconry;
+        }
+
+        public Long getChurchCount() {
+            return churchCount;
+        }
+
+        public Long getCurrentLeadersCount() {
+            return currentLeadersCount;
+        }
+    }
 }
+

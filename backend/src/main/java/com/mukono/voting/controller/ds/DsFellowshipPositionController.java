@@ -1,5 +1,6 @@
 package com.mukono.voting.controller.ds;
 
+
 import com.mukono.voting.model.leadership.PositionScope;
 import com.mukono.voting.payload.request.CreateFellowshipPositionRequest;
 import com.mukono.voting.payload.request.UpdateFellowshipPositionRequest;
@@ -94,8 +95,8 @@ public class DsFellowshipPositionController {
             @RequestParam(name = "size", defaultValue = "20") int size,
             @RequestParam(name = "sort", defaultValue = "id,desc") String sort) {
         Pageable pageable = toPageable(page, size, sort);
-        var result = fellowshipPositionService.list(fellowshipId, scope, pageable)
-                .map(FellowshipPositionResponse::fromEntity);
+        var result = fellowshipPositionService.listWithCounts(fellowshipId, scope, pageable)
+                .map(pwc -> FellowshipPositionResponse.fromEntity(pwc.getPosition(), pwc.getCurrentAssignmentsCount()));
         return ResponseEntity.ok(result);
     }
 

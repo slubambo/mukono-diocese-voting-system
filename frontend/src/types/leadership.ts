@@ -13,6 +13,7 @@ export interface PositionTitle {
   id: number
   name: string
   status: EntityStatus
+  usageCount?: number
   createdAt: string
   updatedAt: string
 }
@@ -51,6 +52,8 @@ export interface FellowshipPosition {
   status: EntityStatus
   fellowship: FellowshipSummary
   title: PositionTitleSummary
+  currentAssignmentsCount?: number
+  availableSeats?: number
   createdAt: string
   updatedAt: string
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import {
   Button,
@@ -22,7 +22,14 @@ import {
   Select,
   FormControl,
   InputLabel,
+  TableSortLabel,
+  Link,
 } from '@mui/material'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+// @ts-ignore - dayjs module resolution
+import dayjs from 'dayjs'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -54,6 +61,8 @@ const PeopleRegistryPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [total, setTotal] = useState(0)
   const [query, setQuery] = useState<string>('')
+  const [debouncedQuery, setDebouncedQuery] = useState<string>('')
+  const [sort, setSort] = useState('fullName,asc')
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<PersonResponse | null>(null)
@@ -72,7 +81,7 @@ const PeopleRegistryPage: React.FC = () => {
   const fetchPeople = async () => {
     try {
       setLoading(true)
-      const resp = await peopleApi.list({ q: query || undefined, page, size: rowsPerPage, sort: 'id,desc' })
+      const resp = await peopleApi.list({ q: debouncedQuery || undefined, page, size: rowsPerPage, sort: 'id,desc' })
       setPeople(resp.content)
       setTotal(resp.totalElements)
     } catch (error: any) {
@@ -126,7 +135,81 @@ const PeopleRegistryPage: React.FC = () => {
 
   
 
-  useEffect(() => { fetchPeople() }, [page, rowsPerPage, query])
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 350)
+    return () => clearTimeout(timer)
+  }, [query])
+
+  useEffect(() => { fetchPeople() }, [page, rowsPerPage, debouncedQuery])
+
+  const sortOptions = [
+    { id: 'fullName,asc', name: 'Name (A-Z)' },
+    { id: 'fullName,desc', name: 'Name (Z-A)' },
+    { id: 'dateOfBirth,desc', name: 'Youngest first' },
+    { id: 'dateOfBirth,asc', name: 'Oldest first' },
+  ]
+
+  const displayPeople = useMemo(() => {
+    const byStatus = (status?: string | null) => (status === 'ACTIVE' ? 0 : 1)
+    const toTimestamp = (value?: string | null) => {
+      if (!value) return null
+      const time = new Date(value).getTime()
+      return Number.isNaN(time) ? null : time
+    }
+    return [...people].sort((a, b) => {
+      const statusCompare = byStatus(a.status) - byStatus(b.status)
+      if (statusCompare !== 0) return statusCompare
+
+      switch (sort) {
+        case 'fullName,asc':
+          return (a.fullName || '').localeCompare(b.fullName || '')
+        case 'fullName,desc':
+          return (b.fullName || '').localeCompare(a.fullName || '')
+        case 'dateOfBirth,asc': {
+          const aTime = toTimestamp(a.dateOfBirth)
+          const bTime = toTimestamp(b.dateOfBirth)
+          if (aTime === null && bTime === null) return 0
+          if (aTime === null) return 1
+          if (bTime === null) return -1
+          return aTime - bTime
+        }
+        case 'dateOfBirth,desc': {
+          const aTime = toTimestamp(a.dateOfBirth)
+          const bTime = toTimestamp(b.dateOfBirth)
+          if (aTime === null && bTime === null) return 0
+          if (aTime === null) return 1
+          if (bTime === null) return -1
+          return bTime - aTime
+        }
+        default:
+          return 0
+      }
+    })
+  }, [people, sort])
+
+  const getSortDirection = (column: 'fullName' | 'dateOfBirth') => {
+    if (sort.startsWith(`${column},`)) return sort.endsWith('asc') ? 'asc' : 'desc'
+    return false
+  }
+
+  const toggleSort = (column: 'fullName' | 'dateOfBirth') => {
+    const direction = getSortDirection(column)
+    if (!direction) {
+      setSort(`${column},asc`)
+    } else if (direction === 'asc') {
+      setSort(`${column},desc`)
+    } else {
+      setSort(`${column},asc`)
+    }
+    setPage(0)
+  }
+
+  const formatAge = (dob?: string | null) => {
+    if (!dob) return '—'
+    const d = dayjs(dob)
+    if (!d.isValid()) return '—'
+    return `${dayjs().diff(d, 'year')}`
+  }
 
   const openCreate = () => { setEditing(null); reset({ fullName: '', email: '', phoneNumber: '', gender: '', dateOfBirth: '' }); setDialogOpen(true) }
   const openEdit = (p: PersonResponse) => { setEditing(p); reset({ fullName: p.fullName, email: p.email || '', phoneNumber: p.phoneNumber || '', gender: p.gender || '', dateOfBirth: p.dateOfBirth || '' }); setDialogOpen(true) }
@@ -177,38 +260,59 @@ const PeopleRegistryPage: React.FC = () => {
               value: query,
               placeholder: 'Search by name or email',
               onChange: (v: any) => { setQuery(v as string); setPage(0) },
-            }
+            },
+            {
+              id: 'sort',
+              label: 'Sort by',
+              value: sort,
+              options: sortOptions,
+              onChange: (value) => {
+                setSort(value as string)
+                setPage(0)
+              },
+              placeholder: 'Sort by',
+            },
           ]}
         />
 
         <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
           {loading ? (
             <LoadingState count={5} variant="row" />
-          ) : people.length === 0 ? (
+          ) : displayPeople.length === 0 ? (
             <EmptyState title="No people" description={isAdmin ? 'Create your first person.' : 'No people found.'} action={isAdmin ? <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Create Person</Button> : undefined} />
           ) : (
             <>
               <TableContainer>
-                <Table sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
+                <Table size="small" sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Full Name</TableCell>
+                      <TableCell sortDirection={getSortDirection('fullName') || false}>
+                        <TableSortLabel active={Boolean(getSortDirection('fullName'))} direction={(getSortDirection('fullName') as any) || 'asc'} onClick={() => toggleSort('fullName')}>
+                          Full Name
+                        </TableSortLabel>
+                      </TableCell>
                       <TableCell>Email</TableCell>
                       <TableCell>Phone</TableCell>
                       <TableCell>Gender</TableCell>
-                      <TableCell>Date of Birth</TableCell>
+                      <TableCell sortDirection={getSortDirection('dateOfBirth') || false}>
+                        <TableSortLabel active={Boolean(getSortDirection('dateOfBirth'))} direction={(getSortDirection('dateOfBirth') as any) || 'asc'} onClick={() => toggleSort('dateOfBirth')}>
+                          Date of Birth
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell>Age</TableCell>
                       <TableCell>Status</TableCell>
                       {isAdmin && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {people.map((p) => (
+                    {displayPeople.map((p) => (
                       <TableRow key={p.id} hover>
                         <TableCell><Typography variant="body2">{p.fullName}</Typography></TableCell>
-                        <TableCell>{p.email}</TableCell>
-                        <TableCell>{p.phoneNumber}</TableCell>
-                        <TableCell>{p.gender}</TableCell>
+                        <TableCell>{p.email ? <Link href={`mailto:${p.email}`} underline="hover" color="inherit">{p.email}</Link> : ''}</TableCell>
+                        <TableCell>{p.phoneNumber ? <Link href={`tel:${p.phoneNumber}`} underline="hover" color="inherit">{p.phoneNumber}</Link> : ''}</TableCell>
+                        <TableCell>{p.gender ? p.gender.charAt(0) + p.gender.slice(1).toLowerCase() : ''}</TableCell>
                         <TableCell>{p.dateOfBirth ? new Date(p.dateOfBirth).toLocaleDateString() : ''}</TableCell>
+                        <TableCell>{formatAge(p.dateOfBirth)}</TableCell>
                         <TableCell><StatusChip status={(p.status as any) ?? 'INACTIVE'} /></TableCell>
                         {isAdmin && (
                           <TableCell align="right">
@@ -227,38 +331,64 @@ const PeopleRegistryPage: React.FC = () => {
           )}
         </Paper>
 
-        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="xs" fullWidth>
           <DialogTitle>{editing ? 'Edit Person' : 'Create Person'}</DialogTitle>
           <DialogContent>
-            <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Controller name="fullName" control={control} rules={{ required: 'Full name is required' }} render={({ field, fieldState }) => (
-                <TextField {...field} label="Full Name" required error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-              )} />
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <Controller name="fullName" control={control} rules={{ required: 'Full name is required' }} render={({ field, fieldState }) => (
+                  <TextField {...field} label="Full Name" required error={!!fieldState.error} helperText={fieldState.error?.message} size="small" sx={{ gridColumn: '1 / -1' }} />
+                )} />
 
-              <Controller name="email" control={control} render={({ field }) => (
-                <TextField {...field} label="Email" type="email" fullWidth />
-              )} />
+                <Controller name="email" control={control} render={({ field }) => (
+                  <TextField {...field} label="Email" type="email" size="small" />
+                )} />
 
-              <Controller name="phoneNumber" control={control} render={({ field }) => (
-                <TextField {...field} label="Phone Number" fullWidth />
-              )} />
+                <Controller name="phoneNumber" control={control} render={({ field }) => (
+                  <TextField {...field} label="Phone Number" size="small" />
+                )} />
 
-              <Controller name="gender" control={control} render={({ field }) => (
-                <FormControl fullWidth>
-                  <InputLabel>Gender</InputLabel>
-                  <Select {...field} label="Gender">
-                    <MenuItem value="">Unknown</MenuItem>
-                    <MenuItem value="MALE">Male</MenuItem>
-                    <MenuItem value="FEMALE">Female</MenuItem>
-                  </Select>
-                </FormControl>
-              )} />
+                <Controller name="gender" control={control} render={({ field }) => (
+                  <FormControl size="small">
+                    <InputLabel>Gender</InputLabel>
+                    <Select {...field} label="Gender">
+                      <MenuItem value="">Unknown</MenuItem>
+                      <MenuItem value="MALE">Male</MenuItem>
+                      <MenuItem value="FEMALE">Female</MenuItem>
+                    </Select>
+                  </FormControl>
+                )} />
 
-              <Controller name="dateOfBirth" control={control} render={({ field }) => (
-                <TextField {...field} label="Date of Birth" type="date" InputLabelProps={{ shrink: true }} fullWidth />
-              )} />
+                <Controller name="dateOfBirth" control={control} rules={{ 
+                  validate: (value) => {
+                    if (!value) return true // Optional field
+                    const date = dayjs(value)
+                    if (!date.isValid()) return 'Invalid date'
+                    const age = dayjs().diff(date, 'year')
+                    if (age < 0) return 'Birth date cannot be in the future'
+                    return true
+                  }
+                }} render={({ field, fieldState }) => (
+                  <DatePicker
+                    label="Date of Birth"
+                    value={field.value ? dayjs(field.value) : null}
+                    onChange={(date) => field.onChange(date ? date.format('YYYY-MM-DD') : '')}
+                    slotProps={{
+                      textField: {
+                        size: 'small',
+                        error: !!fieldState.error,
+                        helperText: fieldState.error?.message,
+                      },
+                      openPickerButton: { color: 'primary' },
+                    }}
+                    openTo="year"
+                    views={['year', 'month', 'day']}
+                    defaultValue={dayjs().subtract(18, 'year')}
+                  />
+                )} />
 
-            </Box>
+              </Box>
+            </LocalizationProvider>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setDialogOpen(false)}>Cancel</Button>

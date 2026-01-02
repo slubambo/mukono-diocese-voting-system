@@ -3,7 +3,7 @@
  * Allows ADMIN to create, update, delete dioceses
  * Allows DS/Polling Officer to view dioceses (read-only)
  */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Button,
@@ -58,6 +58,7 @@ export const DiocesePage: React.FC = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
+  const [sort, setSort] = useState('name,asc')
   
   // Dialog state
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
@@ -66,6 +67,7 @@ export const DiocesePage: React.FC = () => {
     name: '',
     code: '',
   })
+  const [errors, setErrors] = useState<{ name?: string; code?: string }>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [dioceseToDelete, setDioceseToDelete] = useState<Diocese | null>(null)
   
@@ -118,6 +120,34 @@ export const DiocesePage: React.FC = () => {
     inactive: dioceses.filter((d) => d.status === 'INACTIVE').length,
   }
 
+  const sortOptions = [
+    { id: 'name,asc', name: 'Name (A-Z)' },
+    { id: 'name,desc', name: 'Name (Z-A)' },
+    { id: 'createdAt,desc', name: 'Newest first' },
+    { id: 'createdAt,asc', name: 'Oldest first' },
+  ]
+
+  const displayDioceses = useMemo(() => {
+    const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
+    return [...filteredDioceses].sort((a, b) => {
+      const statusCompare = byStatus(a.status) - byStatus(b.status)
+      if (statusCompare !== 0) return statusCompare
+
+      switch (sort) {
+        case 'name,asc':
+          return a.name.localeCompare(b.name)
+        case 'name,desc':
+          return b.name.localeCompare(a.name)
+        case 'createdAt,asc':
+          return a.createdAt.localeCompare(b.createdAt)
+        case 'createdAt,desc':
+          return b.createdAt.localeCompare(a.createdAt)
+        default:
+          return 0
+      }
+    })
+  }, [filteredDioceses, sort])
+
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage)
   }
@@ -129,6 +159,7 @@ export const DiocesePage: React.FC = () => {
 
   const handleOpenCreateDialog = () => {
     setFormData({ name: '', code: '' })
+    setErrors({})
     setSelectedDiocese(null)
     setDialogMode('create')
   }
@@ -139,6 +170,7 @@ export const DiocesePage: React.FC = () => {
       code: diocese.code || '',
       status: diocese.status,
     })
+    setErrors({})
     setSelectedDiocese(diocese)
     setDialogMode('edit')
   }
@@ -147,13 +179,22 @@ export const DiocesePage: React.FC = () => {
     setDialogMode(null)
     setSelectedDiocese(null)
     setFormData({ name: '', code: '' })
+    setErrors({})
+  }
+
+  const validateForm = () => {
+    const nextErrors: { name?: string; code?: string } = {}
+
+    if (!formData.name.trim()) {
+      nextErrors.name = 'Name is required'
+    }
+
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
   }
 
   const handleSave = async () => {
-    if (!formData.name.trim()) {
-      showToast('Diocese name is required', 'error')
-      return
-    }
+    if (!validateForm()) return
 
     try {
       if (dialogMode === 'create') {
@@ -212,6 +253,8 @@ export const DiocesePage: React.FC = () => {
     })
   }
 
+  const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
+
   return (
     <AppShell>
       <PageLayout title="Dioceses">
@@ -226,6 +269,19 @@ export const DiocesePage: React.FC = () => {
             { label: 'Total Dioceses', value: stats.total },
             { label: 'Active', value: stats.active },
             { label: 'Inactive', value: stats.inactive },
+          ]}
+          filters={[
+            {
+              id: 'sort',
+              label: 'Sort by',
+              value: sort,
+              options: sortOptions,
+              onChange: (value) => {
+                setSort(value as string)
+                setPage(0)
+              },
+              placeholder: 'Sort by',
+            },
           ]}
         />
 
@@ -267,7 +323,7 @@ export const DiocesePage: React.FC = () => {
       <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
         {loading ? (
           <LoadingState count={5} variant="row" />
-        ) : filteredDioceses.length === 0 ? (
+        ) : displayDioceses.length === 0 ? (
           <EmptyState
             title={searchQuery ? 'No dioceses found' : 'No dioceses found'}
             description={
@@ -308,13 +364,15 @@ export const DiocesePage: React.FC = () => {
                   <TableRow>
                     <TableCell>Name</TableCell>
                     <TableCell>Code</TableCell>
+                    <TableCell align="right">Archdeaconries</TableCell>
+                    <TableCell align="right">Churches</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Created Date</TableCell>
                     {!isReadOnly && <TableCell align="right">Actions</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredDioceses.map((diocese) => (
+                  {displayDioceses.map((diocese) => (
                     <TableRow key={diocese.id} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight={500}>
@@ -322,6 +380,8 @@ export const DiocesePage: React.FC = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>{diocese.code || '—'}</TableCell>
+                      <TableCell align="right">{renderCount(diocese.archdeaconryCount)}</TableCell>
+                      <TableCell align="right">{renderCount(diocese.churchCount)}</TableCell>
                       <TableCell>
                         <StatusChip status={diocese.status} />
                       </TableCell>
@@ -372,24 +432,34 @@ export const DiocesePage: React.FC = () => {
           {dialogMode === 'create' ? 'Create Diocese' : 'Edit Diocese'}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1.5 }}>
             <TextField
               label="Name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value })
+                if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }))
+              }}
               required
               fullWidth
               autoFocus
+              size="small"
+              error={Boolean(errors.name)}
+              helperText={errors.name}
             />
             <TextField
               label="Code"
               value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, code: e.target.value })
+                if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }))
+              }}
               fullWidth
-              helperText="Optional unique identifier"
+              helperText={errors.code || 'Optional unique identifier'}
+              size="small"
             />
             {dialogMode === 'edit' && (
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={formData.status || 'ACTIVE'}

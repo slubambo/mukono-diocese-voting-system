@@ -11,6 +11,8 @@ export interface Diocese {
   name: string
   code?: string
   status: EntityStatus
+  archdeaconryCount?: number
+  churchCount?: number
   createdAt: string
   updatedAt: string
 }
@@ -51,6 +53,8 @@ export interface Archdeaconry {
   code?: string
   status: EntityStatus
   diocese: DioceseSummary
+  churchCount?: number
+  currentLeadersCount?: number
   createdAt: string
   updatedAt: string
 }
@@ -93,6 +97,8 @@ export interface Church {
   code?: string
   status: EntityStatus
   archdeaconry: ArchdeaconrySummary
+  diocese?: DioceseSummary
+  currentLeadersCount?: number
   createdAt: string
   updatedAt: string
 }
@@ -134,6 +140,7 @@ export interface Fellowship {
   name: string
   code?: string
   status: EntityStatus
+  positionsCount?: number
   createdAt: string
   updatedAt: string
 }

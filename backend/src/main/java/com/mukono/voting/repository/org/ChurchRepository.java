@@ -60,4 +60,22 @@ public interface ChurchRepository extends JpaRepository<Church, Long> {
         @Param("archdeaconryId") Long archdeaconryId,
         @Param("name") String name
     );
+
+    /**
+     * Count active churches in an archdeaconry.
+     * 
+     * @param archdeaconryId the archdeaconry id
+     * @return count of active churches
+     */
+    @Query("SELECT COUNT(c) FROM Church c WHERE c.archdeaconry.id = :archdeaconryId AND c.status = 'ACTIVE'")
+    long countActiveByArchdeaconryId(@Param("archdeaconryId") Long archdeaconryId);
+
+    /**
+     * Count active churches in a diocese (through archdeaconry).
+     * 
+     * @param dioceseId the diocese id
+     * @return count of active churches in the diocese
+     */
+    @Query("SELECT COUNT(c) FROM Church c WHERE c.archdeaconry.diocese.id = :dioceseId AND c.status = 'ACTIVE'")
+    long countActiveByDioceseId(@Param("dioceseId") Long dioceseId);
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Button,
   Paper,
@@ -26,6 +26,8 @@ import {
   OutlinedInput,
   Checkbox,
   ListItemText,
+  TableSortLabel,
+  Link,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -56,6 +58,7 @@ const UserManagementPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [total, setTotal] = useState(0)
   const [query, setQuery] = useState('')
+  const [sort, setSort] = useState('username,asc')
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<User | null>(null)
@@ -71,6 +74,15 @@ const UserManagementPage: React.FC = () => {
   const [resetNewPassword, setResetNewPassword] = useState<string>('')
 
   const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues: { username: '', email: '', password: '', displayName: '', roles: [] } })
+
+  const sortOptions = [
+    { id: 'username,asc', name: 'Username (A-Z)' },
+    { id: 'username,desc', name: 'Username (Z-A)' },
+    { id: 'displayName,asc', name: 'Display Name (A-Z)' },
+    { id: 'displayName,desc', name: 'Display Name (Z-A)' },
+    { id: 'status,active', name: 'Active first' },
+    { id: 'status,inactive', name: 'Inactive first' },
+  ]
 
   const fetchUsers = async () => {
     try {
@@ -112,6 +124,46 @@ const UserManagementPage: React.FC = () => {
     if (!role) return ''
     const r = role.replace(/^ROLE_/, '')
     return r.split('_').map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()).join(' ')
+  }
+
+  const displayUsers = useMemo(() => {
+    const activeValue = (active?: boolean) => (active ? 0 : 1)
+    const safeText = (value?: string | null) => (value || '').toLowerCase()
+
+    return [...users].sort((a, b) => {
+      if (sort === 'status,active') return activeValue(a.active) - activeValue(b.active)
+      if (sort === 'status,inactive') return activeValue(b.active) - activeValue(a.active)
+
+      switch (sort) {
+        case 'username,asc':
+          return safeText(a.username).localeCompare(safeText(b.username))
+        case 'username,desc':
+          return safeText(b.username).localeCompare(safeText(a.username))
+        case 'displayName,asc':
+          return safeText(a.displayName).localeCompare(safeText(b.displayName))
+        case 'displayName,desc':
+          return safeText(b.displayName).localeCompare(safeText(a.displayName))
+        default:
+          return 0
+      }
+    })
+  }, [users, sort])
+
+  const getSortDirection = (column: 'username' | 'displayName') => {
+    if (sort.startsWith(`${column},`)) return sort.endsWith('asc') ? 'asc' : 'desc'
+    return false
+  }
+
+  const toggleSort = (column: 'username' | 'displayName') => {
+    const direction = getSortDirection(column)
+    if (!direction) {
+      setSort(`${column},asc`)
+    } else if (direction === 'asc') {
+      setSort(`${column},desc`)
+    } else {
+      setSort(`${column},asc`)
+    }
+    setPage(0)
   }
 
   const openCreate = () => { setEditing(null); reset({ username: '', email: '', password: '', displayName: '', roles: [] }); setDialogOpen(true) }
@@ -209,7 +261,26 @@ const UserManagementPage: React.FC = () => {
           onAddClick={isAdmin ? openCreate : undefined}
           addButtonLabel="Create User"
           isAdmin={isAdmin}
-          filters={[{ id: 'search', label: 'Search', value: query, placeholder: 'Search by username or email', onChange: (v: any) => { setQuery(v as string); setPage(0) } }]}
+          filters={[
+            {
+              id: 'search',
+              label: 'Search',
+              value: query,
+              placeholder: 'Search by username or email',
+              onChange: (v: any) => { setQuery(v as string); setPage(0) },
+            },
+            {
+              id: 'sort',
+              label: 'Sort by',
+              value: sort,
+              options: sortOptions,
+              onChange: (value) => {
+                setSort(value as string)
+                setPage(0)
+              },
+              placeholder: 'Sort by',
+            },
+          ]}
         />
 
         <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
@@ -220,11 +291,27 @@ const UserManagementPage: React.FC = () => {
           ) : (
             <>
               <TableContainer>
-                <Table sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
+                <Table size="small" sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Username</TableCell>
-                      <TableCell>Display Name</TableCell>
+                      <TableCell sortDirection={getSortDirection('username') || false}>
+                        <TableSortLabel
+                          active={Boolean(getSortDirection('username'))}
+                          direction={(getSortDirection('username') as any) || 'asc'}
+                          onClick={() => toggleSort('username')}
+                        >
+                          Username
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell sortDirection={getSortDirection('displayName') || false}>
+                        <TableSortLabel
+                          active={Boolean(getSortDirection('displayName'))}
+                          direction={(getSortDirection('displayName') as any) || 'asc'}
+                          onClick={() => toggleSort('displayName')}
+                        >
+                          Display Name
+                        </TableSortLabel>
+                      </TableCell>
                       <TableCell>Email</TableCell>
                       <TableCell>Roles</TableCell>
                       <TableCell>Status</TableCell>
@@ -232,13 +319,13 @@ const UserManagementPage: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {users.map((u) => (
+                    {displayUsers.map((u) => (
                       <TableRow key={u.id} hover>
-                        <TableCell>{u.username}</TableCell>
-                        <TableCell>{u.displayName}</TableCell>
-                        <TableCell>{u.email}</TableCell>
+                        <TableCell><Typography variant="body2">{u.username}</Typography></TableCell>
+                        <TableCell><Typography variant="body2">{u.displayName}</Typography></TableCell>
+                        <TableCell>{u.email ? <Link href={`mailto:${u.email}`} underline="hover" color="inherit">{u.email}</Link> : ''}</TableCell>
                         <TableCell>{u.roles.map(r => <Chip key={r} label={formatRoleLabel(r)} size="small" sx={{ mr: 0.5 }} />)}</TableCell>
-                        <TableCell>{u.active ? <Chip label="Active" color="success" /> : <Chip label="Inactive" color="default" />}</TableCell>
+                        <TableCell>{u.active ? <Chip label="Active" color="success" size="small" /> : <Chip label="Inactive" color="default" size="small" />}</TableCell>
                         {isAdmin && (
                           <TableCell align="right">
                             <Button size="small" onClick={() => openEdit(u)} sx={{ mr: 1 }}>Edit</Button>
@@ -289,47 +376,90 @@ const UserManagementPage: React.FC = () => {
         <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
           <DialogTitle>{editing ? 'Edit User' : 'Create User'}</DialogTitle>
           <DialogContent>
-            <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box
+              component="form"
+              onSubmit={handleSubmit(onSubmit)}
+              sx={{ mt: 2, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 1.5 }}
+            >
               {!editing && (
-                <Controller name="username" control={control} rules={{ required: 'Username is required' }} render={({ field, fieldState }) => (
-                  <TextField {...field} label="Username" required error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                )} />
+                <Controller
+                  name="username"
+                  control={control}
+                  rules={{ required: 'Username is required' }}
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      {...field}
+                      label="Username"
+                      required
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      fullWidth
+                      size="small"
+                    />
+                  )}
+                />
               )}
 
-              <Controller name="email" control={control} render={({ field }) => (
-                <TextField {...field} label="Email" type="email" fullWidth />
-              )} />
+              <Controller
+                name="email"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} label="Email" type="email" fullWidth size="small" />
+                )}
+              />
 
               {!editing && (
-                <Controller name="password" control={control} rules={{ required: 'Password is required' }} render={({ field, fieldState }) => (
-                  <TextField {...field} label="Password" type="password" required error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                )} />
+                <Controller
+                  name="password"
+                  control={control}
+                  rules={{ required: 'Password is required' }}
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      {...field}
+                      label="Password"
+                      type="password"
+                      required
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      fullWidth
+                      size="small"
+                    />
+                  )}
+                />
               )}
 
-              <Controller name="displayName" control={control} render={({ field }) => (
-                <TextField {...field} label="Display Name" fullWidth />
-              )} />
+              <Controller
+                name="displayName"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} label="Display Name" fullWidth size="small" />
+                )}
+              />
 
-              <Controller name="roles" control={control} render={({ field }) => (
-                <FormControl fullWidth>
-                  <InputLabel id="roles-label">Roles</InputLabel>
-                  <Select
-                    labelId="roles-label"
-                    multiple
-                    value={field.value || []}
-                    onChange={(e) => field.onChange(e.target.value as string[])}
-                    input={<OutlinedInput label="Roles" />}
-                    renderValue={(selected) => (selected as string[]).map(s => <Chip key={s} label={formatRoleLabel(s)} size="small" sx={{ mr: 0.5 }} />)}
-                  >
-                      {rolesOptions.map((r) => (
-                        <MenuItem key={r} value={r}>
-                          <Checkbox checked={(field.value || []).indexOf(r) > -1} />
-                          <ListItemText primary={formatRoleLabel(r)} />
-                        </MenuItem>
-                      ))}
-                  </Select>
-                </FormControl>
-              )} />
+              <Controller
+                name="roles"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth size="small" sx={{ gridColumn: '1 / -1' }}>
+                    <InputLabel id="roles-label">Roles</InputLabel>
+                    <Select
+                      labelId="roles-label"
+                      multiple
+                      value={field.value || []}
+                      onChange={(e) => field.onChange(e.target.value as string[])}
+                      input={<OutlinedInput label="Roles" />}
+                      renderValue={(selected) => (selected as string[]).map(s => <Chip key={s} label={formatRoleLabel(s)} size="small" sx={{ mr: 0.5 }} />)}
+                    >
+                        {rolesOptions.map((r) => (
+                          <MenuItem key={r} value={r}>
+                            <Checkbox checked={(field.value || []).indexOf(r) > -1} />
+                            <ListItemText primary={formatRoleLabel(r)} />
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
 
             </Box>
           </DialogContent>

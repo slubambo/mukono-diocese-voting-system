@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { Box, Button, TextField, FormControl, InputLabel, Select, MenuItem, Autocomplete } from '@mui/material'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+// @ts-ignore dayjs module resolution without esModuleInterop
+import dayjs from 'dayjs'
 import type { CreateLeadershipAssignmentRequest, LeadershipAssignmentResponse } from '../../types/leadership'
 import { leadershipApi } from '../../api/leadership.api'
 import { fellowshipApi } from '../../api/fellowship.api'
@@ -28,7 +33,7 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
   const [churches, setChurches] = useState<any[]>([])
   const [levels, setLevels] = useState<string[]>([])
 
-  const { control, handleSubmit, reset, watch, setValue } = useForm<CreateLeadershipAssignmentRequest & { termStartDateMonth?: string; termEndDateMonth?: string }>({ defaultValues: { personId: personId ?? 0, fellowshipPositionId: 0, termStartDate: '', termEndDate: '' } })
+  const { control, handleSubmit, reset, watch, setValue, getValues } = useForm<CreateLeadershipAssignmentRequest & { termStartDateMonth?: string; termEndDateMonth?: string }>({ defaultValues: { personId: personId ?? 0, fellowshipPositionId: 0, termStartDate: '', termEndDate: '' } })
 
   const [people, setPeople] = useState<any[]>([])
   const showPersonSelector = !personId
@@ -39,7 +44,99 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
   const watchedDiocese = watch('dioceseId') as number | undefined
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null)
 
-  useEffect(() => { fellowshipApi.list({ page: 0, size: 1000 }).then(r => setFellowships(r.content)).catch(() => {}) ; dioceseApi.list({ page: 0, size: 100 }).then(r => setDioceses(r.content)).catch(() => {}) ; leadershipApi.getLevels().then(lv => setLevels(lv)).catch(() => setLevels(['DIOCESE','ARCHDEACONRY','CHURCH'])) }, [])
+  const mergeById = (prev: any[], next: any[]) => {
+    const map = new Map<number, any>()
+    prev.forEach((item) => map.set(item.id, item))
+    next.forEach((item) => map.set(item.id, item))
+    return Array.from(map.values())
+  }
+
+  useEffect(() => {
+    fellowshipApi.list({ page: 0, size: 1000 }).then(r => setFellowships(r.content)).catch(() => {})
+    dioceseApi.list({ page: 0, size: 100 }).then(r => setDioceses((prev) => mergeById(prev, r.content))).catch(() => {})
+    leadershipApi.getLevels().then(lv => setLevels(lv)).catch(() => setLevels(['DIOCESE','ARCHDEACONRY','CHURCH']))
+  }, [])
+
+  useEffect(() => {
+    if (!assignment) return
+    const fid = (assignment.fellowshipPosition as any)?.fellowshipId ?? assignment.fellowship?.id
+    const fname = (assignment.fellowshipPosition as any)?.fellowshipName ?? assignment.fellowship?.name
+    if (!fid || !fname) return
+    setFellowships((prev) => (prev.some((f) => f.id === fid) ? prev : [{ id: fid, name: fname }, ...prev]))
+  }, [assignment])
+
+  useEffect(() => {
+    if (!assignment) return
+    let cancelled = false
+
+    const hydrateLocation = async () => {
+      const churchFromAssignment = assignment.church ?? null
+      const archFromAssignment = assignment.archdeaconry ?? null
+      const dioceseFromAssignment = assignment.diocese ?? null
+
+      let archId =
+        archFromAssignment?.id ??
+        assignment.archdeaconryId ??
+        churchFromAssignment?.archdeaconryId ??
+        null
+      let dioceseId =
+        dioceseFromAssignment?.id ??
+        assignment.dioceseId ??
+        archFromAssignment?.dioceseId ??
+        null
+
+      let archResolved = archFromAssignment
+      let dioceseResolved = dioceseFromAssignment
+
+      if (!archResolved && archId) {
+        try {
+          archResolved = await archdeaconryApi.get(archId)
+        } catch (_) {
+          // ignore
+        }
+      }
+
+      if (!dioceseId && archResolved?.dioceseId) {
+        dioceseId = archResolved.dioceseId
+      }
+
+      if (!dioceseResolved && dioceseId) {
+        try {
+          dioceseResolved = await dioceseApi.get(dioceseId)
+        } catch (_) {
+          // ignore
+        }
+      }
+
+      if (cancelled) return
+
+      if (dioceseResolved?.id && dioceseResolved?.name) {
+        setDioceses((prev) => (prev.some((d) => d.id === dioceseResolved?.id) ? prev : [dioceseResolved, ...prev]))
+      }
+      if (archResolved?.id && archResolved?.name) {
+        setArchdeaconries((prev) => (prev.some((a) => a.id === archResolved?.id) ? prev : [archResolved, ...prev]))
+      }
+      if (churchFromAssignment?.id && churchFromAssignment?.name) {
+        setChurches((prev) => (prev.some((c) => c.id === churchFromAssignment?.id) ? prev : [churchFromAssignment, ...prev]))
+      }
+
+      if (dioceseId) {
+        setValue('dioceseId', dioceseId)
+        archdeaconryApi.list({ dioceseId, page: 0, size: 1000 }).then(r => setArchdeaconries(r.content)).catch(() => {})
+      }
+      if (archId) {
+        setValue('archdeaconryId', archId)
+        churchApi.list({ archdeaconryId: archId, page: 0, size: 1000 }).then(r => setChurches(r.content)).catch(() => {})
+      }
+      if (churchFromAssignment?.id) setValue('churchId', churchFromAssignment.id)
+    }
+
+    hydrateLocation()
+
+    return () => {
+      cancelled = true
+    }
+  }, [assignment, setValue])
 
   // if dioceses list contains only one, preselect it
   useEffect(() => {
@@ -75,21 +172,58 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
   useEffect(() => {
     if (assignment) {
       // prefill
+      const scope = (assignment.fellowshipPosition as any)?.scope ?? null
+      if (scope) {
+        setSelectedLevel(scope)
+        if (onLevelChange) onLevelChange(scope)
+      }
       const startMonth = assignment.termStartDate ? assignment.termStartDate.slice(0,7) : ''
       const endMonth = assignment.termEndDate ? assignment.termEndDate.slice(0,7) : ''
-      reset({ personId: assignment.person.id, fellowshipPositionId: assignment.fellowshipPosition?.id ?? assignment.fellowshipPositionId, termStartDate: assignment.termStartDate ?? '', termEndDate: assignment.termEndDate ?? '' })
+      const currentValues = getValues()
+      const derivedArchId =
+        assignment.archdeaconry?.id ??
+        assignment.archdeaconryId ??
+        assignment.church?.archdeaconryId ??
+        currentValues.archdeaconryId ??
+        undefined
+      const derivedDioceseId =
+        assignment.diocese?.id ??
+        assignment.dioceseId ??
+        assignment.archdeaconry?.dioceseId ??
+        currentValues.dioceseId ??
+        undefined
+      const derivedChurchId =
+        assignment.church?.id ??
+        assignment.churchId ??
+        currentValues.churchId ??
+        undefined
+      const derivedFellowshipId =
+        (assignment.fellowshipPosition as any)?.fellowshipId ??
+        assignment.fellowship?.id ??
+        (currentValues as any).fellowshipId ??
+        undefined
+
+      reset({
+        personId: assignment.person.id,
+        fellowshipPositionId: assignment.fellowshipPosition?.id ?? assignment.fellowshipPositionId,
+        termStartDate: assignment.termStartDate ?? '',
+        termEndDate: assignment.termEndDate ?? '',
+        dioceseId: derivedDioceseId,
+        archdeaconryId: derivedArchId,
+        churchId: derivedChurchId,
+      })
       setValue('termStartDateMonth', startMonth)
       setValue('termEndDateMonth', endMonth)
-      if (assignment.diocese?.id) setValue('dioceseId', assignment.diocese.id)
-      if (assignment.archdeaconry?.id) setValue('archdeaconryId', assignment.archdeaconry.id)
-      if (assignment.church?.id) setValue('churchId', assignment.church.id)
+      if (derivedDioceseId) setValue('dioceseId', derivedDioceseId)
+      if (derivedArchId) setValue('archdeaconryId', derivedArchId)
+      if (derivedChurchId) setValue('churchId', derivedChurchId)
+      if (derivedFellowshipId) setValue('fellowshipId' as any, derivedFellowshipId)
       // load positions for fellowship
-      const fid = (assignment.fellowshipPosition as any)?.fellowshipId ?? assignment.fellowship?.id
-      if (fid) fellowshipPositionApi.list({ fellowshipId: fid, page: 0, size: 1000 }).then(r => setPositions(r.content)).catch(() => {})
+      if (derivedFellowshipId) fellowshipPositionApi.list({ fellowshipId: derivedFellowshipId, page: 0, size: 1000 }).then(r => setPositions(r.content)).catch(() => {})
     } else if (personId) {
       reset({ personId, fellowshipPositionId: 0, termStartDate: '', termEndDate: '' })
     }
-  }, [assignment, personId, reset, setValue])
+  }, [assignment, getValues, personId, reset, setValue])
 
   useEffect(() => {
     if (initialLevel !== undefined) setSelectedLevel(initialLevel)
@@ -166,89 +300,114 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit(submit)} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {showPersonSelector && (
-        <Controller name="personId" control={control} render={({ field }) => (
-          <Autocomplete options={people} getOptionLabel={(p: any) => p.fullName} onChange={(_, v) => field.onChange(v?.id ?? 0)} renderInput={(params) => <TextField {...params} label="Person" required />} />
-        )} />
-      )}
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <Box component="form" onSubmit={handleSubmit(submit)} sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+        {showPersonSelector && (
+          <Controller name="personId" control={control} render={({ field }) => (
+            <Autocomplete
+              options={people}
+              getOptionLabel={(p: any) => p.fullName}
+              value={people.find((p) => p.id === field.value) || null}
+              onChange={(_, v) => field.onChange(v?.id ?? 0)}
+              renderInput={(params) => <TextField {...params} label="Person" required size="small" />}
+              sx={{ gridColumn: '1 / -1' }}
+            />
+          )} />
+        )}
 
-      <FormControl fullWidth>
-        <InputLabel>Fellowship</InputLabel>
-        <Controller name={"fellowshipId" as any} control={control} render={({ field }) => (
-          <Select {...field} label="Fellowship">
-            <MenuItem value="">-- Select Fellowship --</MenuItem>
-            {fellowships.map((f) => (<MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>))}
+        <FormControl fullWidth size="small">
+          <InputLabel>Fellowship</InputLabel>
+          <Controller name={"fellowshipId" as any} control={control} render={({ field }) => (
+            <Select {...field} label="Fellowship" value={field.value ?? ''}>
+              <MenuItem value="">-- Select Fellowship --</MenuItem>
+              {fellowships.map((f) => (<MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>))}
+            </Select>
+          )} />
+        </FormControl>
+
+        <FormControl fullWidth size="small">
+          <InputLabel>Level</InputLabel>
+          <Select value={selectedLevel ?? ''} label="Level" onChange={(e: any) => { const v = e.target.value as string; const nv = v || null; setSelectedLevel(nv); if (onLevelChange) onLevelChange(nv); if (nv === 'DIOCESE') { setValue('archdeaconryId', undefined); setValue('churchId', undefined); } if (nv === 'ARCHDEACONRY') { setValue('churchId', undefined); } }}>
+            <MenuItem value="">-- Select Level --</MenuItem>
+            {levels.map((l) => (<MenuItem key={l} value={l}>{l.charAt(0) + l.slice(1).toLowerCase()}</MenuItem>))}
           </Select>
+        </FormControl>
+
+        <Controller name="fellowshipPositionId" control={control} render={({ field }) => (
+          <Autocomplete
+            options={positions}
+            getOptionLabel={(p: any) => ((p.title && p.title.name) || p.titleName) + ' — ' + ((p.fellowship && p.fellowship.name) || p.fellowshipName)}
+            value={positions.find((p) => p.id === field.value) || null}
+            onChange={(_, v) => field.onChange(v?.id ?? 0)}
+            renderInput={(params) => <TextField {...params} label="Position" required size="small" />}
+            sx={{ gridColumn: '1 / -1' }}
+          />
         )} />
-      </FormControl>
 
-      <FormControl fullWidth>
-        <InputLabel>Level</InputLabel>
-        <Select value={selectedLevel ?? ''} label="Level" onChange={(e: any) => { const v = e.target.value as string; const nv = v || null; setSelectedLevel(nv); if (onLevelChange) onLevelChange(nv); if (nv === 'DIOCESE') { setValue('archdeaconryId', undefined); setValue('churchId', undefined); } if (nv === 'ARCHDEACONRY') { setValue('churchId', undefined); } }}>
-          <MenuItem value="">-- Select Level --</MenuItem>
-          {levels.map((l) => (<MenuItem key={l} value={l}>{l.charAt(0) + l.slice(1).toLowerCase()}</MenuItem>))}
-        </Select>
-      </FormControl>
+        {(selectedLevel === 'DIOCESE' || selectedLevel === 'ARCHDEACONRY' || selectedLevel === 'CHURCH') && (
+          <FormControl fullWidth size="small">
+            <InputLabel>Diocese</InputLabel>
+            <Controller name="dioceseId" control={control} render={({ field }) => (
+              <Select {...field} label="Diocese" value={field.value ?? ''}>
+                <MenuItem value="">-- Select Diocese --</MenuItem>
+                {dioceses.map(d => (<MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>))}
+              </Select>
+            )} />
+          </FormControl>
+        )}
 
-      <Controller name="fellowshipPositionId" control={control} render={({ field }) => (
-        <Autocomplete
-          options={positions}
-          getOptionLabel={(p: any) => ((p.title && p.title.name) || p.titleName) + ' — ' + ((p.fellowship && p.fellowship.name) || p.fellowshipName)}
-          onChange={(_, v) => field.onChange(v?.id ?? 0)}
-          renderInput={(params) => <TextField {...params} label="Position" required />}
-        />
-      )} />
+        {(selectedLevel === 'ARCHDEACONRY' || selectedLevel === 'CHURCH') && (
+          <FormControl fullWidth size="small">
+            <InputLabel>Archdeaconry</InputLabel>
+            <Controller name="archdeaconryId" control={control} render={({ field }) => (
+              <Select {...field} label="Archdeaconry" value={field.value ?? ''}>
+                <MenuItem value="">-- Select Archdeaconry --</MenuItem>
+                {archdeaconries.map(a => (<MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>))}
+              </Select>
+            )} />
+          </FormControl>
+        )}
 
-      {(selectedLevel === 'DIOCESE' || selectedLevel === 'ARCHDEACONRY' || selectedLevel === 'CHURCH') && (
-        <FormControl fullWidth>
-          <InputLabel>Diocese</InputLabel>
-          <Controller name="dioceseId" control={control} render={({ field }) => (
-            <Select {...field} label="Diocese">
-              <MenuItem value="">-- Select Diocese --</MenuItem>
-              {dioceses.map(d => (<MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>))}
-            </Select>
-          )} />
-        </FormControl>
-      )}
+        {selectedLevel === 'CHURCH' && (
+          <FormControl fullWidth size="small" sx={{ gridColumn: '1 / -1' }}>
+            <InputLabel>Church</InputLabel>
+            <Controller name="churchId" control={control} render={({ field }) => (
+              <Select {...field} label="Church" value={field.value ?? ''}>
+                <MenuItem value="">-- Select Church --</MenuItem>
+                {churches.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
+              </Select>
+            )} />
+          </FormControl>
+        )}
 
-      {(selectedLevel === 'ARCHDEACONRY' || selectedLevel === 'CHURCH') && (
-        <FormControl fullWidth>
-          <InputLabel>Archdeaconry</InputLabel>
-          <Controller name="archdeaconryId" control={control} render={({ field }) => (
-            <Select {...field} label="Archdeaconry">
-              <MenuItem value="">-- Select Archdeaconry --</MenuItem>
-              {archdeaconries.map(a => (<MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>))}
-            </Select>
-          )} />
-        </FormControl>
-      )}
+        <Controller name="termStartDateMonth" control={control} render={({ field }) => (
+          <DatePicker
+            label="Term Start"
+            views={["year","month"]}
+            openTo="year"
+            value={field.value ? dayjs(`${field.value}-01`) : null}
+            onChange={(date) => field.onChange(date ? date.format('YYYY-MM') : '')}
+            slotProps={{ textField: { size: 'small' } }}
+          />
+        )} />
 
-      {selectedLevel === 'CHURCH' && (
-        <FormControl fullWidth>
-          <InputLabel>Church</InputLabel>
-          <Controller name="churchId" control={control} render={({ field }) => (
-            <Select {...field} label="Church">
-              <MenuItem value="">-- Select Church --</MenuItem>
-              {churches.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
-            </Select>
-          )} />
-        </FormControl>
-      )}
+        <Controller name="termEndDateMonth" control={control} render={({ field }) => (
+          <DatePicker
+            label="Term End"
+            views={["year","month"]}
+            openTo="year"
+            value={field.value ? dayjs(`${field.value}-01`) : null}
+            onChange={(date) => field.onChange(date ? date.format('YYYY-MM') : '')}
+            slotProps={{ textField: { size: 'small' } }}
+          />
+        )} />
 
-      <Controller name="termStartDateMonth" control={control} render={({ field }) => (
-        <TextField {...field} label="Term Start (month)" type="month" />
-      )} />
-
-      <Controller name="termEndDateMonth" control={control} render={({ field }) => (
-        <TextField {...field} label="Term End (month)" type="month" />
-      )} />
-
-      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-        <Button onClick={onCancel ?? (() => {})}>Cancel</Button>
-        <Button type="submit" variant="contained">{assignment ? 'Save' : 'Assign'}</Button>
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 0.5, gridColumn: '1 / -1' }}>
+          <Button onClick={onCancel ?? (() => {})}>Cancel</Button>
+          <Button type="submit" variant="contained">{assignment ? 'Save' : 'Assign'}</Button>
+        </Box>
       </Box>
-    </Box>
+    </LocalizationProvider>
   )
 }
 

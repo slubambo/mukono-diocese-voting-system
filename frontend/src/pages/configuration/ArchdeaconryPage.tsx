@@ -3,7 +3,7 @@
  * Allows ADMIN to create, update, delete archdeaconries
  * Allows DS/Polling Officer to view archdeaconries (read-only)
  */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Button,
@@ -57,6 +57,7 @@ export const ArchdeaconryPage: React.FC = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
+  const [sort, setSort] = useState('name,asc')
   
   // Dialog state
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
@@ -66,6 +67,7 @@ export const ArchdeaconryPage: React.FC = () => {
     name: '',
     code: '',
   })
+  const [errors, setErrors] = useState<{ dioceseId?: string; name?: string; code?: string }>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [archdeaconryToDelete, setArchdeaconryToDelete] = useState<Archdeaconry | null>(null)
   
@@ -128,6 +130,7 @@ export const ArchdeaconryPage: React.FC = () => {
 
   const handleOpenCreateDialog = () => {
     setFormData({ dioceseId: selectedDioceseId || 0, name: '', code: '' })
+    setErrors({})
     setSelectedArchdeaconry(null)
     setDialogMode('create')
   }
@@ -139,6 +142,7 @@ export const ArchdeaconryPage: React.FC = () => {
       code: archdeaconry.code || '',
       status: archdeaconry.status,
     })
+    setErrors({})
     setSelectedArchdeaconry(archdeaconry)
     setDialogMode('edit')
   }
@@ -147,17 +151,25 @@ export const ArchdeaconryPage: React.FC = () => {
     setDialogMode(null)
     setSelectedArchdeaconry(null)
     setFormData({ dioceseId: 0, name: '', code: '' })
+    setErrors({})
+  }
+
+  const validateForm = () => {
+    const nextErrors: { dioceseId?: string; name?: string; code?: string } = {}
+
+    if (!formData.dioceseId) {
+      nextErrors.dioceseId = 'Diocese is required'
+    }
+    if (!formData.name.trim()) {
+      nextErrors.name = 'Name is required'
+    }
+
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
   }
 
   const handleSave = async () => {
-    if (!formData.name.trim()) {
-      showToast('Archdeaconry name is required', 'error')
-      return
-    }
-    if (!formData.dioceseId) {
-      showToast('Diocese is required', 'error')
-      return
-    }
+    if (!validateForm()) return
 
     try {
       if (dialogMode === 'create') {
@@ -217,11 +229,41 @@ export const ArchdeaconryPage: React.FC = () => {
     })
   }
 
+  const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
+
   const stats = {
     total: totalElements,
     active: archdeaconries.filter((a) => a.status === 'ACTIVE').length,
     inactive: archdeaconries.filter((a) => a.status === 'INACTIVE').length,
   }
+
+  const sortOptions = [
+    { id: 'name,asc', name: 'Name (A-Z)' },
+    { id: 'name,desc', name: 'Name (Z-A)' },
+    { id: 'createdAt,desc', name: 'Newest first' },
+    { id: 'createdAt,asc', name: 'Oldest first' },
+  ]
+
+  const displayArchdeaconries = useMemo(() => {
+    const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
+    return [...archdeaconries].sort((a, b) => {
+      const statusCompare = byStatus(a.status) - byStatus(b.status)
+      if (statusCompare !== 0) return statusCompare
+
+      switch (sort) {
+        case 'name,asc':
+          return a.name.localeCompare(b.name)
+        case 'name,desc':
+          return b.name.localeCompare(a.name)
+        case 'createdAt,asc':
+          return a.createdAt.localeCompare(b.createdAt)
+        case 'createdAt,desc':
+          return b.createdAt.localeCompare(a.createdAt)
+        default:
+          return 0
+      }
+    })
+  }, [archdeaconries, sort])
 
   return (
     <AppShell>
@@ -249,7 +291,18 @@ export const ArchdeaconryPage: React.FC = () => {
                 setPage(0)
               },
               placeholder: 'Select Diocese',
-            }
+            },
+            {
+              id: 'sort',
+              label: 'Sort by',
+              value: sort,
+              options: sortOptions,
+              onChange: (value) => {
+                setSort(value as string)
+                setPage(0)
+              },
+              placeholder: 'Sort by',
+            },
           ]}
         />
 
@@ -261,7 +314,7 @@ export const ArchdeaconryPage: React.FC = () => {
             title="Select a diocese"
             description="Please select a diocese to view its archdeaconries."
           />
-        ) : archdeaconries.length === 0 ? (
+        ) : displayArchdeaconries.length === 0 ? (
           <EmptyState
             title="No archdeaconries found"
             description={
@@ -303,13 +356,15 @@ export const ArchdeaconryPage: React.FC = () => {
                     <TableCell>Name</TableCell>
                     <TableCell>Code</TableCell>
                     <TableCell>Diocese</TableCell>
+                    <TableCell align="right">Churches</TableCell>
+                    <TableCell align="right">Leaders</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Created Date</TableCell>
                     {!isReadOnly && <TableCell align="right">Actions</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {archdeaconries.map((archdeaconry) => (
+                  {displayArchdeaconries.map((archdeaconry) => (
                     <TableRow key={archdeaconry.id} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight={500}>
@@ -318,6 +373,8 @@ export const ArchdeaconryPage: React.FC = () => {
                       </TableCell>
                       <TableCell>{archdeaconry.code || '—'}</TableCell>
                       <TableCell>{archdeaconry.diocese.name}</TableCell>
+                      <TableCell align="right">{renderCount(archdeaconry.churchCount)}</TableCell>
+                      <TableCell align="right">{renderCount(archdeaconry.currentLeadersCount)}</TableCell>
                       <TableCell>
                         <StatusChip status={archdeaconry.status} />
                       </TableCell>
@@ -368,35 +425,54 @@ export const ArchdeaconryPage: React.FC = () => {
           {dialogMode === 'create' ? 'Create Archdeaconry' : 'Edit Archdeaconry'}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1.5 }}>
             <Autocomplete
               options={dioceses}
               getOptionLabel={(option) => option.name}
               value={dioceses.find((d) => d.id === formData.dioceseId) || null}
               onChange={(_, newValue) => {
                 setFormData({ ...formData, dioceseId: newValue?.id || 0 })
+                if (errors.dioceseId) setErrors((prev) => ({ ...prev, dioceseId: undefined }))
               }}
               disabled={dialogMode === 'edit'}
               renderInput={(params) => (
-                <TextField {...params} label="Diocese" required />
+                <TextField
+                  {...params}
+                  label="Diocese"
+                  required
+                  size="small"
+                  error={Boolean(errors.dioceseId)}
+                  helperText={errors.dioceseId}
+                />
               )}
+              size="small"
             />
             <TextField
               label="Name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value })
+                if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }))
+              }}
               required
               fullWidth
+              size="small"
+              error={Boolean(errors.name)}
+              helperText={errors.name}
             />
             <TextField
               label="Code"
               value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, code: e.target.value })
+                if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }))
+              }}
               fullWidth
-              helperText="Optional unique identifier"
+              helperText={errors.code || 'Optional unique identifier'}
+              size="small"
             />
             {dialogMode === 'edit' && (
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={formData.status || 'ACTIVE'}

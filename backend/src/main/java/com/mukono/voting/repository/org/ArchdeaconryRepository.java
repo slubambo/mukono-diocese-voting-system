@@ -40,6 +40,15 @@ public interface ArchdeaconryRepository extends JpaRepository<Archdeaconry, Long
     );
 
     /**
+     * Find all archdeaconries by diocese id with pagination.
+     * 
+     * @param dioceseId the diocese id
+     * @param pageable pagination information
+     * @return page of archdeaconries in the diocese
+     */
+    Page<Archdeaconry> findByDioceseId(Long dioceseId, Pageable pageable);
+
+    /**
      * Find an archdeaconry by diocese id and name (exact match, case-insensitive).
      * 
      * @param dioceseId the diocese id
@@ -51,4 +60,13 @@ public interface ArchdeaconryRepository extends JpaRepository<Archdeaconry, Long
         @Param("dioceseId") Long dioceseId,
         @Param("name") String name
     );
+
+    /**
+     * Count active archdeaconries in a diocese.
+     * 
+     * @param dioceseId the diocese id
+     * @return count of active archdeaconries
+     */
+    @Query("SELECT COUNT(a) FROM Archdeaconry a WHERE a.diocese.id = :dioceseId AND a.status = 'ACTIVE'")
+    long countActiveByDioceseId(@Param("dioceseId") Long dioceseId);
 }

@@ -2,7 +2,7 @@
  * Church Management Page
  * Similar to Archdeaconry but belongs to an Archdeaconry
  */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Button,
@@ -59,6 +59,7 @@ export const ChurchPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
   const [, setStats] = useState({ total: 0, active: 0, inactive: 0 })
+  const [sort, setSort] = useState('name,asc')
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selectedChurch, setSelectedChurch] = useState<Church | null>(null)
@@ -67,6 +68,7 @@ export const ChurchPage: React.FC = () => {
     name: '',
     code: '',
   })
+  const [errors, setErrors] = useState<{ archdeaconryId?: string; name?: string; code?: string }>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [churchToDelete, setChurchToDelete] = useState<Church | null>(null)
   
@@ -140,6 +142,7 @@ export const ChurchPage: React.FC = () => {
 
   const handleOpenCreateDialog = () => {
     setFormData({ archdeaconryId: selectedArchdeaconryId || 0, name: '', code: '' })
+    setErrors({})
     setSelectedChurch(null)
     setDialogMode('create')
   }
@@ -151,6 +154,7 @@ export const ChurchPage: React.FC = () => {
       code: church.code || '',
       status: church.status,
     })
+    setErrors({})
     setSelectedChurch(church)
     setDialogMode('edit')
   }
@@ -158,13 +162,25 @@ export const ChurchPage: React.FC = () => {
   const handleCloseDialog = () => {
     setDialogMode(null)
     setSelectedChurch(null)
+    setErrors({})
+  }
+
+  const validateForm = () => {
+    const nextErrors: { archdeaconryId?: string; name?: string; code?: string } = {}
+
+    if (!formData.archdeaconryId) {
+      nextErrors.archdeaconryId = 'Archdeaconry is required'
+    }
+    if (!formData.name.trim()) {
+      nextErrors.name = 'Name is required'
+    }
+
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
   }
 
   const handleSave = async () => {
-    if (!formData.name.trim() || !formData.archdeaconryId) {
-      showToast('All required fields must be filled', 'error')
-      return
-    }
+    if (!validateForm()) return
 
     try {
       if (dialogMode === 'create') {
@@ -202,6 +218,36 @@ export const ChurchPage: React.FC = () => {
     }
   }
 
+  const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
+
+  const sortOptions = [
+    { id: 'name,asc', name: 'Name (A-Z)' },
+    { id: 'name,desc', name: 'Name (Z-A)' },
+    { id: 'createdAt,desc', name: 'Newest first' },
+    { id: 'createdAt,asc', name: 'Oldest first' },
+  ]
+
+  const displayChurches = useMemo(() => {
+    const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
+    return [...churches].sort((a, b) => {
+      const statusCompare = byStatus(a.status) - byStatus(b.status)
+      if (statusCompare !== 0) return statusCompare
+
+      switch (sort) {
+        case 'name,asc':
+          return a.name.localeCompare(b.name)
+        case 'name,desc':
+          return b.name.localeCompare(a.name)
+        case 'createdAt,asc':
+          return a.createdAt.localeCompare(b.createdAt)
+        case 'createdAt,desc':
+          return b.createdAt.localeCompare(a.createdAt)
+        default:
+          return 0
+      }
+    })
+  }, [churches, sort])
+
   return (
     <AppShell>
       <PageLayout title="Church Management">
@@ -229,7 +275,18 @@ export const ChurchPage: React.FC = () => {
               onChange: (value) => setSelectedArchdeaconryId(value as number | null),
               disabled: !archdeaconries.length,
               placeholder: 'Select Archdeaconry',
-            }
+            },
+            {
+              id: 'sort',
+              label: 'Sort by',
+              value: sort,
+              options: sortOptions,
+              onChange: (value) => {
+                setSort(value as string)
+                setPage(0)
+              },
+              placeholder: 'Sort by',
+            },
           ]}
         />
 
@@ -238,7 +295,7 @@ export const ChurchPage: React.FC = () => {
           <LoadingState count={5} variant="row" />
         ) : !selectedArchdeaconryId ? (
           <EmptyState title="Select an archdeaconry" description="Please select an archdeaconry to view its churches." />
-        ) : churches.length === 0 ? (
+        ) : displayChurches.length === 0 ? (
           <EmptyState
             title="No churches found"
             description={isReadOnly ? 'No churches exist yet.' : 'Create your first church.'}
@@ -269,18 +326,22 @@ export const ChurchPage: React.FC = () => {
                   <TableRow>
                     <TableCell>Name</TableCell>
                     <TableCell>Code</TableCell>
+                    <TableCell>Diocese</TableCell>
                     <TableCell>Archdeaconry</TableCell>
+                    <TableCell align="right">Leaders</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Created</TableCell>
                     {!isReadOnly && <TableCell align="right">Actions</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {churches.map((church) => (
+                  {displayChurches.map((church) => (
                     <TableRow key={church.id} hover>
                       <TableCell><Typography variant="body2" fontWeight={500}>{church.name}</Typography></TableCell>
                       <TableCell>{church.code || '—'}</TableCell>
+                      <TableCell>{church.diocese?.name || '—'}</TableCell>
                       <TableCell>{church.archdeaconry.name}</TableCell>
+                      <TableCell align="right">{renderCount(church.currentLeadersCount)}</TableCell>
                       <TableCell><StatusChip status={church.status} /></TableCell>
                       <TableCell>{new Date(church.createdAt).toLocaleDateString()}</TableCell>
                       {!isReadOnly && (
@@ -310,19 +371,54 @@ export const ChurchPage: React.FC = () => {
       <Dialog open={dialogMode !== null} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{dialogMode === 'create' ? 'Create Church' : 'Edit Church'}</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1.5 }}>
             <Autocomplete
               options={archdeaconries}
               getOptionLabel={(opt) => opt.name}
               value={archdeaconries.find((a) => a.id === formData.archdeaconryId) || null}
-              onChange={(_, val) => setFormData({ ...formData, archdeaconryId: val?.id || 0 })}
+              onChange={(_, val) => {
+                setFormData({ ...formData, archdeaconryId: val?.id || 0 })
+                if (errors.archdeaconryId) setErrors((prev) => ({ ...prev, archdeaconryId: undefined }))
+              }}
               disabled={dialogMode === 'edit'}
-              renderInput={(params) => <TextField {...params} label="Archdeaconry" required />}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Archdeaconry"
+                  required
+                  size="small"
+                  error={Boolean(errors.archdeaconryId)}
+                  helperText={errors.archdeaconryId}
+                />
+              )}
+              size="small"
             />
-            <TextField label="Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required fullWidth />
-            <TextField label="Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} fullWidth />
+            <TextField
+              label="Name"
+              value={formData.name}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value })
+                if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }))
+              }}
+              required
+              fullWidth
+              size="small"
+              error={Boolean(errors.name)}
+              helperText={errors.name}
+            />
+            <TextField
+              label="Code"
+              value={formData.code}
+              onChange={(e) => {
+                setFormData({ ...formData, code: e.target.value })
+                if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }))
+              }}
+              fullWidth
+              size="small"
+              helperText={errors.code || 'Optional unique identifier'}
+            />
             {dialogMode === 'edit' && (
-              <FormControl fullWidth>
+              <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select value={formData.status || 'ACTIVE'} label="Status" onChange={(e) => setFormData({ ...formData, status: e.target.value as EntityStatus })}>
                   <MenuItem value="ACTIVE">Active</MenuItem>

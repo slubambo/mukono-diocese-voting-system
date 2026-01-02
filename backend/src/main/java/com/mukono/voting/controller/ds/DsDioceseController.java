@@ -49,7 +49,8 @@ public class DsDioceseController {
                                                       @RequestParam(name = "size", defaultValue = "20") int size,
                                                       @RequestParam(name = "sort", defaultValue = "id,desc") String sort) {
         Pageable pageable = toPageable(page, size, sort);
-        var result = dioceseService.list(q, pageable).map(DioceseResponse::fromEntity);
+        var result = dioceseService.listWithCounts(q, pageable)
+            .map(dwc -> DioceseResponse.fromEntity(dwc.getDiocese(), dwc.getArchdeaconryCount(), dwc.getChurchCount()));
         return ResponseEntity.ok(result);
     }
 

@@ -2,11 +2,15 @@ package com.mukono.voting.service.org;
 
 import com.mukono.voting.model.common.RecordStatus;
 import com.mukono.voting.model.org.Fellowship;
+import com.mukono.voting.repository.leadership.FellowshipPositionRepository;
 import com.mukono.voting.repository.org.FellowshipRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.stream.Collectors;
 
 /**
  * Service for Fellowship entity.
@@ -17,9 +21,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class FellowshipService {
 
     private final FellowshipRepository fellowshipRepository;
+    private final FellowshipPositionRepository fellowshipPositionRepository;
 
-    public FellowshipService(FellowshipRepository fellowshipRepository) {
+    public FellowshipService(FellowshipRepository fellowshipRepository,
+                             FellowshipPositionRepository fellowshipPositionRepository) {
         this.fellowshipRepository = fellowshipRepository;
+        this.fellowshipPositionRepository = fellowshipPositionRepository;
     }
 
     /**
@@ -116,6 +123,32 @@ public class FellowshipService {
     }
 
     /**
+     * List all fellowships with optional search and enriched data.
+     * 
+     * @param q the search query (optional)
+     * @param pageable pagination information
+     * @return page of fellowships with position counts
+     */
+    @Transactional(readOnly = true)
+    public Page<FellowshipWithCounts> listWithCounts(String q, Pageable pageable) {
+        Page<Fellowship> page;
+        if (q == null || q.isBlank()) {
+            page = fellowshipRepository.findAll(pageable);
+        } else {
+            page = fellowshipRepository.findByNameContainingIgnoreCase(q.trim(), pageable);
+        }
+
+        var content = page.getContent().stream()
+            .map(fellowship -> new FellowshipWithCounts(
+                fellowship,
+                fellowshipPositionRepository.countByFellowshipIdAndStatus(fellowship.getId(), RecordStatus.ACTIVE)
+            ))
+            .collect(Collectors.toList());
+
+        return new PageImpl<>(content, pageable, page.getTotalElements());
+    }
+
+    /**
      * List all fellowships with optional search.
      * 
      * @param q the search query (optional)
@@ -141,5 +174,26 @@ public class FellowshipService {
         Fellowship fellowship = getById(id);
         fellowship.setStatus(RecordStatus.INACTIVE);
         fellowshipRepository.save(fellowship);
+    }
+
+    /**
+     * Internal DTO class to hold Fellowship with enriched counts.
+     */
+    public static class FellowshipWithCounts {
+        private final Fellowship fellowship;
+        private final Long positionsCount;
+
+        public FellowshipWithCounts(Fellowship fellowship, Long positionsCount) {
+            this.fellowship = fellowship;
+            this.positionsCount = positionsCount;
+        }
+
+        public Fellowship getFellowship() {
+            return fellowship;
+        }
+
+        public Long getPositionsCount() {
+            return positionsCount;
+        }
     }
 }

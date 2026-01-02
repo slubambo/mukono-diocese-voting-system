@@ -6,12 +6,16 @@ import com.mukono.voting.model.leadership.PositionScope;
 import com.mukono.voting.model.leadership.PositionTitle;
 import com.mukono.voting.model.org.Fellowship;
 import com.mukono.voting.repository.leadership.FellowshipPositionRepository;
+import com.mukono.voting.repository.leadership.LeadershipAssignmentRepository;
 import com.mukono.voting.repository.leadership.PositionTitleRepository;
 import com.mukono.voting.repository.org.FellowshipRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.stream.Collectors;
 
 /**
  * Service for FellowshipPosition entity.
@@ -24,14 +28,17 @@ public class FellowshipPositionService {
     private final FellowshipPositionRepository fellowshipPositionRepository;
     private final FellowshipRepository fellowshipRepository;
     private final PositionTitleRepository positionTitleRepository;
+    private final LeadershipAssignmentRepository leadershipAssignmentRepository;
 
     public FellowshipPositionService(
             FellowshipPositionRepository fellowshipPositionRepository,
             FellowshipRepository fellowshipRepository,
-            PositionTitleRepository positionTitleRepository) {
+            PositionTitleRepository positionTitleRepository,
+            LeadershipAssignmentRepository leadershipAssignmentRepository) {
         this.fellowshipPositionRepository = fellowshipPositionRepository;
         this.fellowshipRepository = fellowshipRepository;
         this.positionTitleRepository = positionTitleRepository;
+        this.leadershipAssignmentRepository = leadershipAssignmentRepository;
     }
 
     /**
@@ -166,6 +173,38 @@ public class FellowshipPositionService {
     }
 
     /**
+     * List fellowship positions with optional filters and enriched data.
+     * 
+     * @param fellowshipId filter by fellowship ID (optional)
+     * @param scope filter by position scope (optional)
+     * @param pageable pagination information
+     * @return a page of fellowship positions with assignment counts
+     */
+    @Transactional(readOnly = true)
+    public Page<FellowshipPositionWithCounts> listWithCounts(Long fellowshipId, PositionScope scope, Pageable pageable) {
+        Page<FellowshipPosition> page;
+        
+        // Apply filters
+        if (fellowshipId != null && scope != null) {
+            page = fellowshipPositionRepository.findByFellowshipIdAndScope(fellowshipId, scope, pageable);
+        } else if (fellowshipId != null) {
+            page = fellowshipPositionRepository.findByFellowshipId(fellowshipId, pageable);
+        } else {
+            page = fellowshipPositionRepository.findAll(pageable);
+        }
+
+        // Enrich with counts
+        var content = page.getContent().stream()
+            .map(position -> new FellowshipPositionWithCounts(
+                position,
+                leadershipAssignmentRepository.countByFellowshipPositionIdAndStatus(position.getId(), RecordStatus.ACTIVE)
+            ))
+            .collect(Collectors.toList());
+
+        return new PageImpl<>(content, pageable, page.getTotalElements());
+    }
+
+    /**
      * List fellowship positions with optional filters.
      * 
      * @param fellowshipId filter by fellowship ID (optional)
@@ -198,5 +237,26 @@ public class FellowshipPositionService {
         FellowshipPosition position = getById(id);
         position.setStatus(RecordStatus.INACTIVE);
         fellowshipPositionRepository.save(position);
+    }
+
+    /**
+     * Internal DTO class to hold FellowshipPosition with enriched counts.
+     */
+    public static class FellowshipPositionWithCounts {
+        private final FellowshipPosition position;
+        private final Long currentAssignmentsCount;
+
+        public FellowshipPositionWithCounts(FellowshipPosition position, Long currentAssignmentsCount) {
+            this.position = position;
+            this.currentAssignmentsCount = currentAssignmentsCount;
+        }
+
+        public FellowshipPosition getPosition() {
+            return position;
+        }
+
+        public Long getCurrentAssignmentsCount() {
+            return currentAssignmentsCount;
+        }
     }
 }

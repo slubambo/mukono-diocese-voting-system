@@ -59,7 +59,7 @@ public class LeadershipAssignmentResponse {
         dto.setPerson(PersonSummary.fromEntity(e.getPerson()));
         dto.setFellowshipPosition(FellowshipPositionSummary.fromEntity(e.getFellowshipPosition()));
         
-        // Only map the correct target based on which field is non-null
+        // Map direct assignments
         if (e.getDiocese() != null) {
             dto.setDiocese(DioceseSummary.fromEntity(e.getDiocese()));
         }
@@ -68,6 +68,21 @@ public class LeadershipAssignmentResponse {
         }
         if (e.getChurch() != null) {
             dto.setChurch(ChurchSummary.fromEntity(e.getChurch()));
+            
+            // For church-level assignments, derive archdeaconry and diocese from church hierarchy
+            if (e.getArchdeaconry() == null && e.getChurch().getArchdeaconry() != null) {
+                dto.setArchdeaconry(ArchdeaconrySummary.fromEntity(e.getChurch().getArchdeaconry()));
+            }
+            if (e.getDiocese() == null && e.getChurch().getArchdeaconry() != null && 
+                e.getChurch().getArchdeaconry().getDiocese() != null) {
+                dto.setDiocese(DioceseSummary.fromEntity(e.getChurch().getArchdeaconry().getDiocese()));
+            }
+        }
+        
+        // For archdeaconry-level assignments, derive diocese from archdeaconry hierarchy
+        if (e.getArchdeaconry() != null && e.getDiocese() == null && 
+            e.getArchdeaconry().getDiocese() != null) {
+            dto.setDiocese(DioceseSummary.fromEntity(e.getArchdeaconry().getDiocese()));
         }
         
         dto.setCreatedAt(e.getCreatedAt());

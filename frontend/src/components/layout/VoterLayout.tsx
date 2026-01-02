@@ -21,33 +21,62 @@ const VoterLayout: React.FC<VoterLayoutProps> = ({ children, showHeader = true }
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
-        backgroundColor: theme.palette.background.default,
+        background: 'linear-gradient(135deg, #F5F3FF 0%, #FFF9F5 50%, #F0F7FF 100%)',
+        position: 'relative',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage: `
+            radial-gradient(circle at 20% 20%, rgba(143, 52, 147, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(14, 97, 173, 0.03) 0%, transparent 50%)
+          `,
+          pointerEvents: 'none',
+        },
       }}
     >
       {/* Header */}
       {showHeader && (
         <AppBar
           position="static"
-          elevation={1}
+          elevation={0}
           sx={{
-            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 50%, ${theme.palette.secondary.main} 100%)`,
+            borderBottom: '3px solid rgba(215, 177, 97, 0.3)',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: '-50%',
+              right: '-10%',
+              width: '400px',
+              height: '400px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)',
+            },
           }}
         >
-          <Toolbar sx={{ flexDirection: 'column', alignItems: 'center', gap: 0.5, py: { xs: 1.5, sm: 2 } }}>
+          <Toolbar sx={{ flexDirection: 'column', alignItems: 'center', gap: 0.5, py: { xs: 2, sm: 2.5 }, position: 'relative', zIndex: 1 }}>
             <Typography
-              variant="h6"
+              variant="h5"
               sx={{
                 fontWeight: 700,
-                fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                fontSize: { xs: '1.25rem', sm: '1.5rem' },
+                letterSpacing: '0.5px',
               }}
             >
               Mukono Diocese Voting
             </Typography>
             <Typography
-              variant="caption"
+              variant="body2"
               sx={{
-                opacity: 0.9,
-                fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                opacity: 0.95,
+                fontSize: { xs: '0.8rem', sm: '0.85rem' },
+                fontWeight: 500,
               }}
             >
               Secure Voting Platform
@@ -63,7 +92,11 @@ const VoterLayout: React.FC<VoterLayoutProps> = ({ children, showHeader = true }
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          p: { xs: 1.5, sm: 3, md: 4 },
+          minHeight: '100vh',
+          p: { xs: 2, sm: 3, md: 4 },
+          position: 'relative',
+          zIndex: 1,
+          py: { xs: 3, sm: 4, md: 5 },
         }}
       >
         <Container
@@ -83,11 +116,14 @@ const VoterLayout: React.FC<VoterLayoutProps> = ({ children, showHeader = true }
       {/* Footer */}
       <Box
         sx={{
-          py: 2,
+          py: 2.5,
           px: 2,
           textAlign: 'center',
           borderTop: `1px solid ${theme.palette.divider}`,
           backgroundColor: theme.palette.background.paper,
+          mt: 'auto',
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         <Typography

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Button,
   Paper,
@@ -15,6 +15,8 @@ import {
   DialogContent,
   DialogActions,
   Typography,
+  TableSortLabel,
+  Link,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
@@ -65,6 +67,9 @@ const LeadershipAssignmentsPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [total, setTotal] = useState(0)
   const [filters] = useState<LeadershipAssignmentListParams>({ page: 0, size: 20, sort: 'id,desc' })
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [sort, setSort] = useState<'name,asc' | 'name,desc' | 'start,asc' | 'start,desc' | 'end,asc' | 'end,desc'>('name,asc')
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<LeadershipAssignmentResponse | null>(null)
@@ -97,6 +102,11 @@ const LeadershipAssignmentsPage: React.FC = () => {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350)
+    return () => clearTimeout(t)
+  }, [search])
 
   
 
@@ -182,8 +192,58 @@ const LeadershipAssignmentsPage: React.FC = () => {
     }
   }, [filterArchdeaconryId])
 
+  const levelAllowsArchdeaconry = !filterLevel || filterLevel === 'ARCHDEACONRY' || filterLevel === 'CHURCH'
+  const levelAllowsChurch = !filterLevel || filterLevel === 'CHURCH'
+
+  // Keep dependent filters coherent with selected level.
+  useEffect(() => {
+    if (filterLevel && !levelAllowsArchdeaconry) setFilterArchdeaconryId(null)
+    if (filterLevel && !levelAllowsChurch) setFilterChurchId(null)
+  }, [filterLevel, levelAllowsArchdeaconry, levelAllowsChurch])
+
   // Re-fetch when filters change
   useEffect(() => { setPage(0); fetchAssignments() }, [filterDioceseId, filterLevel, filterArchdeaconryId, filterChurchId, filterFellowshipId])
+
+  const filteredAssignments = useMemo(() => {
+    const termToTime = (v?: string | null) => (v ? new Date(v).getTime() : null)
+    const matchesSearch = (a: LeadershipAssignmentResponse) => {
+      if (!debouncedSearch.trim()) return true
+      const q = debouncedSearch.toLowerCase()
+      return [a.person.fullName, a.person.email, a.person.phoneNumber].some((field) => (field ?? '').toLowerCase().includes(q))
+    }
+    const sorted = [...assignments].filter(matchesSearch).sort((a, b) => {
+      const nameA = a.person.fullName || ''
+      const nameB = b.person.fullName || ''
+      const startA = termToTime(a.termStartDate)
+      const startB = termToTime(b.termStartDate)
+      const endA = termToTime(a.termEndDate)
+      const endB = termToTime(b.termEndDate)
+      switch (sort) {
+        case 'name,asc': return nameA.localeCompare(nameB)
+        case 'name,desc': return nameB.localeCompare(nameA)
+        case 'start,asc': return (startA ?? Infinity) - (startB ?? Infinity)
+        case 'start,desc': return (startB ?? -Infinity) - (startA ?? -Infinity)
+        case 'end,asc': return (endA ?? Infinity) - (endB ?? Infinity)
+        case 'end,desc': return (endB ?? -Infinity) - (endA ?? -Infinity)
+        default: return 0
+      }
+    })
+    return sorted
+  }, [assignments, debouncedSearch, sort])
+
+  const getSortDirection = (key: 'name' | 'start' | 'end') => {
+    if (sort.startsWith(`${key},`)) return sort.endsWith('asc') ? 'asc' : 'desc'
+    return false
+  }
+
+  const toggleSort = (key: 'name' | 'start' | 'end') => {
+    const dir = getSortDirection(key)
+    if (!dir) setSort(`${key},asc` as any)
+    else if (dir === 'asc') setSort(`${key},desc` as any)
+    else setSort(`${key},asc` as any)
+  }
+
+  const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString() : '—')
 
   const openCreate = () => {
     setEditing(null)
@@ -234,47 +294,68 @@ const LeadershipAssignmentsPage: React.FC = () => {
           actions={[{ id: 'clear', label: 'Clear Filters', onClick: () => { setFilterDioceseId(dioceseFixed ? filterDioceseId : null); setFilterLevel(null); setFilterArchdeaconryId(null); setFilterChurchId(null); setFilterFellowshipId(null); setPage(0); fetchAssignments() } } ]}
           filters={[
             {
-              id: 'diocese',
-              label: 'Diocese',
-              value: filterDioceseId,
-              options: dioceses.map((d) => ({ id: d.id, name: d.name })),
-              onChange: (v: any) => { setFilterDioceseId(v as number | null); if (v) { setFilterArchdeaconryId(null); setFilterChurchId(null) } },
-              placeholder: 'Diocese',
-              disabled: dioceseFixed,
+              id: 'search',
+              label: 'Search',
+              value: search,
+              placeholder: 'Search by name, email, phone',
+              onChange: (v: any) => { setSearch(v as string); setPage(0) },
             },
             {
-              id: 'level',
-              label: 'Level',
-              value: filterLevel,
-              options: levels.map((l) => ({ id: l, name: `${l.charAt(0)}${l.slice(1).toLowerCase()}` })),
-              onChange: (v: any) => { setFilterLevel(v as string | null) },
-              placeholder: 'Level',
-            },
-            {
-              id: 'archdeaconry',
-              label: 'Archdeaconry',
-              value: filterArchdeaconryId,
-              options: archdeaconries.map((a) => ({ id: a.id, name: a.name })),
-              onChange: (v: any) => { setFilterArchdeaconryId(v as number | null); if (v) setFilterChurchId(null) },
-              placeholder: 'Archdeaconry',
-              disabled: !archdeaconries.length,
-            },
-            {
-              id: 'church',
-              label: 'Church',
-              value: filterChurchId,
-              options: churches.map((c) => ({ id: c.id, name: c.name })),
-              onChange: (v: any) => setFilterChurchId(v as number | null),
-              placeholder: 'Church',
-              disabled: !churches.length,
+              id: 'sort',
+              label: 'Sort by',
+              value: sort,
+              options: [
+                { id: 'name,asc', name: 'Name (A-Z)' },
+                { id: 'name,desc', name: 'Name (Z-A)' },
+                { id: 'start,asc', name: 'Term Start (Earliest)' },
+                { id: 'start,desc', name: 'Term Start (Latest)' },
+                { id: 'end,asc', name: 'Term End (Earliest)' },
+                { id: 'end,desc', name: 'Term End (Latest)' },
+              ],
+              onChange: (v: any) => setSort(v as any),
+              placeholder: 'Sort by',
             },
             {
               id: 'fellowship',
               label: 'Fellowship',
               value: filterFellowshipId,
-              options: fellowships.map((f) => ({ id: f.id, name: f.name })),
-              onChange: (v: any) => setFilterFellowshipId(v as number | null),
+              options: [{ id: '', name: '-- All --' }, ...fellowships.map((f) => ({ id: f.id, name: f.name }))],
+              onChange: (v: any) => setFilterFellowshipId((v === '' ? null : v) as number | null),
               placeholder: 'Fellowship',
+            },
+            {
+              id: 'level',
+              label: 'Level',
+              value: filterLevel,
+              options: [{ id: '', name: '-- All --' }, ...levels.map((l) => ({ id: l, name: `${l.charAt(0)}${l.slice(1).toLowerCase()}` }))],
+              onChange: (v: any) => { setFilterLevel((v === '' ? null : v) as string | null) },
+              placeholder: 'Level',
+            },
+            {
+              id: 'diocese',
+              label: 'Diocese',
+              value: filterDioceseId,
+              options: [{ id: '', name: '-- All --' }, ...dioceses.map((d) => ({ id: d.id, name: d.name }))],
+              onChange: (v: any) => { setFilterDioceseId((v === '' ? null : v) as number | null); if (v) { setFilterArchdeaconryId(null); setFilterChurchId(null) } },
+              placeholder: 'Diocese',
+            },
+            {
+              id: 'archdeaconry',
+              label: 'Archdeaconry',
+              value: filterArchdeaconryId,
+              options: [{ id: '', name: '-- All --' }, ...archdeaconries.map((a) => ({ id: a.id, name: a.name }))],
+              onChange: (v: any) => { setFilterArchdeaconryId((v === '' ? null : v) as number | null); if (v) setFilterChurchId(null) },
+              placeholder: 'Archdeaconry',
+              disabled: !levelAllowsArchdeaconry,
+            },
+            {
+              id: 'church',
+              label: 'Church',
+              value: filterChurchId,
+              options: [{ id: '', name: '-- All --' }, ...churches.map((c) => ({ id: c.id, name: c.name }))],
+              onChange: (v: any) => setFilterChurchId((v === '' ? null : v) as number | null),
+              placeholder: 'Church',
+              disabled: !levelAllowsChurch,
             },
           ]}
         />
@@ -287,32 +368,44 @@ const LeadershipAssignmentsPage: React.FC = () => {
           ) : (
             <>
               <TableContainer>
-                <Table sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
+                <Table size="small" sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Full Name</TableCell>
+                      <TableCell sortDirection={getSortDirection('name') || false}>
+                        <TableSortLabel active={Boolean(getSortDirection('name'))} direction={(getSortDirection('name') as any) || 'asc'} onClick={() => toggleSort('name')}>
+                          Full Name
+                        </TableSortLabel>
+                      </TableCell>
                       <TableCell>Email</TableCell>
                       <TableCell>Phone</TableCell>
                       <TableCell>Position</TableCell>
                       <TableCell>Fellowship</TableCell>
                       <TableCell>Scope</TableCell>
-                      <TableCell>Term Start</TableCell>
-                      <TableCell>Term End</TableCell>
+                      <TableCell sortDirection={getSortDirection('start') || false}>
+                        <TableSortLabel active={Boolean(getSortDirection('start'))} direction={(getSortDirection('start') as any) || 'asc'} onClick={() => toggleSort('start')}>
+                          Term Start
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell sortDirection={getSortDirection('end') || false}>
+                        <TableSortLabel active={Boolean(getSortDirection('end'))} direction={(getSortDirection('end') as any) || 'asc'} onClick={() => toggleSort('end')}>
+                          Term End
+                        </TableSortLabel>
+                      </TableCell>
                       <TableCell>Status</TableCell>
                       {isAdmin && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {assignments.map((a) => (
+                    {filteredAssignments.map((a) => (
                       <TableRow key={a.id} hover>
                         <TableCell><Typography variant="body2">{a.person.fullName}</Typography></TableCell>
-                        <TableCell>{a.person.email}</TableCell>
-                        <TableCell>{a.person.phoneNumber}</TableCell>
+                        <TableCell>{a.person.email ? <Link href={`mailto:${a.person.email}`} underline="hover" color="inherit">{a.person.email}</Link> : ''}</TableCell>
+                        <TableCell>{a.person.phoneNumber ? <Link href={`tel:${a.person.phoneNumber}`} underline="hover" color="inherit">{a.person.phoneNumber}</Link> : ''}</TableCell>
                         <TableCell>{((a.fellowshipPosition as any)?.titleName) ?? (a.fellowshipPosition as any)?.title?.name ?? '—'}</TableCell>
                         <TableCell>{((a.fellowshipPosition as any)?.fellowshipName) ?? a.fellowship?.name ?? '—'}</TableCell>
                         <TableCell>{(((a.fellowshipPosition as any)?.scope) ?? '').charAt(0) + (((a.fellowshipPosition as any)?.scope) ?? '').slice(1).toLowerCase()}</TableCell>
-                        <TableCell>{new Date(a.termStartDate).toLocaleDateString()}</TableCell>
-                        <TableCell>{a.termEndDate ? new Date(a.termEndDate).toLocaleDateString() : '—'}</TableCell>
+                        <TableCell>{formatDate(a.termStartDate)}</TableCell>
+                        <TableCell>{formatDate(a.termEndDate)}</TableCell>
                         <TableCell><StatusChip status={(a.status as any) ?? 'INACTIVE'} /></TableCell>
                         {isAdmin && (
                           <TableCell align="right">

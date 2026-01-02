@@ -1,5 +1,6 @@
 package com.mukono.voting.controller.ds;
 
+
 import com.mukono.voting.model.common.RecordStatus;
 import com.mukono.voting.model.leadership.PositionScope;
 import com.mukono.voting.payload.request.CreateLeadershipAssignmentRequest;
@@ -92,9 +93,12 @@ public class DsLeadershipAssignmentController {
      * List leadership assignments with optional filters and pagination.
      *
      * @param status optional filter by RecordStatus (ACTIVE/INACTIVE)
+     * @param dioceseId optional filter by diocese ID
+     * @param archdeaconryId optional filter by archdeaconry ID
+     * @param churchId optional filter by church ID
      * @param fellowshipId optional filter by fellowship ID
      * @param personId optional filter by person ID
-     * @param archdeaconryId optional filter by archdeaconry ID
+     * @param scope optional filter by position scope (DIOCESE/ARCHDEACONRY/CHURCH)
      * @param page page number (default 0)
      * @param size page size (default 20)
      * @param sort sort order (default id,desc)
@@ -103,14 +107,18 @@ public class DsLeadershipAssignmentController {
     @GetMapping
     public ResponseEntity<Page<LeadershipAssignmentResponse>> list(
             @RequestParam(name = "status", required = false) RecordStatus status,
+            @RequestParam(name = "dioceseId", required = false) Long dioceseId,
+            @RequestParam(name = "archdeaconryId", required = false) Long archdeaconryId,
+            @RequestParam(name = "churchId", required = false) Long churchId,
             @RequestParam(name = "fellowshipId", required = false) Long fellowshipId,
             @RequestParam(name = "personId", required = false) Long personId,
-            @RequestParam(name = "archdeaconryId", required = false) Long archdeaconryId,
+            @RequestParam(name = "scope", required = false) PositionScope scope,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size,
             @RequestParam(name = "sort", defaultValue = "id,desc") String sort) {
         Pageable pageable = toPageable(page, size, sort);
-        var result = leadershipAssignmentService.list(status, fellowshipId, personId, archdeaconryId, pageable)
+        var result = leadershipAssignmentService.list(status, dioceseId, archdeaconryId, churchId, 
+                fellowshipId, personId, scope, pageable)
                 .map(LeadershipAssignmentResponse::fromEntity);
         return ResponseEntity.ok(result);
     }
@@ -149,7 +157,7 @@ public class DsLeadershipAssignmentController {
             @RequestParam(name = "size", defaultValue = "20") int size,
             @RequestParam(name = "sort", defaultValue = "id,desc") String sort) {
         Pageable pageable = toPageable(page, size, sort);
-        var result = leadershipAssignmentService.list(RecordStatus.ACTIVE, fellowshipId, null, null, pageable)
+        var result = leadershipAssignmentService.list(RecordStatus.ACTIVE, null, null, null, fellowshipId, null, scope, pageable)
                 .map(LeadershipAssignmentResponse::fromEntity);
         return ResponseEntity.ok(result);
     }

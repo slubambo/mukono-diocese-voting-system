@@ -1,7 +1,7 @@
 /**
  * Fellowship Position Management Page
  */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Button,
   Paper,
@@ -58,7 +58,10 @@ export const PositionPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
   const [selectedFellowshipId, setSelectedFellowshipId] = useState<number | null>(null)
+  const [selectedScope, setSelectedScope] = useState<PositionScope | null>(null)
+  const [availableScopes, setAvailableScopes] = useState<PositionScope[]>([])
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 })
+  const [sort, setSort] = useState('title.name,asc')
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selected, setSelected] = useState<FellowshipPosition | null>(null)
@@ -84,12 +87,18 @@ export const PositionPage: React.FC = () => {
       setLoading(true)
       const response = await fellowshipPositionApi.list({ 
         fellowshipId: selectedFellowshipId, 
+        scope: selectedScope || undefined,
         page, 
         size: rowsPerPage, 
         sort: 'id,desc' 
       })
       setPositions(response.content)
       setTotalElements(response.totalElements)
+      setAvailableScopes((prev) => {
+        const next = new Set(prev)
+        response.content.forEach((p) => next.add(p.scope))
+        return Array.from(next)
+      })
       setStats({
         total: response.totalElements,
         active: response.content.filter((p) => p.status === 'ACTIVE').length,
@@ -128,7 +137,12 @@ export const PositionPage: React.FC = () => {
 
   useEffect(() => {
     fetchPositions()
-  }, [page, rowsPerPage, selectedFellowshipId])
+  }, [page, rowsPerPage, selectedFellowshipId, selectedScope])
+
+  useEffect(() => {
+    setAvailableScopes([])
+    setSelectedScope(null)
+  }, [selectedFellowshipId])
 
   useEffect(() => {
     loadFellowships()
@@ -179,6 +193,48 @@ export const PositionPage: React.FC = () => {
     }
   }
 
+  const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
+
+  const scopeOptions = Array.from(new Set(availableScopes.length ? availableScopes : positions.map((p) => p.scope)))
+    .map((scope) => ({
+      id: scope,
+      name: scope.charAt(0) + scope.slice(1).toLowerCase(),
+    }))
+
+  const sortOptions = [
+    { id: 'title.name,asc', name: 'Title (A-Z)' },
+    { id: 'title.name,desc', name: 'Title (Z-A)' },
+    { id: 'seats,desc', name: 'Seats (High-Low)' },
+    { id: 'seats,asc', name: 'Seats (Low-High)' },
+    { id: 'createdAt,desc', name: 'Newest first' },
+    { id: 'createdAt,asc', name: 'Oldest first' },
+  ]
+
+  const displayPositions = useMemo(() => {
+    const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
+    return [...positions].sort((a, b) => {
+      const statusCompare = byStatus(a.status) - byStatus(b.status)
+      if (statusCompare !== 0) return statusCompare
+
+      switch (sort) {
+        case 'title.name,asc':
+          return (a.title?.name || '').localeCompare(b.title?.name || '')
+        case 'title.name,desc':
+          return (b.title?.name || '').localeCompare(a.title?.name || '')
+        case 'seats,asc':
+          return (a.seats || 0) - (b.seats || 0)
+        case 'seats,desc':
+          return (b.seats || 0) - (a.seats || 0)
+        case 'createdAt,asc':
+          return (a.createdAt || '').localeCompare(b.createdAt || '')
+        case 'createdAt,desc':
+          return (b.createdAt || '').localeCompare(a.createdAt || '')
+        default:
+          return 0
+      }
+    })
+  }, [positions, sort])
+
   // FellowshipPosition has nested fellowship and title objects
   const getFellowshipName = (position: FellowshipPosition) => position.fellowship.name
   const getTitleName = (position: FellowshipPosition) => position.title.name
@@ -210,6 +266,30 @@ export const PositionPage: React.FC = () => {
               },
               placeholder: 'Select Fellowship',
             }
+            ,
+            {
+              id: 'scope',
+              label: 'Scope',
+              value: selectedScope ?? 'ALL',
+              options: [{ id: 'ALL', name: 'All' }, ...scopeOptions],
+              onChange: (value) => {
+                setSelectedScope(value === 'ALL' ? null : (value as PositionScope))
+                setPage(0)
+              },
+              placeholder: 'All scopes',
+            }
+            ,
+            {
+              id: 'sort',
+              label: 'Sort by',
+              value: sort,
+              options: sortOptions,
+              onChange: (value) => {
+                setSort(value as string)
+                setPage(0)
+              },
+              placeholder: 'Sort by',
+            }
           ]}
         />
 
@@ -218,7 +298,7 @@ export const PositionPage: React.FC = () => {
           <LoadingState count={5} variant="row" />
         ) : !selectedFellowshipId ? (
           <EmptyState title="Select a Fellowship" description="Choose a fellowship to view its positions." />
-        ) : positions.length === 0 ? (
+        ) : displayPositions.length === 0 ? (
           <EmptyState title="No positions" description={isAdmin ? 'Create your first position for this fellowship.' : 'No positions exist for this fellowship.'} action={isAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormData({ fellowshipId: selectedFellowshipId || 0, titleId: 0, seats: 1, scope: 'DIOCESE' }); setDialogMode('create'); }}>Add Position</Button>} />
         ) : (
           <>
@@ -247,17 +327,21 @@ export const PositionPage: React.FC = () => {
                     <TableCell>Position Title</TableCell>
                     <TableCell>Scope</TableCell>
                     <TableCell>Seats</TableCell>
+                    <TableCell align="right">Assigned</TableCell>
+                    <TableCell align="right">Available</TableCell>
                     <TableCell>Status</TableCell>
                     {isAdmin && <TableCell align="right">Actions</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {positions.map((p) => (
+                  {displayPositions.map((p) => (
                     <TableRow key={p.id} hover>
                       <TableCell><Typography variant="body2">{getFellowshipName(p)}</Typography></TableCell>
                       <TableCell><Typography variant="body2" fontWeight={500}>{getTitleName(p)}</Typography></TableCell>
                       <TableCell><Typography variant="caption" color="text.secondary">{p.scope}</Typography></TableCell>
                       <TableCell>{p.seats}</TableCell>
+                      <TableCell align="right">{renderCount(p.currentAssignmentsCount)}</TableCell>
+                      <TableCell align="right">{renderCount(p.availableSeats)}</TableCell>
                       <TableCell><StatusChip status={p.status} /></TableCell>
                       {isAdmin && (
                         <TableCell align="right">

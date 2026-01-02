@@ -1,28 +1,40 @@
 package com.mukono.voting.api.admin.controller;
 
-import com.mukono.voting.payload.response.tally.*;
-import com.mukono.voting.backend.integration.IntegrationTestBase;
-import com.mukono.voting.model.election.*;
-import com.mukono.voting.model.people.Person;
-import com.mukono.voting.repository.election.*;
-import com.mukono.voting.repository.leadership.FellowshipPositionRepository;
-import com.mukono.voting.repository.leadership.PositionTitleRepository;
-import com.mukono.voting.repository.org.FellowshipRepository;
-import com.mukono.voting.repository.people.PersonRepository;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.transaction.annotation.Transactional;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.mukono.voting.backend.integration.IntegrationTestBase;
+import com.mukono.voting.model.election.Election;
+import com.mukono.voting.model.election.ElectionCandidate;
+import com.mukono.voting.model.election.ElectionPosition;
+import com.mukono.voting.model.election.ElectionStatus;
+import com.mukono.voting.model.election.VoteRecord;
+import com.mukono.voting.model.election.VoteSelection;
+import com.mukono.voting.model.election.VotingPeriod;
+import com.mukono.voting.model.election.VotingPeriodStatus;
+import com.mukono.voting.model.people.Person;
+import com.mukono.voting.repository.election.ElectionCandidateRepository;
+import com.mukono.voting.repository.election.ElectionPositionRepository;
+import com.mukono.voting.repository.election.ElectionRepository;
+import com.mukono.voting.repository.election.VoteRecordRepository;
+import com.mukono.voting.repository.election.VoteSelectionRepository;
+import com.mukono.voting.repository.election.VotingPeriodRepository;
+import com.mukono.voting.repository.leadership.FellowshipPositionRepository;
+import com.mukono.voting.repository.leadership.PositionTitleRepository;
+import com.mukono.voting.repository.org.FellowshipRepository;
+import com.mukono.voting.repository.people.PersonRepository;
 
 @Transactional
 public class ElectionResultsAdminControllerTest extends IntegrationTestBase {
