@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, MenuItem } from '@mui/material'
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, MenuItem, FormControl, InputLabel, Select } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import dayjs from 'dayjs'
 import { electionApi } from '../../api/election.api'
 import { fellowshipApi } from '../../api/fellowship.api'
 import { dioceseApi } from '../../api/diocese.api'
@@ -52,11 +57,8 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
   const isEditing = Boolean(election?.id)
 
   const formatLocalDateTime = (value?: string | null) => {
-    if (!value) return ''
-    const dt = new Date(value)
-    if (Number.isNaN(dt.getTime())) return ''
-    const pad = (num: number) => String(num).padStart(2, '0')
-    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+    if (!value) return null
+    return dayjs(value)
   }
 
   useEffect(() => {
@@ -156,11 +158,16 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
   }, [scope, selectedArchdeaconryId, setValue, toast])
 
   const onSubmit = async (data: Partial<Election>) => {
-    const toDateOrUndefined = (value?: string) => (value?.trim() ? value : undefined)
-    const toIsoOrUndefined = (value?: string) => {
-      if (!value?.trim()) return undefined
-      const dt = new Date(value)
-      if (Number.isNaN(dt.getTime())) return undefined
+    const toDateOrUndefined = (value?: string | any) => {
+      if (!value) return undefined
+      const d = dayjs(value)
+      if (!d.isValid()) return undefined
+      return d.format('YYYY-MM-DD')
+    }
+    const toIsoOrUndefined = (value?: any) => {
+      if (!value) return undefined
+      const dt = dayjs(value)
+      if (!dt.isValid()) return undefined
       return dt.toISOString()
     }
     const scopeValue = data.scope
@@ -225,17 +232,18 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>{election ? 'Edit Election' : 'Create Election'}</DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
-          <Box sx={{ display: 'grid', gap: 2 }}>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 1.5, mt: 2 }}>
             <Controller name="name" control={control} rules={{ required: true }} render={({ field }) => (
-              <TextField {...field} label="Name" required />
+              <TextField {...field} label="Name" required size="small" sx={{ gridColumn: '1 / -1' }} />
             )} />
 
             <Controller name="description" control={control} render={({ field }) => (
-              <TextField {...field} label="Description" multiline minRows={3} />
+              <TextField {...field} label="Description" multiline minRows={2} size="small" sx={{ gridColumn: '1 / -1' }} />
             )} />
 
             <Controller name="scope" control={control} rules={{ required: 'Scope is required' }} render={({ field }) => (
@@ -244,6 +252,7 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                 select
                 label="Scope"
                 required
+                size="small"
                 value={field.value ?? ''}
                 disabled={isEditing}
                 error={Boolean(errors.scope)}
@@ -260,10 +269,12 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                 {...field}
                 select
                 label="Fellowship"
+                size="small"
                 value={field.value ?? ''}
                 onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                helperText="Optional. Set only if the election is for one fellowship."
+                helperText="Optional"
               >
+                <MenuItem value="">None</MenuItem>
                 {fellowships.map((f) => (
                   <MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>
                 ))}
@@ -277,6 +288,7 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                   select
                   label="Diocese"
                   required
+                  size="small"
                   value={field.value ?? ''}
                   onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                   disabled={isEditing}
@@ -297,11 +309,12 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                   select
                   label="Diocese"
                   required
+                  size="small"
                   value={field.value ?? ''}
                   onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                   disabled={isEditing}
                   error={Boolean(errors.dioceseId)}
-                  helperText={errors.dioceseId?.message as string | undefined || 'Used to filter archdeaconries'}
+                  helperText="Filter for archdeaconries"
                 >
                   {dioceses.map((d) => (
                     <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
@@ -317,6 +330,7 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                   select
                   label="Archdeaconry"
                   required
+                  size="small"
                   value={field.value ?? ''}
                   onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                   disabled={isEditing}
@@ -338,6 +352,7 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                     select
                     label="Archdeaconry"
                     required
+                    size="small"
                     value={field.value ?? ''}
                     onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                     disabled={isEditing}
@@ -356,6 +371,7 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                     select
                     label="Church"
                     required
+                    size="small"
                     value={field.value ?? ''}
                     onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                     disabled={isEditing}
@@ -370,15 +386,12 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
               </>
             )}
 
-            <Controller name="termStartDate" control={control} rules={{ required: 'Term start date is required' }} render={({ field }) => (
-              <TextField
-                {...field}
+            <Controller name="termStartDate" control={control} rules={{ required: 'Term start date is required' }} render={({ field: { value, onChange } }) => (
+              <DatePicker
                 label="Term Start Date"
-                type="date"
-                required
-                InputLabelProps={{ shrink: true }}
-                error={Boolean(errors.termStartDate)}
-                helperText={errors.termStartDate?.message as string | undefined}
+                value={value ? dayjs(value) : null}
+                onChange={(v) => onChange(v ? v.format('YYYY-MM-DD') : '')}
+                slotProps={{ textField: { fullWidth: true, size: 'small', error: Boolean(errors.termStartDate), helperText: errors.termStartDate?.message as string | undefined } }}
               />
             )} />
 
@@ -386,28 +399,25 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
               required: 'Term end date is required',
               validate: (value) => {
                 if (!value || !termStartDate) return true
-                return new Date(value) > new Date(termStartDate) || 'Term end date must be after start date'
+                const start = dayjs(termStartDate)
+                const end = dayjs(value)
+                return end.isAfter(start) || 'Term end date must be after start date'
               },
-            }} render={({ field }) => (
-              <TextField
-                {...field}
+            }} render={({ field: { value, onChange } }) => (
+              <DatePicker
                 label="Term End Date"
-                type="date"
-                required
-                InputLabelProps={{ shrink: true }}
-                error={Boolean(errors.termEndDate)}
-                helperText={errors.termEndDate?.message as string | undefined}
+                value={value ? dayjs(value) : null}
+                onChange={(v) => onChange(v ? v.format('YYYY-MM-DD') : '')}
+                slotProps={{ textField: { fullWidth: true, size: 'small', error: Boolean(errors.termEndDate), helperText: errors.termEndDate?.message as string | undefined } }}
               />
             )} />
 
-            <Controller name="nominationStartAt" control={control} render={({ field }) => (
-              <TextField
-                {...field}
+            <Controller name="nominationStartAt" control={control} render={({ field: { value, onChange } }) => (
+              <DateTimePicker
                 label="Nomination Start"
-                type="datetime-local"
-                InputLabelProps={{ shrink: true }}
-                error={Boolean(errors.nominationStartAt)}
-                helperText={errors.nominationStartAt?.message as string | undefined}
+                value={value ? dayjs(value) : null}
+                onChange={(v) => onChange(v ? v.toISOString() : undefined)}
+                slotProps={{ textField: { fullWidth: true, size: 'small', error: Boolean(errors.nominationStartAt), helperText: errors.nominationStartAt?.message as string | undefined } }}
               />
             )} />
 
@@ -416,34 +426,34 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
                 if (!nominationStartAt && !value) return true
                 if (!nominationStartAt && value) return 'Nomination start time is required'
                 if (nominationStartAt && !value) return 'Nomination end time is required'
-                if (nominationStartAt && value && new Date(value) <= new Date(nominationStartAt)) {
+                const start = dayjs(nominationStartAt as any)
+                const end = dayjs(value as any)
+                if (start.isValid() && end.isValid() && end.isBefore(start)) {
                   return 'Nomination end must be after start'
                 }
-                if (votingEndAt && value && new Date(value) > new Date(votingEndAt)) {
-                  return 'Nomination end must not be after voting end'
+                if (votingEndAt) {
+                  const votEnd = dayjs(votingEndAt as any)
+                  if (end.isValid() && votEnd.isValid() && end.isAfter(votEnd)) {
+                    return 'Nomination end must not be after voting end'
+                  }
                 }
                 return true
               },
-            }} render={({ field }) => (
-              <TextField
-                {...field}
+            }} render={({ field: { value, onChange } }) => (
+              <DateTimePicker
                 label="Nomination End"
-                type="datetime-local"
-                InputLabelProps={{ shrink: true }}
-                error={Boolean(errors.nominationEndAt)}
-                helperText={errors.nominationEndAt?.message as string | undefined}
+                value={value ? dayjs(value) : null}
+                onChange={(v) => onChange(v ? v.toISOString() : undefined)}
+                slotProps={{ textField: { fullWidth: true, size: 'small', error: Boolean(errors.nominationEndAt), helperText: errors.nominationEndAt?.message as string | undefined } }}
               />
             )} />
 
-            <Controller name="votingStartAt" control={control} rules={{ required: 'Voting start time is required' }} render={({ field }) => (
-              <TextField
-                {...field}
+            <Controller name="votingStartAt" control={control} rules={{ required: 'Voting start time is required' }} render={({ field: { value, onChange } }) => (
+              <DateTimePicker
                 label="Voting Start"
-                type="datetime-local"
-                required
-                InputLabelProps={{ shrink: true }}
-                error={Boolean(errors.votingStartAt)}
-                helperText={errors.votingStartAt?.message as string | undefined}
+                value={value ? dayjs(value) : null}
+                onChange={(v) => onChange(v ? v.toISOString() : undefined)}
+                slotProps={{ textField: { fullWidth: true, size: 'small', error: Boolean(errors.votingStartAt), helperText: errors.votingStartAt?.message as string | undefined } }}
               />
             )} />
 
@@ -451,20 +461,20 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
               required: 'Voting end time is required',
               validate: (value) => {
                 if (!value || !votingStartAt) return true
-                return new Date(value) > new Date(votingStartAt) || 'Voting end must be after start'
+                const start = dayjs(votingStartAt as any)
+                const end = dayjs(value as any)
+                return end.isAfter(start) || 'Voting end must be after start'
               },
-            }} render={({ field }) => (
-              <TextField
-                {...field}
+            }} render={({ field: { value, onChange } }) => (
+              <DateTimePicker
                 label="Voting End"
-                type="datetime-local"
-                required
-                InputLabelProps={{ shrink: true }}
-                error={Boolean(errors.votingEndAt)}
-                helperText={errors.votingEndAt?.message as string | undefined}
+                value={value ? dayjs(value) : null}
+                onChange={(v) => onChange(v ? v.toISOString() : undefined)}
+                slotProps={{ textField: { fullWidth: true, size: 'small', error: Boolean(errors.votingEndAt), helperText: errors.votingEndAt?.message as string | undefined } }}
               />
             )} />
-          </Box>
+            </Box>
+          </LocalizationProvider>
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancel</Button>
