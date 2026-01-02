@@ -252,7 +252,7 @@ const PeopleRegistryPage: React.FC = () => {
                         <TableCell><Typography variant="body2">{p.fullName}</Typography></TableCell>
                         <TableCell>{p.email}</TableCell>
                         <TableCell>{p.phoneNumber}</TableCell>
-                        <TableCell>{p.gender}</TableCell>
+                        <TableCell>{p.gender ? p.gender.charAt(0) + p.gender.slice(1).toLowerCase() : ''}</TableCell>
                         <TableCell>{p.dateOfBirth ? new Date(p.dateOfBirth).toLocaleDateString() : ''}</TableCell>
                         <TableCell><StatusChip status={(p.status as any) ?? 'INACTIVE'} /></TableCell>
                         {isAdmin && (

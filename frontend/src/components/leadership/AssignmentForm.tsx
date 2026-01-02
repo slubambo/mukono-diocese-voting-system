@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { Box, Button, TextField, FormControl, InputLabel, Select, MenuItem, Autocomplete } from '@mui/material'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+// @ts-ignore dayjs module resolution without esModuleInterop
+import dayjs from 'dayjs'
 import type { CreateLeadershipAssignmentRequest, LeadershipAssignmentResponse } from '../../types/leadership'
 import { leadershipApi } from '../../api/leadership.api'
 import { fellowshipApi } from '../../api/fellowship.api'
@@ -166,89 +171,105 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit(submit)} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {showPersonSelector && (
-        <Controller name="personId" control={control} render={({ field }) => (
-          <Autocomplete options={people} getOptionLabel={(p: any) => p.fullName} onChange={(_, v) => field.onChange(v?.id ?? 0)} renderInput={(params) => <TextField {...params} label="Person" required />} />
-        )} />
-      )}
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <Box component="form" onSubmit={handleSubmit(submit)} sx={{ display: 'grid', gap: 1.5 }}>
+        {showPersonSelector && (
+          <Controller name="personId" control={control} render={({ field }) => (
+            <Autocomplete options={people} getOptionLabel={(p: any) => p.fullName} onChange={(_, v) => field.onChange(v?.id ?? 0)} renderInput={(params) => <TextField {...params} label="Person" required size="small" />} />
+          )} />
+        )}
 
-      <FormControl fullWidth>
-        <InputLabel>Fellowship</InputLabel>
-        <Controller name={"fellowshipId" as any} control={control} render={({ field }) => (
-          <Select {...field} label="Fellowship">
-            <MenuItem value="">-- Select Fellowship --</MenuItem>
-            {fellowships.map((f) => (<MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>))}
+        <FormControl fullWidth size="small">
+          <InputLabel>Fellowship</InputLabel>
+          <Controller name={"fellowshipId" as any} control={control} render={({ field }) => (
+            <Select {...field} label="Fellowship">
+              <MenuItem value="">-- Select Fellowship --</MenuItem>
+              {fellowships.map((f) => (<MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>))}
+            </Select>
+          )} />
+        </FormControl>
+
+        <FormControl fullWidth size="small">
+          <InputLabel>Level</InputLabel>
+          <Select value={selectedLevel ?? ''} label="Level" onChange={(e: any) => { const v = e.target.value as string; const nv = v || null; setSelectedLevel(nv); if (onLevelChange) onLevelChange(nv); if (nv === 'DIOCESE') { setValue('archdeaconryId', undefined); setValue('churchId', undefined); } if (nv === 'ARCHDEACONRY') { setValue('churchId', undefined); } }}>
+            <MenuItem value="">-- Select Level --</MenuItem>
+            {levels.map((l) => (<MenuItem key={l} value={l}>{l.charAt(0) + l.slice(1).toLowerCase()}</MenuItem>))}
           </Select>
+        </FormControl>
+
+        <Controller name="fellowshipPositionId" control={control} render={({ field }) => (
+          <Autocomplete
+            options={positions}
+            getOptionLabel={(p: any) => ((p.title && p.title.name) || p.titleName) + ' — ' + ((p.fellowship && p.fellowship.name) || p.fellowshipName)}
+            onChange={(_, v) => field.onChange(v?.id ?? 0)}
+            renderInput={(params) => <TextField {...params} label="Position" required size="small" />}
+          />
         )} />
-      </FormControl>
 
-      <FormControl fullWidth>
-        <InputLabel>Level</InputLabel>
-        <Select value={selectedLevel ?? ''} label="Level" onChange={(e: any) => { const v = e.target.value as string; const nv = v || null; setSelectedLevel(nv); if (onLevelChange) onLevelChange(nv); if (nv === 'DIOCESE') { setValue('archdeaconryId', undefined); setValue('churchId', undefined); } if (nv === 'ARCHDEACONRY') { setValue('churchId', undefined); } }}>
-          <MenuItem value="">-- Select Level --</MenuItem>
-          {levels.map((l) => (<MenuItem key={l} value={l}>{l.charAt(0) + l.slice(1).toLowerCase()}</MenuItem>))}
-        </Select>
-      </FormControl>
+        {(selectedLevel === 'DIOCESE' || selectedLevel === 'ARCHDEACONRY' || selectedLevel === 'CHURCH') && (
+          <FormControl fullWidth size="small">
+            <InputLabel>Diocese</InputLabel>
+            <Controller name="dioceseId" control={control} render={({ field }) => (
+              <Select {...field} label="Diocese">
+                <MenuItem value="">-- Select Diocese --</MenuItem>
+                {dioceses.map(d => (<MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>))}
+              </Select>
+            )} />
+          </FormControl>
+        )}
 
-      <Controller name="fellowshipPositionId" control={control} render={({ field }) => (
-        <Autocomplete
-          options={positions}
-          getOptionLabel={(p: any) => ((p.title && p.title.name) || p.titleName) + ' — ' + ((p.fellowship && p.fellowship.name) || p.fellowshipName)}
-          onChange={(_, v) => field.onChange(v?.id ?? 0)}
-          renderInput={(params) => <TextField {...params} label="Position" required />}
-        />
-      )} />
+        {(selectedLevel === 'ARCHDEACONRY' || selectedLevel === 'CHURCH') && (
+          <FormControl fullWidth size="small">
+            <InputLabel>Archdeaconry</InputLabel>
+            <Controller name="archdeaconryId" control={control} render={({ field }) => (
+              <Select {...field} label="Archdeaconry">
+                <MenuItem value="">-- Select Archdeaconry --</MenuItem>
+                {archdeaconries.map(a => (<MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>))}
+              </Select>
+            )} />
+          </FormControl>
+        )}
 
-      {(selectedLevel === 'DIOCESE' || selectedLevel === 'ARCHDEACONRY' || selectedLevel === 'CHURCH') && (
-        <FormControl fullWidth>
-          <InputLabel>Diocese</InputLabel>
-          <Controller name="dioceseId" control={control} render={({ field }) => (
-            <Select {...field} label="Diocese">
-              <MenuItem value="">-- Select Diocese --</MenuItem>
-              {dioceses.map(d => (<MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>))}
-            </Select>
-          )} />
-        </FormControl>
-      )}
+        {selectedLevel === 'CHURCH' && (
+          <FormControl fullWidth size="small">
+            <InputLabel>Church</InputLabel>
+            <Controller name="churchId" control={control} render={({ field }) => (
+              <Select {...field} label="Church">
+                <MenuItem value="">-- Select Church --</MenuItem>
+                {churches.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
+              </Select>
+            )} />
+          </FormControl>
+        )}
 
-      {(selectedLevel === 'ARCHDEACONRY' || selectedLevel === 'CHURCH') && (
-        <FormControl fullWidth>
-          <InputLabel>Archdeaconry</InputLabel>
-          <Controller name="archdeaconryId" control={control} render={({ field }) => (
-            <Select {...field} label="Archdeaconry">
-              <MenuItem value="">-- Select Archdeaconry --</MenuItem>
-              {archdeaconries.map(a => (<MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>))}
-            </Select>
-          )} />
-        </FormControl>
-      )}
+        <Controller name="termStartDateMonth" control={control} render={({ field }) => (
+          <DatePicker
+            label="Term Start"
+            views={["year","month"]}
+            openTo="year"
+            value={field.value ? dayjs(`${field.value}-01`) : null}
+            onChange={(date) => field.onChange(date ? date.format('YYYY-MM') : '')}
+            slotProps={{ textField: { size: 'small' } }}
+          />
+        )} />
 
-      {selectedLevel === 'CHURCH' && (
-        <FormControl fullWidth>
-          <InputLabel>Church</InputLabel>
-          <Controller name="churchId" control={control} render={({ field }) => (
-            <Select {...field} label="Church">
-              <MenuItem value="">-- Select Church --</MenuItem>
-              {churches.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
-            </Select>
-          )} />
-        </FormControl>
-      )}
+        <Controller name="termEndDateMonth" control={control} render={({ field }) => (
+          <DatePicker
+            label="Term End"
+            views={["year","month"]}
+            openTo="year"
+            value={field.value ? dayjs(`${field.value}-01`) : null}
+            onChange={(date) => field.onChange(date ? date.format('YYYY-MM') : '')}
+            slotProps={{ textField: { size: 'small' } }}
+          />
+        )} />
 
-      <Controller name="termStartDateMonth" control={control} render={({ field }) => (
-        <TextField {...field} label="Term Start (month)" type="month" />
-      )} />
-
-      <Controller name="termEndDateMonth" control={control} render={({ field }) => (
-        <TextField {...field} label="Term End (month)" type="month" />
-      )} />
-
-      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-        <Button onClick={onCancel ?? (() => {})}>Cancel</Button>
-        <Button type="submit" variant="contained">{assignment ? 'Save' : 'Assign'}</Button>
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 0.5 }}>
+          <Button onClick={onCancel ?? (() => {})}>Cancel</Button>
+          <Button type="submit" variant="contained">{assignment ? 'Save' : 'Assign'}</Button>
+        </Box>
       </Box>
-    </Box>
+    </LocalizationProvider>
   )
 }
 
