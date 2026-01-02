@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Button,
   Paper,
@@ -192,10 +192,19 @@ const LeadershipAssignmentsPage: React.FC = () => {
     }
   }, [filterArchdeaconryId])
 
+  const levelAllowsArchdeaconry = !filterLevel || filterLevel === 'ARCHDEACONRY' || filterLevel === 'CHURCH'
+  const levelAllowsChurch = !filterLevel || filterLevel === 'CHURCH'
+
+  // Keep dependent filters coherent with selected level.
+  useEffect(() => {
+    if (filterLevel && !levelAllowsArchdeaconry) setFilterArchdeaconryId(null)
+    if (filterLevel && !levelAllowsChurch) setFilterChurchId(null)
+  }, [filterLevel, levelAllowsArchdeaconry, levelAllowsChurch])
+
   // Re-fetch when filters change
   useEffect(() => { setPage(0); fetchAssignments() }, [filterDioceseId, filterLevel, filterArchdeaconryId, filterChurchId, filterFellowshipId])
 
-  const filteredAssignments = React.useMemo(() => {
+  const filteredAssignments = useMemo(() => {
     const termToTime = (v?: string | null) => (v ? new Date(v).getTime() : null)
     const matchesSearch = (a: LeadershipAssignmentResponse) => {
       if (!debouncedSearch.trim()) return true
@@ -337,6 +346,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
               options: [{ id: '', name: '-- All --' }, ...archdeaconries.map((a) => ({ id: a.id, name: a.name }))],
               onChange: (v: any) => { setFilterArchdeaconryId((v === '' ? null : v) as number | null); if (v) setFilterChurchId(null) },
               placeholder: 'Archdeaconry',
+              disabled: !levelAllowsArchdeaconry,
             },
             {
               id: 'church',
@@ -345,6 +355,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
               options: [{ id: '', name: '-- All --' }, ...churches.map((c) => ({ id: c.id, name: c.name }))],
               onChange: (v: any) => setFilterChurchId((v === '' ? null : v) as number | null),
               placeholder: 'Church',
+              disabled: !levelAllowsChurch,
             },
           ]}
         />
