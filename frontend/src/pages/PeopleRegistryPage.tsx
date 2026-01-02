@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import {
   Button,
@@ -54,6 +54,7 @@ const PeopleRegistryPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [total, setTotal] = useState(0)
   const [query, setQuery] = useState<string>('')
+  const [sort, setSort] = useState('fullName,asc')
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<PersonResponse | null>(null)
@@ -128,6 +129,34 @@ const PeopleRegistryPage: React.FC = () => {
 
   useEffect(() => { fetchPeople() }, [page, rowsPerPage, query])
 
+  const sortOptions = [
+    { id: 'fullName,asc', name: 'Name (A-Z)' },
+    { id: 'fullName,desc', name: 'Name (Z-A)' },
+    { id: 'createdAt,desc', name: 'Newest first' },
+    { id: 'createdAt,asc', name: 'Oldest first' },
+  ]
+
+  const displayPeople = useMemo(() => {
+    const byStatus = (status?: string | null) => (status === 'ACTIVE' ? 0 : 1)
+    return [...people].sort((a, b) => {
+      const statusCompare = byStatus(a.status) - byStatus(b.status)
+      if (statusCompare !== 0) return statusCompare
+
+      switch (sort) {
+        case 'fullName,asc':
+          return (a.fullName || '').localeCompare(b.fullName || '')
+        case 'fullName,desc':
+          return (b.fullName || '').localeCompare(a.fullName || '')
+        case 'createdAt,asc':
+          return (a.createdAt || '').localeCompare(b.createdAt || '')
+        case 'createdAt,desc':
+          return (b.createdAt || '').localeCompare(a.createdAt || '')
+        default:
+          return 0
+      }
+    })
+  }, [people, sort])
+
   const openCreate = () => { setEditing(null); reset({ fullName: '', email: '', phoneNumber: '', gender: '', dateOfBirth: '' }); setDialogOpen(true) }
   const openEdit = (p: PersonResponse) => { setEditing(p); reset({ fullName: p.fullName, email: p.email || '', phoneNumber: p.phoneNumber || '', gender: p.gender || '', dateOfBirth: p.dateOfBirth || '' }); setDialogOpen(true) }
 
@@ -177,14 +206,25 @@ const PeopleRegistryPage: React.FC = () => {
               value: query,
               placeholder: 'Search by name or email',
               onChange: (v: any) => { setQuery(v as string); setPage(0) },
-            }
+            },
+            {
+              id: 'sort',
+              label: 'Sort by',
+              value: sort,
+              options: sortOptions,
+              onChange: (value) => {
+                setSort(value as string)
+                setPage(0)
+              },
+              placeholder: 'Sort by',
+            },
           ]}
         />
 
         <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
           {loading ? (
             <LoadingState count={5} variant="row" />
-          ) : people.length === 0 ? (
+          ) : displayPeople.length === 0 ? (
             <EmptyState title="No people" description={isAdmin ? 'Create your first person.' : 'No people found.'} action={isAdmin ? <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Create Person</Button> : undefined} />
           ) : (
             <>
@@ -202,7 +242,7 @@ const PeopleRegistryPage: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {people.map((p) => (
+                    {displayPeople.map((p) => (
                       <TableRow key={p.id} hover>
                         <TableCell><Typography variant="body2">{p.fullName}</Typography></TableCell>
                         <TableCell>{p.email}</TableCell>
@@ -230,21 +270,21 @@ const PeopleRegistryPage: React.FC = () => {
         <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
           <DialogTitle>{editing ? 'Edit Person' : 'Create Person'}</DialogTitle>
           <DialogContent>
-            <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               <Controller name="fullName" control={control} rules={{ required: 'Full name is required' }} render={({ field, fieldState }) => (
-                <TextField {...field} label="Full Name" required error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                <TextField {...field} label="Full Name" required error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth size="small" />
               )} />
 
               <Controller name="email" control={control} render={({ field }) => (
-                <TextField {...field} label="Email" type="email" fullWidth />
+                <TextField {...field} label="Email" type="email" fullWidth size="small" />
               )} />
 
               <Controller name="phoneNumber" control={control} render={({ field }) => (
-                <TextField {...field} label="Phone Number" fullWidth />
+                <TextField {...field} label="Phone Number" fullWidth size="small" />
               )} />
 
               <Controller name="gender" control={control} render={({ field }) => (
-                <FormControl fullWidth>
+                <FormControl fullWidth size="small">
                   <InputLabel>Gender</InputLabel>
                   <Select {...field} label="Gender">
                     <MenuItem value="">Unknown</MenuItem>
@@ -255,7 +295,7 @@ const PeopleRegistryPage: React.FC = () => {
               )} />
 
               <Controller name="dateOfBirth" control={control} render={({ field }) => (
-                <TextField {...field} label="Date of Birth" type="date" InputLabelProps={{ shrink: true }} fullWidth />
+                <TextField {...field} label="Date of Birth" type="date" InputLabelProps={{ shrink: true }} fullWidth size="small" />
               )} />
 
             </Box>

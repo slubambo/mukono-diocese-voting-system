@@ -20,6 +20,14 @@ public class PersonService {
     }
 
     public Person createPerson(Person person) {
+        // Convert empty strings to null to avoid unique constraint violations
+        if (person.getEmail() != null && person.getEmail().isBlank()) {
+            person.setEmail(null);
+        }
+        if (person.getPhoneNumber() != null && person.getPhoneNumber().isBlank()) {
+            person.setPhoneNumber(null);
+        }
+        
         if (person.getEmail() != null && !person.getEmail().isBlank()) {
             if (personRepository.existsByEmail(person.getEmail())) {
                 throw new IllegalArgumentException("Email already in use");
@@ -40,19 +48,27 @@ public class PersonService {
         if (updates.getFullName() != null && !updates.getFullName().isBlank()) {
             person.setFullName(updates.getFullName());
         }
-        if (updates.getEmail() != null && !updates.getEmail().isBlank()) {
-            if (!updates.getEmail().equals(person.getEmail()) &&
-                personRepository.existsByEmail(updates.getEmail())) {
-                throw new IllegalArgumentException("Email already in use");
+        if (updates.getEmail() != null) {
+            // Convert empty strings to null
+            String email = updates.getEmail().isBlank() ? null : updates.getEmail();
+            if (email != null) {
+                if (!email.equals(person.getEmail()) &&
+                    personRepository.existsByEmail(email)) {
+                    throw new IllegalArgumentException("Email already in use");
+                }
             }
-            person.setEmail(updates.getEmail());
+            person.setEmail(email);
         }
-        if (updates.getPhoneNumber() != null && !updates.getPhoneNumber().isBlank()) {
-            if (!updates.getPhoneNumber().equals(person.getPhoneNumber()) &&
-                personRepository.existsByPhoneNumber(updates.getPhoneNumber())) {
-                throw new IllegalArgumentException("Phone number already in use");
+        if (updates.getPhoneNumber() != null) {
+            // Convert empty strings to null
+            String phoneNumber = updates.getPhoneNumber().isBlank() ? null : updates.getPhoneNumber();
+            if (phoneNumber != null) {
+                if (!phoneNumber.equals(person.getPhoneNumber()) &&
+                    personRepository.existsByPhoneNumber(phoneNumber)) {
+                    throw new IllegalArgumentException("Phone number already in use");
+                }
             }
-            person.setPhoneNumber(updates.getPhoneNumber());
+            person.setPhoneNumber(phoneNumber);
         }
         if (updates.getGender() != null) {
             person.setGender(updates.getGender());
