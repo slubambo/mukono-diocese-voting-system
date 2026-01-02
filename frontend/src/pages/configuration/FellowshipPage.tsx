@@ -2,7 +2,7 @@
  * Fellowship Management Page
  * Simpler - fellowships are not hierarchical
  */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Button,
   Paper,
@@ -53,6 +53,7 @@ export const FellowshipPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 })
+  const [sort, setSort] = useState('name,asc')
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selected, setSelected] = useState<Fellowship | null>(null)
@@ -149,6 +150,34 @@ export const FellowshipPage: React.FC = () => {
 
   const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
 
+  const sortOptions = [
+    { id: 'name,asc', name: 'Name (A-Z)' },
+    { id: 'name,desc', name: 'Name (Z-A)' },
+    { id: 'createdAt,desc', name: 'Newest first' },
+    { id: 'createdAt,asc', name: 'Oldest first' },
+  ]
+
+  const displayFellowships = useMemo(() => {
+    const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
+    return [...fellowships].sort((a, b) => {
+      const statusCompare = byStatus(a.status) - byStatus(b.status)
+      if (statusCompare !== 0) return statusCompare
+
+      switch (sort) {
+        case 'name,asc':
+          return a.name.localeCompare(b.name)
+        case 'name,desc':
+          return b.name.localeCompare(a.name)
+        case 'createdAt,asc':
+          return a.createdAt.localeCompare(b.createdAt)
+        case 'createdAt,desc':
+          return b.createdAt.localeCompare(a.createdAt)
+        default:
+          return 0
+      }
+    })
+  }, [fellowships, sort])
+
   return (
     <AppShell>
       <PageLayout title="Fellowships">
@@ -164,12 +193,25 @@ export const FellowshipPage: React.FC = () => {
             { label: 'Active', value: stats.active },
             { label: 'Inactive', value: stats.inactive },
           ]}
+          filters={[
+            {
+              id: 'sort',
+              label: 'Sort by',
+              value: sort,
+              options: sortOptions,
+              onChange: (value) => {
+                setSort(value as string)
+                setPage(0)
+              },
+              placeholder: 'Sort by',
+            },
+          ]}
         />
 
         <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
         {loading ? (
           <LoadingState count={5} variant="row" />
-        ) : fellowships.length === 0 ? (
+        ) : displayFellowships.length === 0 ? (
           <EmptyState
             title="No fellowships found"
             description={isAdmin ? 'Create your first fellowship.' : 'No fellowships exist yet.'}
@@ -207,7 +249,7 @@ export const FellowshipPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {fellowships.map((f) => (
+                  {displayFellowships.map((f) => (
                     <TableRow key={f.id} hover>
                       <TableCell><Typography variant="body2" fontWeight={500}>{f.name}</Typography></TableCell>
                       <TableCell>{f.code || '—'}</TableCell>

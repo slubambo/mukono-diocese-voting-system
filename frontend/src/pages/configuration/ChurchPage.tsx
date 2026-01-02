@@ -2,7 +2,7 @@
  * Church Management Page
  * Similar to Archdeaconry but belongs to an Archdeaconry
  */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Button,
@@ -59,6 +59,7 @@ export const ChurchPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
   const [, setStats] = useState({ total: 0, active: 0, inactive: 0 })
+  const [sort, setSort] = useState('name,asc')
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selectedChurch, setSelectedChurch] = useState<Church | null>(null)
@@ -219,6 +220,34 @@ export const ChurchPage: React.FC = () => {
 
   const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
 
+  const sortOptions = [
+    { id: 'name,asc', name: 'Name (A-Z)' },
+    { id: 'name,desc', name: 'Name (Z-A)' },
+    { id: 'createdAt,desc', name: 'Newest first' },
+    { id: 'createdAt,asc', name: 'Oldest first' },
+  ]
+
+  const displayChurches = useMemo(() => {
+    const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
+    return [...churches].sort((a, b) => {
+      const statusCompare = byStatus(a.status) - byStatus(b.status)
+      if (statusCompare !== 0) return statusCompare
+
+      switch (sort) {
+        case 'name,asc':
+          return a.name.localeCompare(b.name)
+        case 'name,desc':
+          return b.name.localeCompare(a.name)
+        case 'createdAt,asc':
+          return a.createdAt.localeCompare(b.createdAt)
+        case 'createdAt,desc':
+          return b.createdAt.localeCompare(a.createdAt)
+        default:
+          return 0
+      }
+    })
+  }, [churches, sort])
+
   return (
     <AppShell>
       <PageLayout title="Church Management">
@@ -246,7 +275,18 @@ export const ChurchPage: React.FC = () => {
               onChange: (value) => setSelectedArchdeaconryId(value as number | null),
               disabled: !archdeaconries.length,
               placeholder: 'Select Archdeaconry',
-            }
+            },
+            {
+              id: 'sort',
+              label: 'Sort by',
+              value: sort,
+              options: sortOptions,
+              onChange: (value) => {
+                setSort(value as string)
+                setPage(0)
+              },
+              placeholder: 'Sort by',
+            },
           ]}
         />
 
@@ -255,7 +295,7 @@ export const ChurchPage: React.FC = () => {
           <LoadingState count={5} variant="row" />
         ) : !selectedArchdeaconryId ? (
           <EmptyState title="Select an archdeaconry" description="Please select an archdeaconry to view its churches." />
-        ) : churches.length === 0 ? (
+        ) : displayChurches.length === 0 ? (
           <EmptyState
             title="No churches found"
             description={isReadOnly ? 'No churches exist yet.' : 'Create your first church.'}
@@ -295,7 +335,7 @@ export const ChurchPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {churches.map((church) => (
+                  {displayChurches.map((church) => (
                     <TableRow key={church.id} hover>
                       <TableCell><Typography variant="body2" fontWeight={500}>{church.name}</Typography></TableCell>
                       <TableCell>{church.code || '—'}</TableCell>

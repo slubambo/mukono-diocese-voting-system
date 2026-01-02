@@ -1,7 +1,7 @@
 /**
  * Position Title Management Page
  */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Button,
   Paper,
@@ -51,6 +51,7 @@ export const PositionTitlePage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 })
+  const [sort, setSort] = useState('name,asc')
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selected, setSelected] = useState<PositionTitle | null>(null)
@@ -127,6 +128,34 @@ export const PositionTitlePage: React.FC = () => {
 
   const renderCount = (value?: number) => (typeof value === 'number' ? value : '—')
 
+  const sortOptions = [
+    { id: 'name,asc', name: 'Title (A-Z)' },
+    { id: 'name,desc', name: 'Title (Z-A)' },
+    { id: 'createdAt,desc', name: 'Newest first' },
+    { id: 'createdAt,asc', name: 'Oldest first' },
+  ]
+
+  const displayTitles = useMemo(() => {
+    const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
+    return [...titles].sort((a, b) => {
+      const statusCompare = byStatus(a.status) - byStatus(b.status)
+      if (statusCompare !== 0) return statusCompare
+
+      switch (sort) {
+        case 'name,asc':
+          return a.name.localeCompare(b.name)
+        case 'name,desc':
+          return b.name.localeCompare(a.name)
+        case 'createdAt,asc':
+          return a.createdAt.localeCompare(b.createdAt)
+        case 'createdAt,desc':
+          return b.createdAt.localeCompare(a.createdAt)
+        default:
+          return 0
+      }
+    })
+  }, [titles, sort])
+
   return (
     <AppShell>
       <PageLayout title="Position Titles">
@@ -142,12 +171,25 @@ export const PositionTitlePage: React.FC = () => {
             { label: 'Active', value: stats.active },
             { label: 'Inactive', value: stats.inactive },
           ]}
+          filters={[
+            {
+              id: 'sort',
+              label: 'Sort by',
+              value: sort,
+              options: sortOptions,
+              onChange: (value) => {
+                setSort(value as string)
+                setPage(0)
+              },
+              placeholder: 'Sort by',
+            },
+          ]}
         />
 
         <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
         {loading ? (
           <LoadingState count={5} variant="row" />
-        ) : titles.length === 0 ? (
+        ) : displayTitles.length === 0 ? (
           <EmptyState title="No position titles" description={isAdmin ? 'Create your first position title.' : 'No titles exist yet.'} action={isAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormData({ name: '' }); setDialogMode('create'); }}>Add Title</Button>} />
         ) : (
           <>
@@ -180,7 +222,7 @@ export const PositionTitlePage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {titles.map((t) => (
+                  {displayTitles.map((t) => (
                     <TableRow key={t.id} hover>
                       <TableCell><Typography variant="body2" fontWeight={500}>{t.name}</Typography></TableCell>
                       <TableCell align="right">{renderCount(t.usageCount)}</TableCell>

@@ -3,7 +3,7 @@
  * Allows ADMIN to create, update, delete dioceses
  * Allows DS/Polling Officer to view dioceses (read-only)
  */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Button,
@@ -58,6 +58,7 @@ export const DiocesePage: React.FC = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
+  const [sort, setSort] = useState('name,asc')
   
   // Dialog state
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
@@ -118,6 +119,34 @@ export const DiocesePage: React.FC = () => {
     active: dioceses.filter((d) => d.status === 'ACTIVE').length,
     inactive: dioceses.filter((d) => d.status === 'INACTIVE').length,
   }
+
+  const sortOptions = [
+    { id: 'name,asc', name: 'Name (A-Z)' },
+    { id: 'name,desc', name: 'Name (Z-A)' },
+    { id: 'createdAt,desc', name: 'Newest first' },
+    { id: 'createdAt,asc', name: 'Oldest first' },
+  ]
+
+  const displayDioceses = useMemo(() => {
+    const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
+    return [...filteredDioceses].sort((a, b) => {
+      const statusCompare = byStatus(a.status) - byStatus(b.status)
+      if (statusCompare !== 0) return statusCompare
+
+      switch (sort) {
+        case 'name,asc':
+          return a.name.localeCompare(b.name)
+        case 'name,desc':
+          return b.name.localeCompare(a.name)
+        case 'createdAt,asc':
+          return a.createdAt.localeCompare(b.createdAt)
+        case 'createdAt,desc':
+          return b.createdAt.localeCompare(a.createdAt)
+        default:
+          return 0
+      }
+    })
+  }, [filteredDioceses, sort])
 
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage)
@@ -241,6 +270,19 @@ export const DiocesePage: React.FC = () => {
             { label: 'Active', value: stats.active },
             { label: 'Inactive', value: stats.inactive },
           ]}
+          filters={[
+            {
+              id: 'sort',
+              label: 'Sort by',
+              value: sort,
+              options: sortOptions,
+              onChange: (value) => {
+                setSort(value as string)
+                setPage(0)
+              },
+              placeholder: 'Sort by',
+            },
+          ]}
         />
 
         {/* Search Bar */}
@@ -281,7 +323,7 @@ export const DiocesePage: React.FC = () => {
       <Paper sx={{ width: '100%', mb: 2, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
         {loading ? (
           <LoadingState count={5} variant="row" />
-        ) : filteredDioceses.length === 0 ? (
+        ) : displayDioceses.length === 0 ? (
           <EmptyState
             title={searchQuery ? 'No dioceses found' : 'No dioceses found'}
             description={
@@ -330,7 +372,7 @@ export const DiocesePage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredDioceses.map((diocese) => (
+                  {displayDioceses.map((diocese) => (
                     <TableRow key={diocese.id} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight={500}>

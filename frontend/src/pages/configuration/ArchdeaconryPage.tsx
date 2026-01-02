@@ -3,7 +3,7 @@
  * Allows ADMIN to create, update, delete archdeaconries
  * Allows DS/Polling Officer to view archdeaconries (read-only)
  */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Button,
@@ -57,6 +57,7 @@ export const ArchdeaconryPage: React.FC = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
+  const [sort, setSort] = useState('name,asc')
   
   // Dialog state
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
@@ -236,6 +237,34 @@ export const ArchdeaconryPage: React.FC = () => {
     inactive: archdeaconries.filter((a) => a.status === 'INACTIVE').length,
   }
 
+  const sortOptions = [
+    { id: 'name,asc', name: 'Name (A-Z)' },
+    { id: 'name,desc', name: 'Name (Z-A)' },
+    { id: 'createdAt,desc', name: 'Newest first' },
+    { id: 'createdAt,asc', name: 'Oldest first' },
+  ]
+
+  const displayArchdeaconries = useMemo(() => {
+    const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
+    return [...archdeaconries].sort((a, b) => {
+      const statusCompare = byStatus(a.status) - byStatus(b.status)
+      if (statusCompare !== 0) return statusCompare
+
+      switch (sort) {
+        case 'name,asc':
+          return a.name.localeCompare(b.name)
+        case 'name,desc':
+          return b.name.localeCompare(a.name)
+        case 'createdAt,asc':
+          return a.createdAt.localeCompare(b.createdAt)
+        case 'createdAt,desc':
+          return b.createdAt.localeCompare(a.createdAt)
+        default:
+          return 0
+      }
+    })
+  }, [archdeaconries, sort])
+
   return (
     <AppShell>
       <PageLayout title="Archdeaconries">
@@ -262,7 +291,18 @@ export const ArchdeaconryPage: React.FC = () => {
                 setPage(0)
               },
               placeholder: 'Select Diocese',
-            }
+            },
+            {
+              id: 'sort',
+              label: 'Sort by',
+              value: sort,
+              options: sortOptions,
+              onChange: (value) => {
+                setSort(value as string)
+                setPage(0)
+              },
+              placeholder: 'Sort by',
+            },
           ]}
         />
 
@@ -274,7 +314,7 @@ export const ArchdeaconryPage: React.FC = () => {
             title="Select a diocese"
             description="Please select a diocese to view its archdeaconries."
           />
-        ) : archdeaconries.length === 0 ? (
+        ) : displayArchdeaconries.length === 0 ? (
           <EmptyState
             title="No archdeaconries found"
             description={
@@ -324,7 +364,7 @@ export const ArchdeaconryPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {archdeaconries.map((archdeaconry) => (
+                  {displayArchdeaconries.map((archdeaconry) => (
                     <TableRow key={archdeaconry.id} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight={500}>
