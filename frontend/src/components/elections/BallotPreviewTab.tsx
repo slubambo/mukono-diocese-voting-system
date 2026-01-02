@@ -148,7 +148,7 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
             label="Voting Day"
             size="small"
             InputProps={{ startAdornment: <InputAdornment position="start"><FilterAltIcon fontSize="small" /></InputAdornment> }}
-            sx={{ minWidth: 200 }}
+            sx={{ minWidth: 200, flex: 1 }}
           >
             <MenuItem value="all">All days</MenuItem>
             {votingPeriods.map((p) => (
@@ -164,7 +164,7 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
             label="Position"
             size="small"
             InputProps={{ startAdornment: <InputAdornment position="start"><AutoAwesomeIcon fontSize="small" /></InputAdornment> }}
-            sx={{ minWidth: 240 }}
+            sx={{ minWidth: 240, flex: 1 }}
           >
             <MenuItem value="all">All positions</MenuItem>
             {positions.map((p) => (
@@ -174,18 +174,6 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
               </MenuItem>
             ))}
           </TextField>
-          <Button
-            variant="outlined"
-            size="medium"
-            sx={{ height: 40, minWidth: 140, fontWeight: 700 }}
-            onClick={() => fetch({
-              votingPeriodId: selectedPeriod === 'all' ? undefined : Number(selectedPeriod),
-              electionPositionId: selectedPosition === 'all' ? undefined : Number(selectedPosition),
-            })}
-            disabled={loading}
-          >
-            Reload
-          </Button>
         </Stack>
       </Paper>
 
