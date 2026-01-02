@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Button, Paper, Table, TableBody, TableCell, TableHead, TableRow, TableContainer, IconButton, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Paper, Table, TableBody, TableCell, TableHead, TableRow, TableContainer, IconButton, Tooltip, Typography, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import { electionApi } from '../../api/election.api'
@@ -14,6 +14,7 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
   const [loading, setLoading] = useState(true)
   const [positions, setPositions] = useState<Position[]>([])
   const [showAdd, setShowAdd] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<Position | null>(null)
   const toast = useToast()
 
   const fetch = async () => {
@@ -31,6 +32,27 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
   }
 
   useEffect(() => { fetch() }, [electionId])
+
+  const handleDelete = (position: Position) => {
+    setConfirmDelete(position)
+  }
+
+  const confirmDeletePosition = async () => {
+    if (!confirmDelete) return
+    try {
+      const deleteId = confirmDelete.fellowshipPosition?.id ?? confirmDelete.positionId ?? confirmDelete.id
+      if (!deleteId) {
+        toast.error('Missing fellowship position id')
+        return
+      }
+      await electionApi.deletePosition(electionId, deleteId)
+      toast.success('Position removed')
+      setConfirmDelete(null)
+      fetch()
+    } catch (err: any) {
+      toast.error(getErrorMessage(err) || 'Failed to remove position')
+    }
+  }
 
   if (loading) return <LoadingState />
 
@@ -61,21 +83,7 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
                     {isAdmin && (
                       <TableCell align="right">
                         <Tooltip title="Delete">
-                          <IconButton size="small" color="error" onClick={async () => {
-                            if (!confirm('Remove this position from the election?')) return
-                            try {
-                              const deleteId = p.fellowshipPosition?.id ?? p.positionId ?? p.id
-                              if (!deleteId) {
-                                toast.error('Missing fellowship position id')
-                                return
-                              }
-                              await electionApi.deletePosition(electionId, deleteId)
-                              toast.success('Position removed')
-                              fetch()
-                            } catch (err: any) {
-                              toast.error(getErrorMessage(err) || 'Failed to remove position')
-                            }
-                          }}><DeleteIcon fontSize="small" /></IconButton>
+                          <IconButton size="small" color="error" onClick={() => handleDelete(p)}><DeleteIcon fontSize="small" /></IconButton>
                         </Tooltip>
                       </TableCell>
                     )}
@@ -88,6 +96,19 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
       )}
 
       <PositionForm open={showAdd} onClose={() => setShowAdd(false)} electionId={electionId} onSaved={() => { setShowAdd(false); fetch() }} />
+
+      <Dialog open={confirmDelete !== null} onClose={() => setConfirmDelete(null)}>
+        <DialogTitle>Remove Position</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to remove <strong>{confirmDelete?.fellowshipPosition?.titleName || confirmDelete?.title || 'this position'}</strong> from the election?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDelete(null)}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={confirmDeletePosition}>Remove</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

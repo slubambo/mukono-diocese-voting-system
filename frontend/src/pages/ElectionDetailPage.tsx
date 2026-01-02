@@ -9,7 +9,6 @@ import { Button } from '@mui/material'
 import AppShell from '../components/layout/AppShell'
 import PageLayout from '../components/layout/PageLayout'
 import LoadingState from '../components/common/LoadingState'
-import StatusChip from '../components/common/StatusChip'
 import { electionApi } from '../api/election.api'
 import { useToast } from '../components/feedback/ToastProvider'
 import { useAuth } from '../context/AuthContext'
@@ -318,7 +317,7 @@ const ElectionDetailPage: React.FC = () => {
           )}
 
           {tab === 1 && <PositionsTab electionId={electionId!} isAdmin={isAdmin} />}
-          {tab === 2 && <VotingPeriodsTab electionId={electionId!} />}
+          {tab === 2 && <VotingPeriodsTab electionId={electionId!} electionStart={election.votingStartAt} electionEnd={election.votingEndAt} />}
           {tab === 3 && <ApplicantsTab electionId={electionId!} />}
           {tab === 4 && <CandidatesTab electionId={electionId!} />}
           {tab === 5 && <BallotPreviewTab electionId={electionId!} />}

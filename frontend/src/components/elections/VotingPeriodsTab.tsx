@@ -18,7 +18,7 @@ import { useAuth } from '../../context/AuthContext'
 import { getErrorMessage } from '../../api/errorHandler'
 import type { Position, VotingPeriod, VotingPeriodPositionsMapResponse, VotingPeriodPositionsResponse } from '../../types/election'
 
-const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
+const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | null; electionEnd?: string | null }> = ({ electionId, electionStart, electionEnd }) => {
   const [loading, setLoading] = useState(true)
   const [periods, setPeriods] = useState<VotingPeriod[]>([])
   const [showDialog, setShowDialog] = useState(false)
@@ -351,7 +351,9 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                   setStartTime(v ? v.toISOString() : '')
                   setFieldErrors((prev) => ({ ...prev, startTime: undefined }))
                 }}
-                slotProps={{ textField: { fullWidth: true, size: 'small', error: Boolean(fieldErrors.startTime), helperText: fieldErrors.startTime || (electionWindow.start && electionWindow.end ? `Within ${new Date(electionWindow.start).toLocaleString()} — ${new Date(electionWindow.end).toLocaleString()}` : undefined) } }}
+                minDateTime={electionStart ? dayjs(electionStart) : undefined}
+                maxDateTime={electionEnd ? dayjs(electionEnd) : undefined}
+                slotProps={{ textField: { fullWidth: true, size: 'small', error: Boolean(fieldErrors.startTime), helperText: fieldErrors.startTime } }}
               />
               <DateTimePicker
                 label="End Time"
@@ -360,6 +362,8 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                   setEndTime(v ? v.toISOString() : '')
                   setFieldErrors((prev) => ({ ...prev, endTime: undefined }))
                 }}
+                minDateTime={startTime ? dayjs(startTime).add(3, 'hours') : (electionStart ? dayjs(electionStart) : undefined)}
+                maxDateTime={electionEnd ? dayjs(electionEnd) : undefined}
                 slotProps={{ textField: { fullWidth: true, size: 'small', error: Boolean(fieldErrors.endTime), helperText: fieldErrors.endTime } }}
               />
               <Divider />
