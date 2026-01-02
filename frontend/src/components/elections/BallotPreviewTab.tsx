@@ -143,6 +143,22 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
           />
           <TextField
             select
+            value={fellowshipFilter}
+            onChange={(e) => setFellowshipFilter(e.target.value)}
+            label="Fellowship"
+            size="small"
+            InputProps={{ startAdornment: <InputAdornment position="start"><PeopleAltIcon fontSize="small" /></InputAdornment> }}
+            sx={{ minWidth: 220, flex: 1 }}
+          >
+            <MenuItem value="all">All fellowships</MenuItem>
+            {groupedBallot.map(([fellowship]) => (
+              <MenuItem key={fellowship} value={fellowship}>
+                {fellowship}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
             value={selectedPeriod}
             onChange={(e: any) => setSelectedPeriod(e.target.value)}
             label="Voting Day"
@@ -177,46 +193,21 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
         </Stack>
       </Paper>
 
-      {groupedBallot.length > 0 && (
+      {groupedBallot.length > 0 && groupedBallot.length > 3 && (
         <Paper sx={{ mb: 2, p: 1, borderRadius: 2, border: '1px solid rgba(88, 28, 135, 0.08)', backgroundColor: 'rgba(88, 28, 135, 0.03)' }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 0.75, alignItems: 'center' }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(auto-fit, minmax(160px, 1fr))' }, gap: 0.5 }}>
-              <Chip
-                label="All fellowships"
-                onClick={() => setFellowshipFilter('all')}
-                color={fellowshipFilter === 'all' ? 'primary' : 'default'}
-                size="small"
-                variant={fellowshipFilter === 'all' ? 'filled' : 'outlined'}
-                sx={{ borderRadius: 999, fontWeight: 600, background: fellowshipFilter === 'all' ? 'linear-gradient(135deg, rgba(88,28,135,0.18) 0%, rgba(168,85,247,0.22) 100%)' : undefined }}
-              />
-              {groupedBallot.map(([fellowship]) => (
-                <Chip
-                  key={fellowship}
-                  label={fellowship}
-                  onClick={() => setFellowshipFilter(fellowship)}
-                  color={fellowshipFilter === fellowship ? 'primary' : 'default'}
-                  size="small"
-                  variant={fellowshipFilter === fellowship ? 'filled' : 'outlined'}
-                  sx={{ borderRadius: 999, fontWeight: 600, background: fellowshipFilter === fellowship ? 'linear-gradient(135deg, rgba(88,28,135,0.18) 0%, rgba(168,85,247,0.22) 100%)' : undefined }}
-                />
-              ))}
-            </Box>
-            {groupedBallot.length > 3 && (
-              <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
-                <Button
-                  size="small"
-                  startIcon={Object.values(collapsedGroups).every(Boolean) ? <UnfoldMoreIcon /> : <UnfoldLessIcon />}
-                  onClick={() => {
-                    const allCollapsed = Object.values(collapsedGroups).every(Boolean)
-                    const next: Record<string, boolean> = {}
-                    groupedBallot.forEach(([key]) => { next[key] = !allCollapsed })
-                    setCollapsedGroups(next)
-                  }}
-                >
-                  {Object.values(collapsedGroups).every(Boolean) ? 'Expand all' : 'Collapse all'}
-                </Button>
-              </Box>
-            )}
+          <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
+            <Button
+              size="small"
+              startIcon={Object.values(collapsedGroups).every(Boolean) ? <UnfoldMoreIcon /> : <UnfoldLessIcon />}
+              onClick={() => {
+                const allCollapsed = Object.values(collapsedGroups).every(Boolean)
+                const next: Record<string, boolean> = {}
+                groupedBallot.forEach(([key]) => { next[key] = !allCollapsed })
+                setCollapsedGroups(next)
+              }}
+            >
+              {Object.values(collapsedGroups).every(Boolean) ? 'Expand all' : 'Collapse all'}
+            </Button>
           </Box>
         </Paper>
       )}
