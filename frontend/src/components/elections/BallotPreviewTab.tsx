@@ -6,6 +6,9 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess'
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore'
+import FilterAltIcon from '@mui/icons-material/FilterAlt'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt'
 import { electionApi } from '../../api/election.api'
 import LoadingState from '../common/LoadingState'
 import { useToast } from '../feedback/ToastProvider'
@@ -107,96 +110,115 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
 
   return (
     <Box>
-      <Box sx={{ mb: 2, display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
-        <TextField
-          select
-          value={selectedPeriod}
-          onChange={(e: any) => setSelectedPeriod(e.target.value)}
-          label="Voting Period"
-          helperText="Filter by a voting period (optional)"
-          size="small"
-          sx={{ minWidth: 240 }}
-        >
-          <MenuItem value="all">All periods</MenuItem>
-          {votingPeriods.map((p) => (
-            <MenuItem key={p.id} value={p.id}>
-              {p.name || p.label || `Period ${p.id}`}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          select
-          value={selectedPosition}
-          onChange={(e: any) => setSelectedPosition(e.target.value)}
-          label="Position"
-          helperText="Filter by position (optional)"
-          size="small"
-          sx={{ minWidth: 260 }}
-        >
-          <MenuItem value="all">All positions</MenuItem>
-          {positions.map((p) => (
-            <MenuItem key={p.id} value={p.id}>
-              {p.fellowshipPosition?.titleName || p.title || p.positionId}
-              {p.fellowshipPosition?.fellowshipName ? ` — ${p.fellowshipPosition.fellowshipName}` : ''}
-            </MenuItem>
-          ))}
-        </TextField>
-        <Button
-          variant="contained"
-          size="small"
-          onClick={() => fetch({
-            votingPeriodId: selectedPeriod === 'all' ? undefined : Number(selectedPeriod),
-            electionPositionId: selectedPosition === 'all' ? undefined : Number(selectedPosition),
-          })}
-        >
-          Load Ballot
-        </Button>
-        <TextField
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search position or candidate"
-          size="small"
-          sx={{ minWidth: 240, flex: 1 }}
-          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
-        />
-      </Box>
+      <Paper
+        sx={{
+          mb: 2,
+          p: 1.5,
+          borderRadius: 2,
+          border: '1px solid rgba(88, 28, 135, 0.12)',
+          background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.04) 0%, rgba(88, 28, 135, 0.02) 100%)',
+        }}
+      >
+        <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, alignItems: 'center' }}>
+          <TextField
+            select
+            value={selectedPeriod}
+            onChange={(e: any) => setSelectedPeriod(e.target.value)}
+            label="Voting Period"
+            helperText="Optional"
+            size="small"
+            InputProps={{ startAdornment: <InputAdornment position="start"><FilterAltIcon fontSize="small" /></InputAdornment> }}
+          >
+            <MenuItem value="all">All periods</MenuItem>
+            {votingPeriods.map((p) => (
+              <MenuItem key={p.id} value={p.id}>
+                {p.name || p.label || `Period ${p.id}`}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            value={selectedPosition}
+            onChange={(e: any) => setSelectedPosition(e.target.value)}
+            label="Position"
+            helperText="Optional"
+            size="small"
+            InputProps={{ startAdornment: <InputAdornment position="start"><AutoAwesomeIcon fontSize="small" /></InputAdornment> }}
+          >
+            <MenuItem value="all">All positions</MenuItem>
+            {positions.map((p) => (
+              <MenuItem key={p.id} value={p.id}>
+                {p.fellowshipPosition?.titleName || p.title || p.positionId}
+                {p.fellowshipPosition?.fellowshipName ? ` — ${p.fellowshipPosition.fellowshipName}` : ''}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search position or candidate"
+            size="small"
+            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+          />
+          <Box sx={{ display: 'flex' }}>
+            <Button
+              fullWidth
+              variant="contained"
+              size="medium"
+              sx={{ height: '40px', fontWeight: 700 }}
+              onClick={() => fetch({
+                votingPeriodId: selectedPeriod === 'all' ? undefined : Number(selectedPeriod),
+                electionPositionId: selectedPosition === 'all' ? undefined : Number(selectedPosition),
+              })}
+            >
+              Load Ballot
+            </Button>
+          </Box>
+        </Box>
+      </Paper>
 
       {groupedBallot.length > 0 && (
-        <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
-            <Chip
-              label="All fellowships"
-              onClick={() => setFellowshipFilter('all')}
-              color={fellowshipFilter === 'all' ? 'primary' : 'default'}
-              size="small"
-              variant={fellowshipFilter === 'all' ? 'filled' : 'outlined'}
-            />
-            {groupedBallot.map(([fellowship]) => (
+        <Paper sx={{ mb: 2, p: 1, borderRadius: 2, border: '1px solid rgba(88, 28, 135, 0.08)', backgroundColor: 'rgba(88, 28, 135, 0.03)' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 0.75, alignItems: 'center' }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(auto-fit, minmax(160px, 1fr))' }, gap: 0.5 }}>
               <Chip
-                key={fellowship}
-                label={fellowship}
-                onClick={() => setFellowshipFilter(fellowship)}
-                color={fellowshipFilter === fellowship ? 'primary' : 'default'}
+                label="All fellowships"
+                onClick={() => setFellowshipFilter('all')}
+                color={fellowshipFilter === 'all' ? 'primary' : 'default'}
                 size="small"
-                variant={fellowshipFilter === fellowship ? 'filled' : 'outlined'}
+                variant={fellowshipFilter === 'all' ? 'filled' : 'outlined'}
+                sx={{ borderRadius: 999, fontWeight: 600, background: fellowshipFilter === 'all' ? 'linear-gradient(135deg, rgba(88,28,135,0.18) 0%, rgba(168,85,247,0.22) 100%)' : undefined }}
               />
-            ))}
-          </Stack>
-          {groupedBallot.length > 3 && (
-            <Button
-              size="small"
-              startIcon={Object.values(collapsedGroups).every(Boolean) ? <UnfoldMoreIcon /> : <UnfoldLessIcon />}
-              onClick={() => {
-                const allCollapsed = Object.values(collapsedGroups).every(Boolean)
-                const next: Record<string, boolean> = {}
-                groupedBallot.forEach(([key]) => { next[key] = !allCollapsed })
-                setCollapsedGroups(next)
-              }}
-            >
-              {Object.values(collapsedGroups).every(Boolean) ? 'Expand all' : 'Collapse all'}
-            </Button>
-          )}
-        </Box>
+              {groupedBallot.map(([fellowship]) => (
+                <Chip
+                  key={fellowship}
+                  label={fellowship}
+                  onClick={() => setFellowshipFilter(fellowship)}
+                  color={fellowshipFilter === fellowship ? 'primary' : 'default'}
+                  size="small"
+                  variant={fellowshipFilter === fellowship ? 'filled' : 'outlined'}
+                  sx={{ borderRadius: 999, fontWeight: 600, background: fellowshipFilter === fellowship ? 'linear-gradient(135deg, rgba(88,28,135,0.18) 0%, rgba(168,85,247,0.22) 100%)' : undefined }}
+                />
+              ))}
+            </Box>
+            {groupedBallot.length > 3 && (
+              <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
+                <Button
+                  size="small"
+                  startIcon={Object.values(collapsedGroups).every(Boolean) ? <UnfoldMoreIcon /> : <UnfoldLessIcon />}
+                  onClick={() => {
+                    const allCollapsed = Object.values(collapsedGroups).every(Boolean)
+                    const next: Record<string, boolean> = {}
+                    groupedBallot.forEach(([key]) => { next[key] = !allCollapsed })
+                    setCollapsedGroups(next)
+                  }}
+                >
+                  {Object.values(collapsedGroups).every(Boolean) ? 'Expand all' : 'Collapse all'}
+                </Button>
+              </Box>
+            )}
+          </Box>
+        </Paper>
       )}
 
       {!preview ? (
@@ -242,7 +264,7 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
           {/* Positions as Ballot Cards grouped by fellowship */}
           {filteredGroups.map(([fellowship, items]) => (
             <Box key={fellowship} sx={{ mb: 2 }}>
-              <Paper sx={{ p: 1.5, mb: 1.5, backgroundColor: 'rgba(88, 28, 135, 0.06)', border: '1px solid rgba(88, 28, 135, 0.14)', borderRadius: 1.5 }}>
+              <Paper sx={{ p: 1.25, mb: 1.25, background: 'linear-gradient(120deg, rgba(88,28,135,0.06) 0%, rgba(168,85,247,0.04) 100%)', border: '1px solid rgba(88, 28, 135, 0.14)', borderRadius: 1.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                   <Box>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'primary.main' }}>{fellowship}</Typography>
@@ -263,11 +285,13 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                         sx={{
                           borderRadius: 2,
                           border: '1px solid rgba(88, 28, 135, 0.15)',
-                          boxShadow: '0 2px 8px rgba(88, 28, 135, 0.08)',
+                          boxShadow: '0 2px 10px rgba(88, 28, 135, 0.08)',
+                          background: 'linear-gradient(150deg, rgba(88,28,135,0.02) 0%, rgba(168,85,247,0.05) 100%)',
                           transition: 'all 0.2s ease',
                           '&:hover': {
-                            boxShadow: '0 4px 16px rgba(88, 28, 135, 0.12)',
-                            borderColor: 'rgba(88, 28, 135, 0.25)',
+                            boxShadow: '0 6px 18px rgba(88, 28, 135, 0.16)',
+                            borderColor: 'rgba(88, 28, 135, 0.3)',
+                            transform: 'translateY(-1px)',
                           },
                         }}
                       >
@@ -303,9 +327,17 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                                 )}
                               </Box>
                             </Box>
-                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                              {cardNumber}
-                            </Typography>
+                            <Stack direction="column" spacing={0.5} alignItems="flex-end" sx={{ minWidth: 80 }}>
+                              <Chip
+                                icon={<PeopleAltIcon sx={{ fontSize: 16 }} />}
+                                label={`${(pos.candidates || []).length} candidate${(pos.candidates || []).length === 1 ? '' : 's'}`}
+                                size="small"
+                                sx={{ height: 26, borderRadius: 999, backgroundColor: 'rgba(88, 28, 135, 0.08)', color: 'primary.main', fontWeight: 600 }}
+                              />
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                                #{cardNumber}
+                              </Typography>
+                            </Stack>
                           </Box>
 
                           {/* Candidates List */}
