@@ -31,6 +31,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
   const [assignedByPeriod, setAssignedByPeriod] = useState<Record<string, number[]>>({})
   const [positionToPeriod, setPositionToPeriod] = useState<Record<number, string>>({})
   const [loadingPositions, setLoadingPositions] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [lifecycleAction, setLifecycleAction] = useState<'open' | 'close' | 'cancel' | 'reactivate' | null>(null)
   const [lifecyclePeriod, setLifecyclePeriod] = useState<VotingPeriod | null>(null)
   const [electionWindow, setElectionWindow] = useState<{ start?: string; end?: string }>({})
@@ -158,10 +159,15 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
   }, [editing, showDialog])
 
   const submit = async () => {
+    if (saving) return
     const nextErrors: { name?: string; startTime?: string; endTime?: string } = {}
     if (!name.trim()) nextErrors.name = 'Name is required'
     if (!startTime.trim()) nextErrors.startTime = 'Start time is required'
     if (!endTime.trim()) nextErrors.endTime = 'End time is required'
+    if (assigned.length === 0) {
+      toast.error('Select at least one position for this voting day')
+      return
+    }
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors)
       return
@@ -187,6 +193,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
       return
     }
     try {
+      setSaving(true)
       const payload = {
         name,
         startTime: startIso,
@@ -213,6 +220,8 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
       loadAssignments()
     } catch (err: any) {
       toast.error(getErrorMessage(err) || 'Failed to save voting period')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -252,11 +261,11 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
   return (
     <Box>
       <Box sx={{ mb: 2 }}>
-        {isAdmin && <Button startIcon={<AddIcon />} variant="contained" onClick={() => openDialog()}>Create Voting Period</Button>}
+        {isAdmin && <Button startIcon={<AddIcon />} variant="contained" onClick={() => openDialog()}>Create Voting Day</Button>}
       </Box>
 
       {periods.length === 0 ? (
-        <EmptyState title="No voting periods" description="No voting periods have been created for this election." action={isAdmin ? <Button onClick={() => openDialog()}>Create Voting Period</Button> : undefined} />
+        <EmptyState title="No voting days" description="No voting days have been created for this election." action={isAdmin ? <Button onClick={() => openDialog()}>Create Voting Day</Button> : undefined} />
       ) : (
         <Paper sx={{ width: '100%', borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
           <TableContainer>
@@ -298,19 +307,50 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
                     <TableCell align="right"><Typography variant="body2">{p.positionsCount ?? assignedByPeriod[String(p.id)]?.length ?? 0}</Typography></TableCell>
                     {isAdmin && (
                       <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                        <Tooltip title="Edit">
-                          <IconButton size="small" color="primary" onClick={() => openDialog(p)}><EditIcon fontSize="small" /></IconButton>
+                        <Tooltip title={p.status === 'CLOSED' ? 'Closed periods cannot be edited' : 'Edit'}>
+                          <span>
+                            <IconButton size="small" color="primary" onClick={() => openDialog(p)} disabled={p.status === 'CLOSED'}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </span>
                         </Tooltip>
                         {p.status !== 'CANCELLED' && (
                           <>
-                            <Tooltip title="Open">
-                              <IconButton size="small" color="success" onClick={() => { setLifecycleAction('open'); setLifecyclePeriod(p) }}><OpenInBrowserIcon fontSize="small" /></IconButton>
+                            <Tooltip title={p.status !== 'SCHEDULED' ? 'Only scheduled periods can be opened' : 'Open'}>
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  color="success"
+                                  onClick={() => { setLifecycleAction('open'); setLifecyclePeriod(p) }}
+                                  disabled={p.status !== 'SCHEDULED'}
+                                >
+                                  <OpenInBrowserIcon fontSize="small" />
+                                </IconButton>
+                              </span>
                             </Tooltip>
-                            <Tooltip title="Close">
-                              <IconButton size="small" color="warning" onClick={() => { setLifecycleAction('close'); setLifecyclePeriod(p) }}><CloseIcon fontSize="small" /></IconButton>
+                            <Tooltip title={!(p.status === 'SCHEDULED' || p.status === 'OPEN') ? 'Only scheduled or open periods can be closed' : 'Close'}>
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  color="warning"
+                                  onClick={() => { setLifecycleAction('close'); setLifecyclePeriod(p) }}
+                                  disabled={!(p.status === 'SCHEDULED' || p.status === 'OPEN')}
+                                >
+                                  <CloseIcon fontSize="small" />
+                                </IconButton>
+                              </span>
                             </Tooltip>
-                            <Tooltip title="Cancel">
-                              <IconButton size="small" color="error" onClick={() => { setLifecycleAction('cancel'); setLifecyclePeriod(p) }}><CancelIcon fontSize="small" /></IconButton>
+                            <Tooltip title={p.status !== 'SCHEDULED' ? 'Only scheduled periods can be cancelled' : 'Cancel'}>
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => { setLifecycleAction('cancel'); setLifecyclePeriod(p) }}
+                                  disabled={p.status !== 'SCHEDULED'}
+                                >
+                                  <CancelIcon fontSize="small" />
+                                </IconButton>
+                              </span>
                             </Tooltip>
                           </>
                         )}
@@ -330,7 +370,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
       )}
 
       <Dialog open={showDialog} onClose={() => setShowDialog(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{editing ? 'Edit Voting Period' : 'Create Voting Period'}</DialogTitle>
+        <DialogTitle>{editing ? 'Edit Voting Day' : 'Create Voting Day'}</DialogTitle>
         <DialogContent>
           <LocalizationProvider dateAdapter={AdapterDayjs}>
             <Box sx={{ display: 'grid', gap: 1.5, mt: 2 }}>
@@ -420,12 +460,14 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={submit}>Save</Button>
+          <Button variant="contained" onClick={submit} disabled={saving || assigned.length === 0}>
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={Boolean(lifecycleAction)} onClose={() => { setLifecycleAction(null); setLifecyclePeriod(null) }}>
-        <DialogTitle>{lifecycleAction ? `${lifecycleAction.toUpperCase()} Voting Period` : 'Voting Period'}</DialogTitle>
+        <DialogTitle>{lifecycleAction ? `${lifecycleAction.toUpperCase()} Voting Day` : 'Voting Day'}</DialogTitle>
         <DialogContent>
           {lifecyclePeriod ? `Are you sure you want to ${lifecycleAction} "${lifecyclePeriod.name || lifecyclePeriod.label || 'this period'}"?` : ''}
         </DialogContent>

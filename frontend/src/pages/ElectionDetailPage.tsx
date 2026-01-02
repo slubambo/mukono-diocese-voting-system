@@ -324,7 +324,7 @@ const ElectionDetailPage: React.FC = () => {
           <Tabs value={tab} onChange={(_, v) => setTab(v)}>
             <Tab label="Overview" />
             <Tab label="Positions" />
-            <Tab label="Voting Periods" />
+            <Tab label="Voting Days" />
             <Tab label="Applicants" />
             <Tab label="Candidates" />
             <Tab label="Ballot Preview" />
