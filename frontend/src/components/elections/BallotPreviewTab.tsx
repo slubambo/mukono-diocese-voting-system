@@ -54,9 +54,12 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   }, [electionId])
 
   useEffect(() => {
-    fetch()
+    fetch({
+      votingPeriodId: selectedPeriod === 'all' ? undefined : Number(selectedPeriod),
+      electionPositionId: selectedPosition === 'all' ? undefined : Number(selectedPosition),
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [electionId])
+  }, [electionId, selectedPeriod, selectedPosition])
 
   useEffect(() => {
     const getPeriods = async () => {
@@ -105,6 +108,10 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       })
       .filter(([, items]) => items.length > 0)
   }, [groupedBallot, fellowshipFilter, search])
+  const filteredPositionsCount = useMemo(
+    () => filteredGroups.reduce((sum, [, items]) => sum + items.length, 0),
+    [filteredGroups]
+  )
 
   if (loading) return <LoadingState />
 
@@ -119,20 +126,34 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
           background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.04) 0%, rgba(88, 28, 135, 0.02) 100%)',
         }}
       >
-        <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, alignItems: 'center' }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1.5}
+          alignItems={{ xs: 'stretch', md: 'center' }}
+          sx={{ flexWrap: 'wrap' }}
+        >
+          <TextField
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            label="Search"
+            placeholder="Search position or candidate"
+            size="small"
+            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+            sx={{ minWidth: 240, flex: 1 }}
+          />
           <TextField
             select
             value={selectedPeriod}
             onChange={(e: any) => setSelectedPeriod(e.target.value)}
-            label="Voting Period"
-            helperText="Optional"
+            label="Voting Day"
             size="small"
             InputProps={{ startAdornment: <InputAdornment position="start"><FilterAltIcon fontSize="small" /></InputAdornment> }}
+            sx={{ minWidth: 200 }}
           >
-            <MenuItem value="all">All periods</MenuItem>
+            <MenuItem value="all">All days</MenuItem>
             {votingPeriods.map((p) => (
               <MenuItem key={p.id} value={p.id}>
-                {p.name || p.label || `Period ${p.id}`}
+                {p.name || p.label || `Day ${p.id}`}
               </MenuItem>
             ))}
           </TextField>
@@ -141,9 +162,9 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
             value={selectedPosition}
             onChange={(e: any) => setSelectedPosition(e.target.value)}
             label="Position"
-            helperText="Optional"
             size="small"
             InputProps={{ startAdornment: <InputAdornment position="start"><AutoAwesomeIcon fontSize="small" /></InputAdornment> }}
+            sx={{ minWidth: 240 }}
           >
             <MenuItem value="all">All positions</MenuItem>
             {positions.map((p) => (
@@ -153,28 +174,19 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
               </MenuItem>
             ))}
           </TextField>
-          <TextField
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search position or candidate"
-            size="small"
-            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
-          />
-          <Box sx={{ display: 'flex' }}>
-            <Button
-              fullWidth
-              variant="contained"
-              size="medium"
-              sx={{ height: '40px', fontWeight: 700 }}
-              onClick={() => fetch({
-                votingPeriodId: selectedPeriod === 'all' ? undefined : Number(selectedPeriod),
-                electionPositionId: selectedPosition === 'all' ? undefined : Number(selectedPosition),
-              })}
-            >
-              Load Ballot
-            </Button>
-          </Box>
-        </Box>
+          <Button
+            variant="outlined"
+            size="medium"
+            sx={{ height: 40, minWidth: 140, fontWeight: 700 }}
+            onClick={() => fetch({
+              votingPeriodId: selectedPeriod === 'all' ? undefined : Number(selectedPeriod),
+              electionPositionId: selectedPosition === 'all' ? undefined : Number(selectedPosition),
+            })}
+            disabled={loading}
+          >
+            Reload
+          </Button>
+        </Stack>
       </Paper>
 
       {groupedBallot.length > 0 && (
@@ -226,10 +238,10 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
           <HowToVoteIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
           <Typography variant="h6" sx={{ mb: 1 }}>Load Your Ballot</Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Select a voting period and position (optional) to preview the ballot
+            Select a voting day and position (optional) to preview the ballot
           </Typography>
         </Paper>
-      ) : positionsPreview.length === 0 ? (
+      ) : filteredPositionsCount === 0 ? (
         <Paper sx={{ p: 3, textAlign: 'center', border: '2px dashed rgba(88, 28, 135, 0.2)', borderRadius: 2 }}>
           <HowToVoteIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
           <Typography variant="h6" sx={{ mb: 1 }}>No Positions Found</Typography>
