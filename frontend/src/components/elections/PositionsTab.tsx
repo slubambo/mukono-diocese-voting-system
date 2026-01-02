@@ -88,11 +88,10 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
                   <TableHead>
                     <TableRow>
                       <TableCell>Title</TableCell>
-                      <TableCell>Scope</TableCell>
-                      <TableCell>Seats</TableCell>
-                      <TableCell align="right">Applicants</TableCell>
-                      <TableCell align="right">Approved</TableCell>
-                      <TableCell align="right">Pending</TableCell>
+                  <TableCell>Seats</TableCell>
+                  <TableCell align="right">Applicants</TableCell>
+                  <TableCell align="right">Approved</TableCell>
+                  <TableCell align="right">Pending</TableCell>
                       <TableCell align="right">Rejected</TableCell>
                       {isAdmin && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
@@ -101,10 +100,9 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
                     {items.map((p) => (
                       <TableRow key={p.id} hover>
                         <TableCell><Typography variant="body2">{p.fellowshipPosition?.titleName || p.title || p.positionId}</Typography></TableCell>
-                        <TableCell><Typography variant="body2">{p.positionScope ?? p.fellowshipPosition?.scope ?? '—'}</Typography></TableCell>
-                        <TableCell><Typography variant="body2">{p.seats ?? '-'}</Typography></TableCell>
-                        <TableCell align="right"><Typography variant="body2">{p.totalApplicants ?? 0}</Typography></TableCell>
-                        <TableCell align="right"><Typography variant="body2">{p.approvedApplicants ?? 0}</Typography></TableCell>
+                    <TableCell><Typography variant="body2">{p.seats ?? '-'}</Typography></TableCell>
+                    <TableCell align="right"><Typography variant="body2">{p.totalApplicants ?? 0}</Typography></TableCell>
+                    <TableCell align="right"><Typography variant="body2">{p.approvedApplicants ?? 0}</Typography></TableCell>
                         <TableCell align="right"><Typography variant="body2">{p.pendingApplicants ?? 0}</Typography></TableCell>
                         <TableCell align="right"><Typography variant="body2">{p.rejectedApplicants ?? 0}</Typography></TableCell>
                         {isAdmin && (
