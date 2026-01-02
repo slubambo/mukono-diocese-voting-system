@@ -46,6 +46,14 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
 
   useEffect(() => { fellowshipApi.list({ page: 0, size: 1000 }).then(r => setFellowships(r.content)).catch(() => {}) ; dioceseApi.list({ page: 0, size: 100 }).then(r => setDioceses(r.content)).catch(() => {}) ; leadershipApi.getLevels().then(lv => setLevels(lv)).catch(() => setLevels(['DIOCESE','ARCHDEACONRY','CHURCH'])) }, [])
 
+  useEffect(() => {
+    if (!assignment) return
+    const fid = (assignment.fellowshipPosition as any)?.fellowshipId ?? assignment.fellowship?.id
+    const fname = (assignment.fellowshipPosition as any)?.fellowshipName ?? assignment.fellowship?.name
+    if (!fid || !fname) return
+    setFellowships((prev) => (prev.some((f) => f.id === fid) ? prev : [{ id: fid, name: fname }, ...prev]))
+  }, [assignment])
+
   // if dioceses list contains only one, preselect it
   useEffect(() => {
     if (dioceses.length === 1) {
@@ -195,7 +203,7 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
         <FormControl fullWidth size="small">
           <InputLabel>Fellowship</InputLabel>
           <Controller name={"fellowshipId" as any} control={control} render={({ field }) => (
-            <Select {...field} label="Fellowship">
+            <Select {...field} label="Fellowship" value={field.value ?? ''}>
               <MenuItem value="">-- Select Fellowship --</MenuItem>
               {fellowships.map((f) => (<MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>))}
             </Select>
