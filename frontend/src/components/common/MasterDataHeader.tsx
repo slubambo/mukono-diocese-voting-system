@@ -153,7 +153,6 @@ export const MasterDataHeader: React.FC<MasterDataHeaderProps> = ({
             }}
           >
             {filters.map((filter) => {
-              const selectedOption = filter.options?.find((opt) => opt.id === filter.value)
               return filter.options && filter.options.length > 0 ? (
                 <FormControl key={filter.id} size="small">
                   <InputLabel sx={{ fontSize: '0.875rem' }}>{filter.label}</InputLabel>

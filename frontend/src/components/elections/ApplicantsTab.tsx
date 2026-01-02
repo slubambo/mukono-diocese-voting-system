@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Tabs, Tab, IconButton, MenuItem, Tooltip, Autocomplete, CircularProgress } from '@mui/material'
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Tabs, Tab, IconButton, MenuItem, Tooltip, Autocomplete, CircularProgress, Typography } from '@mui/material'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import RotateLeftIcon from '@mui/icons-material/RotateLeft'
@@ -110,7 +110,7 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
     if (!isAdmin) return
     setDecisionAction(action)
     setDecisionApplicant(applicant)
-    setDecisionBy(user?.displayName || user?.username || '')
+    setDecisionBy(user?.username || '')
     setDecisionNotes('')
     setDecisionOpen(true)
   }
@@ -176,71 +176,71 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       {applicants.length === 0 ? (
         <EmptyState title="No applicants" description="There are no applicants to display." action={isAdmin ? <Button onClick={() => setShowManual(true)}>Add Applicant</Button> : undefined} />
       ) : (
-        <Paper>
+        <Paper sx={{ border: '1px solid rgba(88, 28, 135, 0.1)', borderRadius: 1.5 }}>
           <TableContainer>
-            <Table>
-              <TableHead>
+            <Table size="small">
+              <TableHead sx={{ backgroundColor: 'rgba(88, 28, 135, 0.08)' }}>
                 <TableRow>
-                  <TableCell>Person</TableCell>
-                  <TableCell>Position</TableCell>
-                  <TableCell>Source</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Submitted</TableCell>
-                  <TableCell>Decision</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                  <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Person</Typography></TableCell>
+                  <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Position</Typography></TableCell>
+                  <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Source</Typography></TableCell>
+                  <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Status</Typography></TableCell>
+                  <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Submitted</Typography></TableCell>
+                  <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Decision</Typography></TableCell>
+                  {isAdmin && <TableCell align="right"><Typography variant="body2" sx={{ fontWeight: 600 }}>Actions</Typography></TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {applicants.map(a => (
                   <TableRow key={a.id} hover>
-                    <TableCell>{a.person?.fullName || a.personName || '—'}</TableCell>
+                    <TableCell><Typography variant="body2">{a.person?.fullName || a.personName || '—'}</Typography></TableCell>
                     <TableCell>
-                      {a.positionTitle || a.fellowshipPosition?.titleName || '—'}
-                      {a.fellowshipName ? ` — ${a.fellowshipName}` : ''}
+                      <Typography variant="body2">
+                        {a.positionTitle || a.fellowshipPosition?.titleName || '—'}
+                        {a.fellowshipName ? ` — ${a.fellowshipName}` : ''}
+                      </Typography>
                     </TableCell>
-                    <TableCell>{a.source || '—'}</TableCell>
+                    <TableCell><Typography variant="body2">{a.source || '—'}</Typography></TableCell>
                     <TableCell><StatusChip status={(a.status || 'pending') as any} /></TableCell>
-                    <TableCell>{a.submittedAt ? new Date(a.submittedAt).toLocaleString() : '—'}</TableCell>
+                    <TableCell><Typography variant="body2">{a.submittedAt ? new Date(a.submittedAt).toLocaleString() : '—'}</Typography></TableCell>
                     <TableCell>
-                      {a.decisionBy ? `${a.decisionBy}${a.decisionAt ? ` • ${new Date(a.decisionAt).toLocaleString()}` : ''}` : '—'}
+                      <Typography variant="body2">
+                        {a.decisionBy ? `${a.decisionBy}${a.decisionAt ? ` • ${new Date(a.decisionAt).toLocaleString()}` : ''}` : '—'}
+                      </Typography>
                     </TableCell>
-                    <TableCell align="right">
-                      {isAdmin && (
-                        <>
-                          {(() => {
-                            const status = (a.status || '').toUpperCase()
-                            const canApprove = status === 'PENDING' || status === 'REVERTED'
-                            const canReject = status === 'PENDING' || status === 'REVERTED'
-                            const canRevert = status === 'APPROVED' || status === 'REJECTED' || status === 'WITHDRAWN'
-                            const canWithdraw = status === 'PENDING' || status === 'APPROVED'
-                            return (
-                              <>
-                                <Tooltip title={canApprove ? 'Approve' : 'Already approved'}>
-                                  <span>
-                                    <IconButton size="small" disabled={!canApprove} onClick={() => openDecision('approve', a)}><CheckIcon /></IconButton>
-                                  </span>
-                                </Tooltip>
-                                <Tooltip title={canReject ? 'Reject' : 'Already rejected'}>
-                                  <span>
-                                    <IconButton size="small" disabled={!canReject} onClick={() => openDecision('reject', a)}><CloseIcon /></IconButton>
-                                  </span>
-                                </Tooltip>
-                                <Tooltip title={canRevert ? 'Revert decision' : 'No decision to revert'}>
-                                  <span>
-                                    <IconButton size="small" disabled={!canRevert} onClick={() => openDecision('revert', a)}><RotateLeftIcon /></IconButton>
-                                  </span>
-                                </Tooltip>
-                                <Tooltip title={canWithdraw ? 'Withdraw' : 'Already withdrawn'}>
-                                  <span>
-                                    <IconButton size="small" disabled={!canWithdraw} onClick={() => openDecision('withdraw', a)}><UndoIcon /></IconButton>
-                                  </span>
-                                </Tooltip>
-                              </>
-                            )
-                          })()}
-                        </>
-                      )}
-                    </TableCell>
+                    {isAdmin && <TableCell align="right">
+                      {(() => {
+                        const status = (a.status || '').toUpperCase()
+                        const canApprove = status === 'PENDING' || status === 'REVERTED'
+                        const canReject = status === 'PENDING' || status === 'REVERTED'
+                        const canRevert = status === 'APPROVED' || status === 'REJECTED' || status === 'WITHDRAWN'
+                        const canWithdraw = status === 'PENDING' || status === 'APPROVED'
+                        return (
+                          <>
+                            <Tooltip title={canApprove ? 'Approve' : 'Already approved'}>
+                              <span>
+                                <IconButton size="small" color={canApprove ? 'success' : 'inherit'} disabled={!canApprove} onClick={() => openDecision('approve', a)}><CheckIcon /></IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title={canReject ? 'Reject' : 'Already rejected'}>
+                              <span>
+                                <IconButton size="small" color={canReject ? 'error' : 'inherit'} disabled={!canReject} onClick={() => openDecision('reject', a)}><CloseIcon /></IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title={canRevert ? 'Revert decision' : 'No decision to revert'}>
+                              <span>
+                                <IconButton size="small" color={canRevert ? 'info' : 'inherit'} disabled={!canRevert} onClick={() => openDecision('revert', a)}><RotateLeftIcon /></IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title={canWithdraw ? 'Withdraw' : 'Already withdrawn'}>
+                              <span>
+                                <IconButton size="small" color={canWithdraw ? 'warning' : 'inherit'} disabled={!canWithdraw} onClick={() => openDecision('withdraw', a)}><UndoIcon /></IconButton>
+                              </span>
+                            </Tooltip>
+                          </>
+                        )
+                      })()}
+                    </TableCell>}
                   </TableRow>
                 ))}
               </TableBody>
@@ -252,19 +252,21 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       <Dialog open={showManual} onClose={() => setShowManual(false)}>
         <DialogTitle>Add Applicant</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'grid', gap: 2, mt: 1 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1fr)', gap: 1.5, mt: 1 }}>
             <Autocomplete
               options={peopleOptions}
               loading={peopleLoading}
               value={selectedPerson}
               onChange={(_, val) => { setSelectedPerson(val); if (val) setManualPersonId(String(val.id)) }}
               getOptionLabel={(option) => option.fullName}
+              size="small"
               renderInput={(params) => (
                 <TextField
                   {...params}
                   label="Person"
                   placeholder="Search people"
                   onChange={(e) => setPeopleQuery(e.target.value)}
+                  size="small"
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (
@@ -283,6 +285,7 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
               fullWidth
               value={manualPositionId}
               onChange={(e) => setManualPositionId(e.target.value)}
+              size="small"
             >
               {positions.map((p) => (
                 <MenuItem key={p.id} value={p.id}>
@@ -291,7 +294,7 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                 </MenuItem>
               ))}
             </TextField>
-            <TextField label="Notes" fullWidth multiline minRows={3} value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} />
+            <TextField label="Notes" fullWidth multiline minRows={2} value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} size="small" />
           </Box>
         </DialogContent>
         <DialogActions>
@@ -306,9 +309,9 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
           {decisionApplicant?.person?.fullName || decisionApplicant?.personName ? ` — ${decisionApplicant?.person?.fullName || decisionApplicant?.personName}` : ''}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'grid', gap: 2, mt: 1 }}>
-            <TextField label="Decision By" fullWidth required value={decisionBy} onChange={(e) => setDecisionBy(e.target.value)} />
-            <TextField label="Notes" fullWidth multiline minRows={3} value={decisionNotes} onChange={(e) => setDecisionNotes(e.target.value)} />
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1fr)', gap: 1.5, mt: 1 }}>
+            <TextField label="Decision By" fullWidth required value={decisionBy} onChange={(e) => setDecisionBy(e.target.value)} size="small" />
+            <TextField label="Notes" fullWidth multiline minRows={2} value={decisionNotes} onChange={(e) => setDecisionNotes(e.target.value)} size="small" />
           </Box>
         </DialogContent>
         <DialogActions>

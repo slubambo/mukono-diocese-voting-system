@@ -65,13 +65,14 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
 
   return (
     <Box>
-      <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+      <Box sx={{ mb: 2, display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
         <TextField
           select
           value={selectedPeriod}
           onChange={(e: any) => setSelectedPeriod(e.target.value)}
           label="Voting Period"
           helperText="Filter by a voting period (optional)"
+          size="small"
           sx={{ minWidth: 240 }}
         >
           <MenuItem value="all">All periods</MenuItem>
@@ -87,6 +88,7 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
           onChange={(e: any) => setSelectedPosition(e.target.value)}
           label="Position"
           helperText="Filter by position (optional)"
+          size="small"
           sx={{ minWidth: 260 }}
         >
           <MenuItem value="all">All positions</MenuItem>
@@ -99,6 +101,7 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
         </TextField>
         <Button
           variant="contained"
+          size="small"
           onClick={() => fetch({
             votingPeriodId: selectedPeriod === 'all' ? undefined : Number(selectedPeriod),
             electionPositionId: selectedPosition === 'all' ? undefined : Number(selectedPosition),

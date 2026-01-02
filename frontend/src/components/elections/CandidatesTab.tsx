@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Button, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Dialog, DialogTitle, DialogContent, TextField, DialogActions, MenuItem, Tooltip, Autocomplete, CircularProgress, IconButton } from '@mui/material'
+import { Box, Button, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Dialog, DialogTitle, DialogContent, TextField, DialogActions, MenuItem, Tooltip, Autocomplete, CircularProgress, IconButton, Typography } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
@@ -121,7 +121,7 @@ const CandidatesTab: React.FC<{ electionId: string }> = ({ electionId }) => {
 
   const openRemove = (candidate: Candidate) => {
     setRemoveTarget(candidate)
-    setRemoveBy(user?.displayName || user?.username || '')
+    setRemoveBy(user?.username || '')
     setRemoveNotes('')
     setRemoveOpen(true)
   }
@@ -154,10 +154,10 @@ const CandidatesTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   return (
     <Box>
       <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
-        {isAdmin && <Button variant="contained" onClick={() => { setDecisionBy(user?.displayName || user?.username || ''); setSelectedPerson(null); setShowAdd(true) }}>Add Candidate</Button>}
+        {isAdmin && <Button variant="contained" onClick={() => { setDecisionBy(user?.username || ''); setSelectedPerson(null); setShowAdd(true) }}>Add Candidate</Button>}
         {isAdmin && (
           <Tooltip title="Auto-generate candidates from approved applicants">
-            <Button color="warning" variant="outlined" onClick={() => { setGenerateBy(user?.displayName || user?.username || ''); setGeneratePositionId(''); setShowGenerate(true) }}>Generate</Button>
+            <Button color="warning" variant="outlined" onClick={() => { setGenerateBy(user?.username || ''); setGeneratePositionId(''); setShowGenerate(true) }}>Generate</Button>
           </Tooltip>
         )}
       </Box>
@@ -165,33 +165,33 @@ const CandidatesTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       {candidates.length === 0 ? (
         <EmptyState title="No candidates" description="No candidates available." action={isAdmin ? <Button onClick={() => setShowAdd(true)}>Add Candidate</Button> : undefined} />
       ) : (
-        <Paper>
+        <Paper sx={{ border: '1px solid rgba(88, 28, 135, 0.1)', borderRadius: 1.5 }}>
           <TableContainer>
-            <Table>
-              <TableHead>
+            <Table size="small">
+              <TableHead sx={{ backgroundColor: 'rgba(88, 28, 135, 0.08)' }}>
                 <TableRow>
-                  <TableCell>Person</TableCell>
-                  <TableCell>Source</TableCell>
-                  <TableCell>Position</TableCell>
-                  <TableCell>Created</TableCell>
-                  {isAdmin && <TableCell align="right">Actions</TableCell>}
+                  <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Person</Typography></TableCell>
+                  <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Source</Typography></TableCell>
+                  <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Position</Typography></TableCell>
+                  {isAdmin && <TableCell align="right"><Typography variant="body2" sx={{ fontWeight: 600 }}>Actions</Typography></TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {candidates.map(c => (
                   <TableRow key={c.id} hover>
-                    <TableCell>{c.person?.fullName || c.personName || '—'}</TableCell>
-                    <TableCell>{c.applicantId ? 'Applicant' : 'Direct'}</TableCell>
+                    <TableCell><Typography variant="body2">{c.person?.fullName || c.personName || '—'}</Typography></TableCell>
+                    <TableCell><Typography variant="body2">{c.applicantId ? 'Applicant' : 'Direct'}</Typography></TableCell>
                     <TableCell>
-                      {c.positionTitle || (c as any)?.positionTitle || '—'}
-                      {c.fellowshipName ? ` — ${c.fellowshipName}` : ''}
+                      <Typography variant="body2">
+                        {c.positionTitle || (c as any)?.positionTitle || '—'}
+                        {c.fellowshipName ? ` — ${c.fellowshipName}` : ''}
+                      </Typography>
                     </TableCell>
-                    <TableCell>{c.createdAt ? new Date(c.createdAt).toLocaleString() : '—'}</TableCell>
                     {isAdmin && (
                       <TableCell align="right">
                         <Tooltip title="Remove">
                           <span>
-                            <IconButton size="small" onClick={() => openRemove(c)}><DeleteIcon /></IconButton>
+                            <IconButton size="small" color="error" onClick={() => openRemove(c)}><DeleteIcon /></IconButton>
                           </span>
                         </Tooltip>
                       </TableCell>
@@ -207,19 +207,21 @@ const CandidatesTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       <Dialog open={showAdd} onClose={() => setShowAdd(false)}>
         <DialogTitle>Add Candidate (Direct)</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'grid', gap: 2, mt: 1 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1fr)', gap: 1.5, mt: 1 }}>
             <Autocomplete
               options={peopleOptions}
               loading={peopleLoading}
               value={selectedPerson}
               onChange={(_, val) => { setSelectedPerson(val); if (val) setPersonId(String(val.id)) }}
               getOptionLabel={(option) => option.fullName}
+              size="small"
               renderInput={(params) => (
                 <TextField
                   {...params}
                   label="Person"
                   placeholder="Search people"
                   onChange={(e) => setPeopleQuery(e.target.value)}
+                  size="small"
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (
@@ -232,7 +234,7 @@ const CandidatesTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                 />
               )}
             />
-            <TextField select label="Election Position" fullWidth value={positionId} onChange={(e) => setPositionId(e.target.value)}>
+            <TextField select label="Election Position" fullWidth value={positionId} onChange={(e) => setPositionId(e.target.value)} size="small">
               {positions.map((p) => (
                 <MenuItem key={p.id} value={p.id}>
                   {(p.fellowshipPosition?.titleName || p.title || p.positionId)}
@@ -240,8 +242,8 @@ const CandidatesTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                 </MenuItem>
               ))}
             </TextField>
-            <TextField label="Decision By" fullWidth required value={decisionBy} onChange={(e) => setDecisionBy(e.target.value)} />
-            <TextField label="Notes" fullWidth multiline minRows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <TextField label="Decision By" fullWidth required value={decisionBy} onChange={(e) => setDecisionBy(e.target.value)} size="small" />
+            <TextField label="Notes" fullWidth multiline minRows={2} value={notes} onChange={(e) => setNotes(e.target.value)} size="small" />
           </Box>
         </DialogContent>
         <DialogActions>
@@ -253,8 +255,8 @@ const CandidatesTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       <Dialog open={showGenerate} onClose={() => setShowGenerate(false)}>
         <DialogTitle>Generate Candidates</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'grid', gap: 2, mt: 1 }}>
-            <TextField select label="Election Position" fullWidth value={generatePositionId} onChange={(e) => setGeneratePositionId(e.target.value)}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1fr)', gap: 1.5, mt: 1 }}>
+            <TextField select label="Election Position" fullWidth value={generatePositionId} onChange={(e) => setGeneratePositionId(e.target.value)} size="small">
               {positions.map((p) => (
                 <MenuItem key={p.id} value={p.id}>
                   {(p.fellowshipPosition?.titleName || p.title || p.positionId)}
@@ -262,7 +264,7 @@ const CandidatesTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                 </MenuItem>
               ))}
             </TextField>
-            <TextField label="Created By" fullWidth required value={generateBy} onChange={(e) => setGenerateBy(e.target.value)} />
+            <TextField label="Created By" fullWidth required value={generateBy} onChange={(e) => setGenerateBy(e.target.value)} size="small" />
           </Box>
         </DialogContent>
         <DialogActions>
@@ -277,9 +279,9 @@ const CandidatesTab: React.FC<{ electionId: string }> = ({ electionId }) => {
           {removeTarget?.person?.fullName ? ` — ${removeTarget.person.fullName}` : ''}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'grid', gap: 2, mt: 1 }}>
-            <TextField label="Removed By" fullWidth required value={removeBy} onChange={(e) => setRemoveBy(e.target.value)} />
-            <TextField label="Notes" fullWidth multiline minRows={3} value={removeNotes} onChange={(e) => setRemoveNotes(e.target.value)} />
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1fr)', gap: 1.5, mt: 1 }}>
+            <TextField label="Removed By" fullWidth required value={removeBy} onChange={(e) => setRemoveBy(e.target.value)} size="small" />
+            <TextField label="Notes" fullWidth multiline minRows={2} value={removeNotes} onChange={(e) => setRemoveNotes(e.target.value)} size="small" />
           </Box>
         </DialogContent>
         <DialogActions>

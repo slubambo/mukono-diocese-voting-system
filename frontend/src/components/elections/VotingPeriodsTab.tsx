@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, IconButton, Checkbox, FormControlLabel, Typography, Divider, Tooltip } from '@mui/material'
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, IconButton, Checkbox, FormControlLabel, Typography, Divider, Tooltip, Chip } from '@mui/material'
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import dayjs from 'dayjs'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser'
@@ -8,7 +12,6 @@ import CancelIcon from '@mui/icons-material/Cancel'
 import RestoreIcon from '@mui/icons-material/Restore'
 import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
-import StatusChip from '../common/StatusChip'
 import { electionApi } from '../../api/election.api'
 import { useToast } from '../feedback/ToastProvider'
 import { useAuth } from '../../context/AuthContext'
@@ -234,6 +237,18 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
 
   if (loading) return <LoadingState />
 
+  const calcDuration = (start?: string, end?: string): string => {
+    if (!start || !end) return '—'
+    const s = new Date(start).getTime()
+    const e = new Date(end).getTime()
+    if (Number.isNaN(s) || Number.isNaN(e)) return '—'
+    const ms = e - s
+    const hours = ms / (1000 * 60 * 60)
+    if (hours < 24) return `${Math.round(hours)} hour${Math.round(hours) === 1 ? '' : 's'}`
+    const days = Math.round(hours / 24)
+    return `${days} day${days === 1 ? '' : 's'}`
+  }
+
   return (
     <Box>
       <Box sx={{ mb: 2 }}>
@@ -243,54 +258,69 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       {periods.length === 0 ? (
         <EmptyState title="No voting periods" description="No voting periods have been created for this election." action={isAdmin ? <Button onClick={() => openDialog()}>Create Voting Period</Button> : undefined} />
       ) : (
-        <Paper>
+        <Paper sx={{ width: '100%', borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
           <TableContainer>
-            <Table>
+            <Table size="small" sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Name</TableCell>
-                  <TableCell>Start</TableCell>
-                  <TableCell>End</TableCell>
+                  <TableCell>Start – End</TableCell>
+                  <TableCell>Duration</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell align="right">Positions</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                  {isAdmin && <TableCell align="right">Actions</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {periods.map(p => (
                   <TableRow key={String(p.id)} hover>
-                    <TableCell>{p.name || p.label}</TableCell>
-                    <TableCell>{p.startTime ? new Date(p.startTime).toLocaleString() : '—'}</TableCell>
-                    <TableCell>{p.endTime ? new Date(p.endTime).toLocaleString() : '—'}</TableCell>
-                    <TableCell><StatusChip status={(p.status || 'pending') as any} /></TableCell>
-                    <TableCell align="right">{p.positionsCount ?? assignedByPeriod[String(p.id)]?.length ?? 0}</TableCell>
-                    <TableCell align="right">
-                      {isAdmin && (
-                        <>
-                          <Tooltip title="Edit">
-                            <IconButton size="small" onClick={() => openDialog(p)}><EditIcon /></IconButton>
-                          </Tooltip>
-                          {p.status !== 'CANCELLED' && (
-                            <>
-                              <Tooltip title="Open">
-                                <IconButton size="small" onClick={() => { setLifecycleAction('open'); setLifecyclePeriod(p) }}><OpenInBrowserIcon /></IconButton>
-                              </Tooltip>
-                              <Tooltip title="Close">
-                                <IconButton size="small" onClick={() => { setLifecycleAction('close'); setLifecyclePeriod(p) }}><CloseIcon /></IconButton>
-                              </Tooltip>
-                              <Tooltip title="Cancel">
-                                <IconButton size="small" onClick={() => { setLifecycleAction('cancel'); setLifecyclePeriod(p) }}><CancelIcon /></IconButton>
-                              </Tooltip>
-                            </>
-                          )}
-                          {p.status === 'CANCELLED' && (
-                            <Tooltip title="Reactivate">
-                              <IconButton size="small" onClick={() => { setLifecycleAction('reactivate'); setLifecyclePeriod(p) }}><RestoreIcon /></IconButton>
-                            </Tooltip>
-                          )}
-                        </>
-                      )}
+                    <TableCell><Typography variant="body2">{p.name || p.label}</Typography></TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {p.startTime && p.endTime
+                          ? `${new Date(p.startTime).toLocaleString()} – ${new Date(p.endTime).toLocaleString()}`
+                          : p.startTime
+                            ? new Date(p.startTime).toLocaleString()
+                            : '—'}
+                      </Typography>
                     </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>{calcDuration(p.startTime, p.endTime)}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={p.status || 'PENDING'}
+                        size="small"
+                        color={p.status === 'OPEN' ? 'success' : p.status === 'CANCELLED' ? 'error' : 'default'}
+                        variant={p.status === 'DRAFT' ? 'outlined' : 'filled'}
+                      />
+                    </TableCell>
+                    <TableCell align="right"><Typography variant="body2">{p.positionsCount ?? assignedByPeriod[String(p.id)]?.length ?? 0}</Typography></TableCell>
+                    {isAdmin && (
+                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                        <Tooltip title="Edit">
+                          <IconButton size="small" color="primary" onClick={() => openDialog(p)}><EditIcon fontSize="small" /></IconButton>
+                        </Tooltip>
+                        {p.status !== 'CANCELLED' && (
+                          <>
+                            <Tooltip title="Open">
+                              <IconButton size="small" color="success" onClick={() => { setLifecycleAction('open'); setLifecyclePeriod(p) }}><OpenInBrowserIcon fontSize="small" /></IconButton>
+                            </Tooltip>
+                            <Tooltip title="Close">
+                              <IconButton size="small" color="warning" onClick={() => { setLifecycleAction('close'); setLifecyclePeriod(p) }}><CloseIcon fontSize="small" /></IconButton>
+                            </Tooltip>
+                            <Tooltip title="Cancel">
+                              <IconButton size="small" color="error" onClick={() => { setLifecycleAction('cancel'); setLifecyclePeriod(p) }}><CancelIcon fontSize="small" /></IconButton>
+                            </Tooltip>
+                          </>
+                        )}
+                        {p.status === 'CANCELLED' && (
+                          <Tooltip title="Reactivate">
+                            <IconButton size="small" color="info" onClick={() => { setLifecycleAction('reactivate'); setLifecyclePeriod(p) }}><RestoreIcon fontSize="small" /></IconButton>
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -299,49 +329,47 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
         </Paper>
       )}
 
-      <Dialog open={showDialog} onClose={() => setShowDialog(false)} fullWidth>
+      <Dialog open={showDialog} onClose={() => setShowDialog(false)} fullWidth maxWidth="sm">
         <DialogTitle>{editing ? 'Edit Voting Period' : 'Create Voting Period'}</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'grid', gap: 2 }}>
-            <TextField
-              label="Name"
-              value={name}
-              onChange={(e) => { setName(e.target.value); setFieldErrors((prev) => ({ ...prev, name: undefined })) }}
-              fullWidth
-              required
-              error={Boolean(fieldErrors.name)}
-              helperText={fieldErrors.name}
-            />
-            <TextField
-              label="Start Time"
-              type="datetime-local"
-              value={startTime}
-              onChange={(e) => { setStartTime(e.target.value); setFieldErrors((prev) => ({ ...prev, startTime: undefined })) }}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ min: electionWindow.start ? formatLocalDateTime(electionWindow.start) : undefined, max: electionWindow.end ? formatLocalDateTime(electionWindow.end) : undefined }}
-              required
-              error={Boolean(fieldErrors.startTime)}
-              helperText={fieldErrors.startTime || (electionWindow.start && electionWindow.end ? `Must be within ${new Date(electionWindow.start).toLocaleString()} — ${new Date(electionWindow.end).toLocaleString()}` : undefined)}
-            />
-            <TextField
-              label="End Time"
-              type="datetime-local"
-              value={endTime}
-              onChange={(e) => { setEndTime(e.target.value); setFieldErrors((prev) => ({ ...prev, endTime: undefined })) }}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ min: electionWindow.start ? formatLocalDateTime(electionWindow.start) : undefined, max: electionWindow.end ? formatLocalDateTime(electionWindow.end) : undefined }}
-              required
-              error={Boolean(fieldErrors.endTime)}
-              helperText={fieldErrors.endTime}
-            />
-            <Divider />
-            <Typography variant="subtitle2">Positions for this voting period</Typography>
-            {loadingPositions ? (
-              <Typography variant="body2">Loading positions...</Typography>
-            ) : positions.length === 0 ? (
-              <Typography variant="body2">No positions available for this election.</Typography>
-            ) : (
-              <Box sx={{ display: 'grid', gap: 1 }}>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Box sx={{ display: 'grid', gap: 1.5, mt: 2 }}>
+              <TextField
+                label="Name"
+                value={name}
+                onChange={(e) => { setName(e.target.value); setFieldErrors((prev) => ({ ...prev, name: undefined })) }}
+                fullWidth
+                required
+                size="small"
+                error={Boolean(fieldErrors.name)}
+                helperText={fieldErrors.name}
+              />
+              <DateTimePicker
+                label="Start Time"
+                value={startTime ? dayjs(startTime) : null}
+                onChange={(v) => {
+                  setStartTime(v ? v.toISOString() : '')
+                  setFieldErrors((prev) => ({ ...prev, startTime: undefined }))
+                }}
+                slotProps={{ textField: { fullWidth: true, size: 'small', error: Boolean(fieldErrors.startTime), helperText: fieldErrors.startTime || (electionWindow.start && electionWindow.end ? `Within ${new Date(electionWindow.start).toLocaleString()} — ${new Date(electionWindow.end).toLocaleString()}` : undefined) } }}
+              />
+              <DateTimePicker
+                label="End Time"
+                value={endTime ? dayjs(endTime) : null}
+                onChange={(v) => {
+                  setEndTime(v ? v.toISOString() : '')
+                  setFieldErrors((prev) => ({ ...prev, endTime: undefined }))
+                }}
+                slotProps={{ textField: { fullWidth: true, size: 'small', error: Boolean(fieldErrors.endTime), helperText: fieldErrors.endTime } }}
+              />
+              <Divider />
+              <Typography variant="subtitle2">Positions for this voting period</Typography>
+              {loadingPositions ? (
+                <Typography variant="body2">Loading positions...</Typography>
+              ) : positions.length === 0 ? (
+                <Typography variant="body2">No positions available for this election.</Typography>
+              ) : (
+                <Box sx={{ display: 'grid', gap: 1 }}>
                 {Object.entries(
                   positions.reduce<Record<string, Position[]>>((acc, pos) => {
                     const name = pos.fellowshipPosition?.fellowshipName || 'Other'
@@ -383,7 +411,8 @@ const VotingPeriodsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                 ))}
               </Box>
             )}
-          </Box>
+            </Box>
+          </LocalizationProvider>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowDialog(false)}>Cancel</Button>

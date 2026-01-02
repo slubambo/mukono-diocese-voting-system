@@ -82,6 +82,26 @@ const ElectionDetailPage: React.FC = () => {
     return '—'
   }
 
+  const calcDays = (start?: string, end?: string): number | null => {
+    if (!start || !end) return null
+    const s = new Date(start).getTime()
+    const e = new Date(end).getTime()
+    if (Number.isNaN(s) || Number.isNaN(e)) return null
+    return Math.ceil((e - s) / (1000 * 60 * 60 * 24))
+  }
+
+  const calcDuration = (start?: string, end?: string): string => {
+    if (!start || !end) return '—'
+    const s = new Date(start).getTime()
+    const e = new Date(end).getTime()
+    if (Number.isNaN(s) || Number.isNaN(e)) return '—'
+    const ms = e - s
+    const hours = ms / (1000 * 60 * 60)
+    if (hours < 24) return `${Math.round(hours)} hour${Math.round(hours) === 1 ? '' : 's'}`
+    const days = Math.round(hours / 24)
+    return `${days} day${days === 1 ? '' : 's'}`
+  }
+
   const handleEdit = () => {
     // navigate to admin edit route - reuse list edit dialog would be better; for now redirect to list and open edit
     navigate('/admin/elections')
@@ -140,18 +160,46 @@ const ElectionDetailPage: React.FC = () => {
           </>
         )}
       >
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3 }}>
           <StatusChip status={election.status || 'pending'} />
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <Chip label={`Scope: ${election.scope || '—'}`} size="small" />
             <Chip label={`Target: ${getTargetLabel()}`} size="small" />
-            <Chip label={`Fellowship: ${election.fellowship?.name || election.fellowshipName || 'All fellowships'}`} size="small" />
+            <Chip label={`Fellowship: ${election.fellowship?.name || election.fellowshipName || 'All'}`} size="small" />
           </Stack>
-          {election.termStartDate && <Typography>Term Start: {new Date(election.termStartDate).toLocaleDateString()}</Typography>}
-          {election.termEndDate && <Typography>Term End: {new Date(election.termEndDate).toLocaleDateString()}</Typography>}
-          {election.votingStartAt && <Typography>Voting Start: {new Date(election.votingStartAt).toLocaleString()}</Typography>}
-          {election.votingEndAt && <Typography>Voting End: {new Date(election.votingEndAt).toLocaleString()}</Typography>}
         </Box>
+
+        <Paper sx={{ p: 2.5, mb: 3, borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+            <Box>
+              <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>Term Dates</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {election.termStartDate && election.termEndDate
+                  ? `${new Date(election.termStartDate).toLocaleDateString()} – ${new Date(election.termEndDate).toLocaleDateString()}`
+                  : election.termStartDate
+                    ? new Date(election.termStartDate).toLocaleDateString()
+                    : '—'}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                Duration: {calcDays(election.termStartDate, election.termEndDate)} days
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>Voting Period</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {election.votingStartAt && election.votingEndAt
+                  ? `${new Date(election.votingStartAt).toLocaleString()} – ${new Date(election.votingEndAt).toLocaleString()}`
+                  : election.votingStartAt
+                    ? new Date(election.votingStartAt).toLocaleString()
+                    : '—'}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                Duration: {calcDuration(election.votingStartAt, election.votingEndAt)}
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
 
         <Paper sx={{ mb: 2 }}>
           <Tabs value={tab} onChange={(_, v) => setTab(v)}>

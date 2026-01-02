@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Button, Paper, Table, TableBody, TableCell, TableHead, TableRow, TableContainer, IconButton } from '@mui/material'
+import { Box, Button, Paper, Table, TableBody, TableCell, TableHead, TableRow, TableContainer, IconButton, Tooltip, Typography } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import DeleteIcon from '@mui/icons-material/Delete'
 import { electionApi } from '../../api/election.api'
 import type { Position } from '../../types/election'
 import LoadingState from '../common/LoadingState'
@@ -8,7 +9,6 @@ import EmptyState from '../common/EmptyState'
 import PositionForm from './PositionForm'
 import { useToast } from '../feedback/ToastProvider'
 import { getErrorMessage } from '../../api/errorHandler'
-import DeleteIcon from '@mui/icons-material/Delete'
 
 const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ electionId, isAdmin = false }) => {
   const [loading, setLoading] = useState(true)
@@ -41,27 +41,27 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
       {positions.length === 0 ? (
         <EmptyState title="No positions" description="No positions have been configured for this election." action={isAdmin ? <Button onClick={() => setShowAdd(true)}>Add Position</Button> : undefined} />
       ) : (
-        <Paper>
+        <Paper sx={{ width: '100%', borderRadius: 1.5, border: '1px solid rgba(88, 28, 135, 0.1)' }}>
           <TableContainer>
-            <Table>
+            <Table size="small" sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Title</TableCell>
                   <TableCell>Fellowship</TableCell>
                   <TableCell>Seats</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                  {isAdmin && <TableCell align="right">Actions</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {positions.map(p => (
                   <TableRow key={p.id} hover>
-                    <TableCell>{p.fellowshipPosition?.titleName || p.title || p.positionId}</TableCell>
-                    <TableCell>{p.fellowshipPosition?.fellowshipName ?? '-'}</TableCell>
-                    <TableCell>{p.seats ?? '-'}</TableCell>
-                    <TableCell align="right">
-                      {isAdmin && (
-                        <>
-                          <IconButton size="small" onClick={async () => {
+                    <TableCell><Typography variant="body2">{p.fellowshipPosition?.titleName || p.title || p.positionId}</Typography></TableCell>
+                    <TableCell><Typography variant="body2">{p.fellowshipPosition?.fellowshipName ?? '-'}</Typography></TableCell>
+                    <TableCell><Typography variant="body2">{p.seats ?? '-'}</Typography></TableCell>
+                    {isAdmin && (
+                      <TableCell align="right">
+                        <Tooltip title="Delete">
+                          <IconButton size="small" color="error" onClick={async () => {
                             if (!confirm('Remove this position from the election?')) return
                             try {
                               const deleteId = p.fellowshipPosition?.id ?? p.positionId ?? p.id
@@ -76,9 +76,9 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
                               toast.error(getErrorMessage(err) || 'Failed to remove position')
                             }
                           }}><DeleteIcon fontSize="small" /></IconButton>
-                        </>
-                      )}
-                    </TableCell>
+                        </Tooltip>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
