@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Box, Paper, Typography, TextField, Button, MenuItem, Chip, Card, CardContent, Grid } from '@mui/material'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Box, Paper, Typography, TextField, Button, MenuItem, Chip, Card, CardContent } from '@mui/material'
 import HowToVoteIcon from '@mui/icons-material/HowToVote'
 import { electionApi } from '../../api/election.api'
 import LoadingState from '../common/LoadingState'
@@ -60,9 +60,18 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
     getPeriods()
   }, [electionId])
 
-  if (loading) return <LoadingState />
-
   const positionsPreview = preview?.positions || []
+  const groupedBallot = useMemo(() => {
+    const groups = positionsPreview.reduce<Record<string, typeof positionsPreview>>((acc, pos) => {
+      const key = pos.fellowshipName || 'Other'
+      acc[key] = acc[key] || []
+      acc[key].push(pos)
+      return acc
+    }, {})
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b))
+  }, [positionsPreview])
+
+  if (loading) return <LoadingState />
 
   return (
     <Box>
@@ -152,119 +161,125 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
             </Typography>
           </Paper>
 
-          {/* Positions as Ballot Cards */}
-          {positionsPreview.map((pos, idx) => (
-            <Card
-              key={String(pos.electionPositionId)}
-              sx={{
-                mb: 2.5,
-                borderRadius: 2,
-                border: '1px solid rgba(88, 28, 135, 0.15)',
-                boxShadow: '0 2px 8px rgba(88, 28, 135, 0.08)',
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  boxShadow: '0 4px 16px rgba(88, 28, 135, 0.12)',
-                  borderColor: 'rgba(88, 28, 135, 0.25)',
-                },
-              }}
-            >
-              <CardContent>
-                {/* Position Header */}
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, pb: 1.5, borderBottom: '2px solid rgba(88, 28, 135, 0.1)' }}>
-                  <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: 'primary.main' }}>
-                      {pos.positionTitle || 'Position'}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      {pos.fellowshipName && (
-                        <Chip
-                          label={pos.fellowshipName}
-                          size="small"
-                          sx={{ backgroundColor: 'rgba(88, 28, 135, 0.1)', color: 'primary.main', fontWeight: 500 }}
-                        />
-                      )}
-                      {pos.scope && (
-                        <Chip
-                          label={pos.scope}
-                          size="small"
-                          variant="outlined"
-                          sx={{ borderColor: 'rgba(88, 28, 135, 0.2)', color: 'text.secondary' }}
-                        />
-                      )}
-                      {typeof pos.seats === 'number' && (
-                        <Chip
-                          label={`${pos.seats} seat${pos.seats === 1 ? '' : 's'}`}
-                          size="small"
-                          sx={{ backgroundColor: 'success.light', color: 'success.dark', fontWeight: 500 }}
-                        />
-                      )}
-                    </Box>
-                  </Box>
-                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                    {idx + 1}
-                  </Typography>
-                </Box>
-
-                {/* Candidates List */}
-                {(pos.candidates || []).length === 0 ? (
-                  <Box sx={{ py: 3, textAlign: 'center' }}>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      No candidates yet
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Grid container spacing={1.5}>
-                    {(pos.candidates || []).map((c, candIdx) => (
-                      <Grid
-                        key={String(c.candidateId)}
-                        sx={{
-                          width: pos.candidates && pos.candidates.length <= 3 ? '100%' : { xs: '100%', sm: '50%' },
-                        }}
-                      >
-                        <Paper
-                          sx={{
-                            p: 1.5,
-                            backgroundColor: 'rgba(88, 28, 135, 0.03)',
-                            border: '1px solid rgba(88, 28, 135, 0.1)',
-                            borderRadius: 1.5,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              backgroundColor: 'rgba(88, 28, 135, 0.08)',
-                              borderColor: 'rgba(88, 28, 135, 0.25)',
-                              transform: 'translateY(-2px)',
-                            },
-                          }}
-                        >
-                          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                            <Box
-                              sx={{
-                                width: 28,
-                                height: 28,
-                                borderRadius: '50%',
-                                backgroundColor: 'primary.main',
-                                color: 'white',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontWeight: 700,
-                                fontSize: '0.875rem',
-                                flexShrink: 0,
-                              }}
-                            >
-                              {candIdx + 1}
+          {/* Positions as Ballot Cards grouped by fellowship */}
+          {groupedBallot.map(([fellowship, items]) => (
+            <Box key={fellowship} sx={{ mb: 2.5 }}>
+              <Paper sx={{ p: 1.5, mb: 1.5, backgroundColor: 'rgba(88, 28, 135, 0.06)', border: '1px solid rgba(88, 28, 135, 0.14)', borderRadius: 1.5 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'primary.main' }}>{fellowship}</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>{items.length} position{items.length === 1 ? '' : 's'}</Typography>
+              </Paper>
+              <Box sx={{ display: 'grid', gap: 1.5 }}>
+                {items.map((pos) => {
+                  const cardNumber = positionsPreview.indexOf(pos) + 1
+                  return (
+                    <Card
+                      key={String(pos.electionPositionId)}
+                      sx={{
+                        borderRadius: 2,
+                        border: '1px solid rgba(88, 28, 135, 0.15)',
+                        boxShadow: '0 2px 8px rgba(88, 28, 135, 0.08)',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          boxShadow: '0 4px 16px rgba(88, 28, 135, 0.12)',
+                          borderColor: 'rgba(88, 28, 135, 0.25)',
+                        },
+                      }}
+                    >
+                      <CardContent>
+                        {/* Position Header */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, pb: 1.5, borderBottom: '2px solid rgba(88, 28, 135, 0.1)' }}>
+                          <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: 'primary.main' }}>
+                              {pos.positionTitle || 'Position'}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              {pos.fellowshipName && (
+                                <Chip
+                                  label={pos.fellowshipName}
+                                  size="small"
+                                  sx={{ backgroundColor: 'rgba(88, 28, 135, 0.1)', color: 'primary.main', fontWeight: 500 }}
+                                />
+                              )}
+                              {pos.scope && (
+                                <Chip
+                                  label={pos.scope}
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ borderColor: 'rgba(88, 28, 135, 0.2)', color: 'text.secondary' }}
+                                />
+                              )}
+                              {typeof pos.seats === 'number' && (
+                                <Chip
+                                  label={`${pos.seats} seat${pos.seats === 1 ? '' : 's'}`}
+                                  size="small"
+                                  sx={{ backgroundColor: 'success.light', color: 'success.dark', fontWeight: 500 }}
+                                />
+                              )}
                             </Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500, flex: 1 }}>
-                              {c.fullName}
+                          </Box>
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                            {cardNumber}
+                          </Typography>
+                        </Box>
+
+                        {/* Candidates List */}
+                        {(pos.candidates || []).length === 0 ? (
+                          <Box sx={{ py: 3, textAlign: 'center' }}>
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                              No candidates yet
                             </Typography>
                           </Box>
-                        </Paper>
-                      </Grid>
-                    ))}
-                  </Grid>
-                )}
-              </CardContent>
-            </Card>
+                        ) : (
+                          <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: pos.candidates && pos.candidates.length <= 3 ? '1fr' : { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
+                            {(pos.candidates || []).map((c, candIdx) => (
+                              <Paper
+                                key={String(c.candidateId)}
+                                sx={{
+                                  p: 1.5,
+                                  backgroundColor: 'rgba(88, 28, 135, 0.03)',
+                                  border: '1px solid rgba(88, 28, 135, 0.1)',
+                                  borderRadius: 1.5,
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(88, 28, 135, 0.08)',
+                                    borderColor: 'rgba(88, 28, 135, 0.25)',
+                                    transform: 'translateY(-2px)',
+                                  },
+                                }}
+                              >
+                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                  <Box
+                                    sx={{
+                                      width: 28,
+                                      height: 28,
+                                      borderRadius: '50%',
+                                      backgroundColor: 'primary.main',
+                                      color: 'white',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontWeight: 700,
+                                      fontSize: '0.875rem',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {candIdx + 1}
+                                  </Box>
+                                  <Typography variant="body2" sx={{ fontWeight: 500, flex: 1 }}>
+                                    {c.fullName}
+                                  </Typography>
+                                </Box>
+                              </Paper>
+                            ))}
+                          </Box>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </Box>
+            </Box>
           ))}
 
           {/* Ballot Footer */}

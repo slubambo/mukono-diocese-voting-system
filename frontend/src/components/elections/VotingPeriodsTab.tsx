@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, IconButton, Checkbox, FormControlLabel, Typography, Divider, Tooltip, Chip } from '@mui/material'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, IconButton, Checkbox, FormControlLabel, Typography, Divider, Tooltip, Chip, Accordion, AccordionSummary, AccordionDetails, InputAdornment, Stack } from '@mui/material'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
@@ -10,6 +10,9 @@ import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser'
 import CloseIcon from '@mui/icons-material/Close'
 import CancelIcon from '@mui/icons-material/Cancel'
 import RestoreIcon from '@mui/icons-material/Restore'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import SearchIcon from '@mui/icons-material/Search'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
 import { electionApi } from '../../api/election.api'
@@ -31,6 +34,8 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
   const [assignedByPeriod, setAssignedByPeriod] = useState<Record<string, number[]>>({})
   const [positionToPeriod, setPositionToPeriod] = useState<Record<number, string>>({})
   const [loadingPositions, setLoadingPositions] = useState(false)
+  const [positionSearch, setPositionSearch] = useState('')
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState(false)
   const [lifecycleAction, setLifecycleAction] = useState<'open' | 'close' | 'cancel' | 'reactivate' | null>(null)
   const [lifecyclePeriod, setLifecyclePeriod] = useState<VotingPeriod | null>(null)
@@ -102,6 +107,8 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
     setEndTime(p?.endTime ?? '')
     setFieldErrors({})
     if (!p) setAssigned([])
+    setPositionSearch('')
+    setExpanded({})
     setShowDialog(true)
   }
 
@@ -157,6 +164,19 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
     setEndTime(endLocal)
     originalValuesRef.current = { name: editing.name ?? '', start: startLocal, end: endLocal }
   }, [editing, showDialog])
+
+  const groupedPositions = useMemo(() => {
+    const search = positionSearch.trim().toLowerCase()
+    const grouped = positions.reduce<Record<string, Position[]>>((acc, pos) => {
+      const fellowshipName = pos.fellowshipPosition?.fellowshipName || 'Other'
+      const label = `${pos.fellowshipPosition?.titleName || pos.title || 'Position'} ${fellowshipName}`.toLowerCase()
+      if (search && !label.includes(search)) return acc
+      acc[fellowshipName] = acc[fellowshipName] || []
+      acc[fellowshipName].push(pos)
+      return acc
+    }, {})
+    return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b))
+  }, [positions, positionSearch])
 
   const submit = async () => {
     if (saving) return
@@ -413,48 +433,92 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
               ) : positions.length === 0 ? (
                 <Typography variant="body2">No positions available for this election.</Typography>
               ) : (
-                <Box sx={{ display: 'grid', gap: 1 }}>
-                {Object.entries(
-                  positions.reduce<Record<string, Position[]>>((acc, pos) => {
-                    const name = pos.fellowshipPosition?.fellowshipName || 'Other'
-                    acc[name] = acc[name] || []
-                    acc[name].push(pos)
-                    return acc
-                  }, {})
-                ).map(([fellowshipName, items]) => (
-                  <Box key={fellowshipName}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>{fellowshipName}</Typography>
-                    {items.map((pos) => {
-                      const id = Number(pos.id)
-                      const assignedElsewhere = Boolean(positionToPeriod[id] && positionToPeriod[id] !== String(editing?.id ?? ''))
-                      const checked = assigned.includes(id)
-                      const fellowshipLabel = pos.fellowshipPosition?.fellowshipName ? ` — ${pos.fellowshipPosition.fellowshipName}` : ''
-                      const label = `${pos.fellowshipPosition?.titleName || pos.title || 'Position'}${fellowshipLabel} (${pos.seats ?? 1} seat${(pos.seats ?? 1) === 1 ? '' : 's'})`
+                <Box sx={{ display: 'grid', gap: 1.5 }}>
+                  <TextField
+                    value={positionSearch}
+                    onChange={(e) => setPositionSearch(e.target.value)}
+                    placeholder="Search positions or fellowships"
+                    size="small"
+                    InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+                  />
+                  <Box sx={{ maxHeight: 360, overflow: 'auto', pr: 0.5, display: 'grid', gap: 1 }}>
+                    {groupedPositions.length === 0 ? (
+                      <Typography variant="body2">No matches found.</Typography>
+                    ) : groupedPositions.map(([fellowshipName, items]) => {
+                      const selectedCount = items.filter((pos) => assigned.includes(Number(pos.id))).length
+                      const totalCount = items.length
+                      const allSelected = selectedCount === totalCount
+                      const isExpanded = expanded[fellowshipName] ?? true
                       return (
-                        <Tooltip
-                          key={id}
-                          title={assignedElsewhere ? `Assigned to period #${positionToPeriod[id]}` : ''}
-                          disableHoverListener={!assignedElsewhere}
+                        <Accordion
+                          key={fellowshipName}
+                          expanded={isExpanded}
+                          onChange={() => setExpanded((prev) => ({ ...prev, [fellowshipName]: !isExpanded }))}
+                          disableGutters
+                          elevation={0}
+                          sx={{ border: '1px solid rgba(88, 28, 135, 0.12)', borderRadius: 1.5, '&:before': { display: 'none' } }}
                         >
-                          <FormControlLabel
-                            control={<Checkbox
-                              checked={checked}
-                              disabled={assignedElsewhere}
-                              onChange={() => {
-                                setAssigned((prev) => (
-                                  prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
-                                ))
-                              }}
-                            />}
-                            label={label}
-                          />
-                        </Tooltip>
+                          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 1.5 }}>
+                            <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1, justifyContent: 'space-between' }}>
+                              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{fellowshipName}</Typography>
+                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                  {selectedCount} of {totalCount} selected
+                                </Typography>
+                              </Box>
+                              <Button
+                                size="small"
+                                variant={allSelected ? 'outlined' : 'text'}
+                                startIcon={<CheckCircleIcon fontSize="small" />}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setAssigned((prev) => {
+                                    const ids = items.map((p) => Number(p.id))
+                                    if (allSelected) return prev.filter((id) => !ids.includes(id))
+                                    const merged = new Set([...prev, ...ids.filter((id) => !positionToPeriod[id] || positionToPeriod[id] === String(editing?.id ?? ''))])
+                                    return Array.from(merged)
+                                  })
+                                }}
+                                disabled={items.every((p) => positionToPeriod[Number(p.id)] && positionToPeriod[Number(p.id)] !== String(editing?.id ?? ''))}
+                              >
+                                {allSelected ? 'Clear' : 'Select all'}
+                              </Button>
+                            </Stack>
+                          </AccordionSummary>
+                          <AccordionDetails sx={{ pt: 0, pb: 1.5, px: 1.5, display: 'grid', gap: 0.5 }}>
+                            {items.map((pos) => {
+                              const id = Number(pos.id)
+                              const assignedElsewhere = Boolean(positionToPeriod[id] && positionToPeriod[id] !== String(editing?.id ?? ''))
+                              const checked = assigned.includes(id)
+                              const label = `${pos.fellowshipPosition?.titleName || pos.title || 'Position'} (${pos.seats ?? 1} seat${(pos.seats ?? 1) === 1 ? '' : 's'})`
+                              return (
+                                <Tooltip
+                                  key={id}
+                                  title={assignedElsewhere ? `Assigned to period #${positionToPeriod[id]}` : ''}
+                                  disableHoverListener={!assignedElsewhere}
+                                >
+                                  <FormControlLabel
+                                    control={<Checkbox
+                                      checked={checked}
+                                      disabled={assignedElsewhere}
+                                      onChange={() => {
+                                        setAssigned((prev) => (
+                                          prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
+                                        ))
+                                      }}
+                                    />}
+                                    label={label}
+                                  />
+                                </Tooltip>
+                              )
+                            })}
+                          </AccordionDetails>
+                        </Accordion>
                       )
                     })}
                   </Box>
-                ))}
-              </Box>
-            )}
+                </Box>
+              )}
             </Box>
           </LocalizationProvider>
         </DialogContent>

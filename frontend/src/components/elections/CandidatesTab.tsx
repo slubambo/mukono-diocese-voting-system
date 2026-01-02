@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Box, Button, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Dialog, DialogTitle, DialogContent, TextField, DialogActions, MenuItem, Tooltip, Autocomplete, CircularProgress, IconButton, Typography } from '@mui/material'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Box, Button, Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Dialog, DialogTitle, DialogContent, TextField, DialogActions, MenuItem, Tooltip, Autocomplete, CircularProgress, IconButton, Typography, Chip } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
@@ -77,6 +77,16 @@ const CandidatesTab: React.FC<{ electionId: string }> = ({ electionId }) => {
     }, 300)
     return () => clearTimeout(handle)
   }, [peopleQuery, showAdd])
+
+  const groupedCandidates = useMemo(() => {
+    const groups = candidates.reduce<Record<string, Candidate[]>>((acc, c) => {
+      const key = c.fellowshipName || (c as any)?.fellowshipPosition?.fellowshipName || 'Other'
+      acc[key] = acc[key] || []
+      acc[key].push(c)
+      return acc
+    }, {})
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b))
+  }, [candidates])
 
   const submitDirect = async () => {
     const pid = selectedPerson?.id || Number(personId)
@@ -165,43 +175,54 @@ const CandidatesTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       {candidates.length === 0 ? (
         <EmptyState title="No candidates" description="No candidates available." action={isAdmin ? <Button onClick={() => setShowAdd(true)}>Add Candidate</Button> : undefined} />
       ) : (
-        <Paper sx={{ border: '1px solid rgba(88, 28, 135, 0.1)', borderRadius: 1.5 }}>
-          <TableContainer>
-            <Table size="small">
-              <TableHead sx={{ backgroundColor: 'rgba(88, 28, 135, 0.08)' }}>
-                <TableRow>
-                  <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Person</Typography></TableCell>
-                  <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Source</Typography></TableCell>
-                  <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Position</Typography></TableCell>
-                  {isAdmin && <TableCell align="right"><Typography variant="body2" sx={{ fontWeight: 600 }}>Actions</Typography></TableCell>}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {candidates.map(c => (
-                  <TableRow key={c.id} hover>
-                    <TableCell><Typography variant="body2">{c.person?.fullName || c.personName || '—'}</Typography></TableCell>
-                    <TableCell><Typography variant="body2">{c.applicantId ? 'Applicant' : 'Direct'}</Typography></TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {c.positionTitle || (c as any)?.positionTitle || '—'}
-                        {c.fellowshipName ? ` — ${c.fellowshipName}` : ''}
-                      </Typography>
-                    </TableCell>
-                    {isAdmin && (
-                      <TableCell align="right">
-                        <Tooltip title="Remove">
-                          <span>
-                            <IconButton size="small" color="error" onClick={() => openRemove(c)}><DeleteIcon /></IconButton>
-                          </span>
-                        </Tooltip>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
+        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', lg: 'repeat(auto-fit, minmax(420px, 1fr))' } }}>
+          {groupedCandidates.map(([fellowship, items]) => (
+            <Paper key={fellowship} sx={{ border: '1px solid rgba(88, 28, 135, 0.1)', borderRadius: 1.5, p: 1.5 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{fellowship}</Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>{items.length} candidate{items.length === 1 ? '' : 's'}</Typography>
+                </Box>
+                <Chip size="small" label="Grouped by fellowship" sx={{ backgroundColor: 'rgba(88, 28, 135, 0.08)', color: 'primary.main', fontWeight: 600 }} />
+              </Box>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead sx={{ backgroundColor: 'rgba(88, 28, 135, 0.06)' }}>
+                    <TableRow>
+                      <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Person</Typography></TableCell>
+                      <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Source</Typography></TableCell>
+                      <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Position</Typography></TableCell>
+                      {isAdmin && <TableCell align="right"><Typography variant="body2" sx={{ fontWeight: 600 }}>Actions</Typography></TableCell>}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {items.map(c => (
+                      <TableRow key={c.id} hover>
+                        <TableCell><Typography variant="body2">{c.person?.fullName || c.personName || '—'}</Typography></TableCell>
+                        <TableCell><Typography variant="body2">{c.applicantId ? 'Applicant' : 'Direct'}</Typography></TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {c.positionTitle || (c as any)?.positionTitle || '—'}
+                            {c.fellowshipName ? ` — ${c.fellowshipName}` : ''}
+                          </Typography>
+                        </TableCell>
+                        {isAdmin && (
+                          <TableCell align="right">
+                            <Tooltip title="Remove">
+                              <span>
+                                <IconButton size="small" color="error" onClick={() => openRemove(c)}><DeleteIcon /></IconButton>
+                              </span>
+                            </Tooltip>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+          ))}
+        </Box>
       )}
 
       <Dialog open={showAdd} onClose={() => setShowAdd(false)}>
