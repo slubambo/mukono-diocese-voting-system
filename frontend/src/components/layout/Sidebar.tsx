@@ -116,8 +116,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
   
   const isParentActive = useCallback((item: MenuItem) => {
     if (!item.children) return false
-    return item.children.some(child => isExactActive(child.path))
-  }, [isExactActive])
+    return item.children.some(child => isSectionActive(child.path))
+  }, [isSectionActive])
 
   const renderMenuItem = useCallback((item: MenuItem, level: number = 0) => {
     const Icon = item.icon
@@ -125,7 +125,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
     const isExpanded = expandedItems[item.id] || false
     const parentActive = isParentActive(item)
     const isChildItem = level > 0
-    const active = isChildItem ? isExactActive(item.path) : isSectionActive(item.path)
+    const active = isChildItem ? isSectionActive(item.path) : isSectionActive(item.path)
 
     return (
       <React.Fragment key={item.id}>
