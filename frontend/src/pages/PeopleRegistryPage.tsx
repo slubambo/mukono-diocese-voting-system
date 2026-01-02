@@ -23,6 +23,11 @@ import {
   FormControl,
   InputLabel,
 } from '@mui/material'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+// @ts-ignore - dayjs module resolution
+import dayjs from 'dayjs'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -267,38 +272,64 @@ const PeopleRegistryPage: React.FC = () => {
           )}
         </Paper>
 
-        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="xs" fullWidth>
           <DialogTitle>{editing ? 'Edit Person' : 'Create Person'}</DialogTitle>
           <DialogContent>
-            <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              <Controller name="fullName" control={control} rules={{ required: 'Full name is required' }} render={({ field, fieldState }) => (
-                <TextField {...field} label="Full Name" required error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth size="small" />
-              )} />
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <Controller name="fullName" control={control} rules={{ required: 'Full name is required' }} render={({ field, fieldState }) => (
+                  <TextField {...field} label="Full Name" required error={!!fieldState.error} helperText={fieldState.error?.message} size="small" sx={{ gridColumn: '1 / -1' }} />
+                )} />
 
-              <Controller name="email" control={control} render={({ field }) => (
-                <TextField {...field} label="Email" type="email" fullWidth size="small" />
-              )} />
+                <Controller name="email" control={control} render={({ field }) => (
+                  <TextField {...field} label="Email" type="email" size="small" />
+                )} />
 
-              <Controller name="phoneNumber" control={control} render={({ field }) => (
-                <TextField {...field} label="Phone Number" fullWidth size="small" />
-              )} />
+                <Controller name="phoneNumber" control={control} render={({ field }) => (
+                  <TextField {...field} label="Phone Number" size="small" />
+                )} />
 
-              <Controller name="gender" control={control} render={({ field }) => (
-                <FormControl fullWidth size="small">
-                  <InputLabel>Gender</InputLabel>
-                  <Select {...field} label="Gender">
-                    <MenuItem value="">Unknown</MenuItem>
-                    <MenuItem value="MALE">Male</MenuItem>
-                    <MenuItem value="FEMALE">Female</MenuItem>
-                  </Select>
-                </FormControl>
-              )} />
+                <Controller name="gender" control={control} render={({ field }) => (
+                  <FormControl size="small">
+                    <InputLabel>Gender</InputLabel>
+                    <Select {...field} label="Gender">
+                      <MenuItem value="">Unknown</MenuItem>
+                      <MenuItem value="MALE">Male</MenuItem>
+                      <MenuItem value="FEMALE">Female</MenuItem>
+                    </Select>
+                  </FormControl>
+                )} />
 
-              <Controller name="dateOfBirth" control={control} render={({ field }) => (
-                <TextField {...field} label="Date of Birth" type="date" InputLabelProps={{ shrink: true }} fullWidth size="small" />
-              )} />
+                <Controller name="dateOfBirth" control={control} rules={{ 
+                  validate: (value) => {
+                    if (!value) return true // Optional field
+                    const date = dayjs(value)
+                    if (!date.isValid()) return 'Invalid date'
+                    const age = dayjs().diff(date, 'year')
+                    if (age < 0) return 'Birth date cannot be in the future'
+                    return true
+                  }
+                }} render={({ field, fieldState }) => (
+                  <DatePicker
+                    label="Date of Birth"
+                    value={field.value ? dayjs(field.value) : null}
+                    onChange={(date) => field.onChange(date ? date.format('YYYY-MM-DD') : '')}
+                    slotProps={{
+                      textField: {
+                        size: 'small',
+                        error: !!fieldState.error,
+                        helperText: fieldState.error?.message,
+                      },
+                      openPickerButton: { color: 'primary' },
+                    }}
+                    openTo="year"
+                    views={['year', 'month', 'day']}
+                    defaultValue={dayjs().subtract(18, 'year')}
+                  />
+                )} />
 
-            </Box>
+              </Box>
+            </LocalizationProvider>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
