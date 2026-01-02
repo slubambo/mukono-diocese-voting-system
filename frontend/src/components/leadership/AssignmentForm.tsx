@@ -54,6 +54,79 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
     setFellowships((prev) => (prev.some((f) => f.id === fid) ? prev : [{ id: fid, name: fname }, ...prev]))
   }, [assignment])
 
+  useEffect(() => {
+    if (!assignment) return
+    let cancelled = false
+
+    const hydrateLocation = async () => {
+      const churchFromAssignment = assignment.church ?? null
+      const archFromAssignment = assignment.archdeaconry ?? null
+      const dioceseFromAssignment = assignment.diocese ?? null
+
+      let archId =
+        archFromAssignment?.id ??
+        assignment.archdeaconryId ??
+        churchFromAssignment?.archdeaconryId ??
+        null
+      let dioceseId =
+        dioceseFromAssignment?.id ??
+        assignment.dioceseId ??
+        archFromAssignment?.dioceseId ??
+        null
+
+      let archResolved = archFromAssignment
+      let dioceseResolved = dioceseFromAssignment
+
+      if (!archResolved && archId) {
+        try {
+          archResolved = await archdeaconryApi.get(archId)
+        } catch (_) {
+          // ignore
+        }
+      }
+
+      if (!dioceseId && archResolved?.dioceseId) {
+        dioceseId = archResolved.dioceseId
+      }
+
+      if (!dioceseResolved && dioceseId) {
+        try {
+          dioceseResolved = await dioceseApi.get(dioceseId)
+        } catch (_) {
+          // ignore
+        }
+      }
+
+      if (cancelled) return
+
+      if (dioceseResolved?.id && dioceseResolved?.name) {
+        setDioceses((prev) => (prev.some((d) => d.id === dioceseResolved?.id) ? prev : [dioceseResolved, ...prev]))
+      }
+      if (archResolved?.id && archResolved?.name) {
+        setArchdeaconries((prev) => (prev.some((a) => a.id === archResolved?.id) ? prev : [archResolved, ...prev]))
+      }
+      if (churchFromAssignment?.id && churchFromAssignment?.name) {
+        setChurches((prev) => (prev.some((c) => c.id === churchFromAssignment?.id) ? prev : [churchFromAssignment, ...prev]))
+      }
+
+      if (dioceseId) {
+        setValue('dioceseId', dioceseId)
+        archdeaconryApi.list({ dioceseId, page: 0, size: 1000 }).then(r => setArchdeaconries(r.content)).catch(() => {})
+      }
+      if (archId) {
+        setValue('archdeaconryId', archId)
+        churchApi.list({ archdeaconryId: archId, page: 0, size: 1000 }).then(r => setChurches(r.content)).catch(() => {})
+      }
+      if (churchFromAssignment?.id) setValue('churchId', churchFromAssignment.id)
+    }
+
+    hydrateLocation()
+
+    return () => {
+      cancelled = true
+    }
+  }, [assignment, setValue])
+
   // if dioceses list contains only one, preselect it
   useEffect(() => {
     if (dioceses.length === 1) {
@@ -233,7 +306,7 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
           <FormControl fullWidth size="small">
             <InputLabel>Diocese</InputLabel>
             <Controller name="dioceseId" control={control} render={({ field }) => (
-              <Select {...field} label="Diocese">
+              <Select {...field} label="Diocese" value={field.value ?? ''}>
                 <MenuItem value="">-- Select Diocese --</MenuItem>
                 {dioceses.map(d => (<MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>))}
               </Select>
@@ -245,7 +318,7 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
           <FormControl fullWidth size="small">
             <InputLabel>Archdeaconry</InputLabel>
             <Controller name="archdeaconryId" control={control} render={({ field }) => (
-              <Select {...field} label="Archdeaconry">
+              <Select {...field} label="Archdeaconry" value={field.value ?? ''}>
                 <MenuItem value="">-- Select Archdeaconry --</MenuItem>
                 {archdeaconries.map(a => (<MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>))}
               </Select>
@@ -257,7 +330,7 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
           <FormControl fullWidth size="small" sx={{ gridColumn: '1 / -1' }}>
             <InputLabel>Church</InputLabel>
             <Controller name="churchId" control={control} render={({ field }) => (
-              <Select {...field} label="Church">
+              <Select {...field} label="Church" value={field.value ?? ''}>
                 <MenuItem value="">-- Select Church --</MenuItem>
                 {churches.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
               </Select>
