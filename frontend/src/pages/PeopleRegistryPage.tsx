@@ -137,12 +137,17 @@ const PeopleRegistryPage: React.FC = () => {
   const sortOptions = [
     { id: 'fullName,asc', name: 'Name (A-Z)' },
     { id: 'fullName,desc', name: 'Name (Z-A)' },
-    { id: 'createdAt,desc', name: 'Newest first' },
-    { id: 'createdAt,asc', name: 'Oldest first' },
+    { id: 'dateOfBirth,desc', name: 'Youngest first' },
+    { id: 'dateOfBirth,asc', name: 'Oldest first' },
   ]
 
   const displayPeople = useMemo(() => {
     const byStatus = (status?: string | null) => (status === 'ACTIVE' ? 0 : 1)
+    const toTimestamp = (value?: string | null) => {
+      if (!value) return null
+      const time = new Date(value).getTime()
+      return Number.isNaN(time) ? null : time
+    }
     return [...people].sort((a, b) => {
       const statusCompare = byStatus(a.status) - byStatus(b.status)
       if (statusCompare !== 0) return statusCompare
@@ -152,10 +157,22 @@ const PeopleRegistryPage: React.FC = () => {
           return (a.fullName || '').localeCompare(b.fullName || '')
         case 'fullName,desc':
           return (b.fullName || '').localeCompare(a.fullName || '')
-        case 'createdAt,asc':
-          return (a.createdAt || '').localeCompare(b.createdAt || '')
-        case 'createdAt,desc':
-          return (b.createdAt || '').localeCompare(a.createdAt || '')
+        case 'dateOfBirth,asc': {
+          const aTime = toTimestamp(a.dateOfBirth)
+          const bTime = toTimestamp(b.dateOfBirth)
+          if (aTime === null && bTime === null) return 0
+          if (aTime === null) return 1
+          if (bTime === null) return -1
+          return aTime - bTime
+        }
+        case 'dateOfBirth,desc': {
+          const aTime = toTimestamp(a.dateOfBirth)
+          const bTime = toTimestamp(b.dateOfBirth)
+          if (aTime === null && bTime === null) return 0
+          if (aTime === null) return 1
+          if (bTime === null) return -1
+          return bTime - aTime
+        }
         default:
           return 0
       }
