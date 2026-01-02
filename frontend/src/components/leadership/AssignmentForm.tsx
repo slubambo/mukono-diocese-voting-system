@@ -33,7 +33,7 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
   const [churches, setChurches] = useState<any[]>([])
   const [levels, setLevels] = useState<string[]>([])
 
-  const { control, handleSubmit, reset, watch, setValue } = useForm<CreateLeadershipAssignmentRequest & { termStartDateMonth?: string; termEndDateMonth?: string }>({ defaultValues: { personId: personId ?? 0, fellowshipPositionId: 0, termStartDate: '', termEndDate: '' } })
+  const { control, handleSubmit, reset, watch, setValue, getValues } = useForm<CreateLeadershipAssignmentRequest & { termStartDateMonth?: string; termEndDateMonth?: string }>({ defaultValues: { personId: personId ?? 0, fellowshipPositionId: 0, termStartDate: '', termEndDate: '' } })
 
   const [people, setPeople] = useState<any[]>([])
   const showPersonSelector = !personId
@@ -44,7 +44,18 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
   const watchedDiocese = watch('dioceseId') as number | undefined
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null)
 
-  useEffect(() => { fellowshipApi.list({ page: 0, size: 1000 }).then(r => setFellowships(r.content)).catch(() => {}) ; dioceseApi.list({ page: 0, size: 100 }).then(r => setDioceses(r.content)).catch(() => {}) ; leadershipApi.getLevels().then(lv => setLevels(lv)).catch(() => setLevels(['DIOCESE','ARCHDEACONRY','CHURCH'])) }, [])
+  const mergeById = (prev: any[], next: any[]) => {
+    const map = new Map<number, any>()
+    prev.forEach((item) => map.set(item.id, item))
+    next.forEach((item) => map.set(item.id, item))
+    return Array.from(map.values())
+  }
+
+  useEffect(() => {
+    fellowshipApi.list({ page: 0, size: 1000 }).then(r => setFellowships(r.content)).catch(() => {})
+    dioceseApi.list({ page: 0, size: 100 }).then(r => setDioceses((prev) => mergeById(prev, r.content))).catch(() => {})
+    leadershipApi.getLevels().then(lv => setLevels(lv)).catch(() => setLevels(['DIOCESE','ARCHDEACONRY','CHURCH']))
+  }, [])
 
   useEffect(() => {
     if (!assignment) return
@@ -168,20 +179,51 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
       }
       const startMonth = assignment.termStartDate ? assignment.termStartDate.slice(0,7) : ''
       const endMonth = assignment.termEndDate ? assignment.termEndDate.slice(0,7) : ''
-      reset({ personId: assignment.person.id, fellowshipPositionId: assignment.fellowshipPosition?.id ?? assignment.fellowshipPositionId, termStartDate: assignment.termStartDate ?? '', termEndDate: assignment.termEndDate ?? '' })
+      const currentValues = getValues()
+      const derivedArchId =
+        assignment.archdeaconry?.id ??
+        assignment.archdeaconryId ??
+        assignment.church?.archdeaconryId ??
+        currentValues.archdeaconryId ??
+        undefined
+      const derivedDioceseId =
+        assignment.diocese?.id ??
+        assignment.dioceseId ??
+        assignment.archdeaconry?.dioceseId ??
+        currentValues.dioceseId ??
+        undefined
+      const derivedChurchId =
+        assignment.church?.id ??
+        assignment.churchId ??
+        currentValues.churchId ??
+        undefined
+      const derivedFellowshipId =
+        (assignment.fellowshipPosition as any)?.fellowshipId ??
+        assignment.fellowship?.id ??
+        (currentValues as any).fellowshipId ??
+        undefined
+
+      reset({
+        personId: assignment.person.id,
+        fellowshipPositionId: assignment.fellowshipPosition?.id ?? assignment.fellowshipPositionId,
+        termStartDate: assignment.termStartDate ?? '',
+        termEndDate: assignment.termEndDate ?? '',
+        dioceseId: derivedDioceseId,
+        archdeaconryId: derivedArchId,
+        churchId: derivedChurchId,
+      })
       setValue('termStartDateMonth', startMonth)
       setValue('termEndDateMonth', endMonth)
-      if (assignment.diocese?.id || assignment.dioceseId) setValue('dioceseId', assignment.diocese?.id ?? assignment.dioceseId ?? undefined)
-      if (assignment.archdeaconry?.id || assignment.archdeaconryId) setValue('archdeaconryId', assignment.archdeaconry?.id ?? assignment.archdeaconryId ?? undefined)
-      if (assignment.church?.id || assignment.churchId) setValue('churchId', assignment.church?.id ?? assignment.churchId ?? undefined)
-      const fid = (assignment.fellowshipPosition as any)?.fellowshipId ?? assignment.fellowship?.id
-      if (fid) setValue('fellowshipId' as any, fid)
+      if (derivedDioceseId) setValue('dioceseId', derivedDioceseId)
+      if (derivedArchId) setValue('archdeaconryId', derivedArchId)
+      if (derivedChurchId) setValue('churchId', derivedChurchId)
+      if (derivedFellowshipId) setValue('fellowshipId' as any, derivedFellowshipId)
       // load positions for fellowship
-      if (fid) fellowshipPositionApi.list({ fellowshipId: fid, page: 0, size: 1000 }).then(r => setPositions(r.content)).catch(() => {})
+      if (derivedFellowshipId) fellowshipPositionApi.list({ fellowshipId: derivedFellowshipId, page: 0, size: 1000 }).then(r => setPositions(r.content)).catch(() => {})
     } else if (personId) {
       reset({ personId, fellowshipPositionId: 0, termStartDate: '', termEndDate: '' })
     }
-  }, [assignment, personId, reset, setValue])
+  }, [assignment, getValues, personId, reset, setValue])
 
   useEffect(() => {
     if (initialLevel !== undefined) setSelectedLevel(initialLevel)
