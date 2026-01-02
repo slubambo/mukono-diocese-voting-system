@@ -307,12 +307,12 @@ const LeadershipAssignmentsPage: React.FC = () => {
               placeholder: 'Sort by',
             },
             {
-              id: 'diocese',
-              label: 'Diocese',
-              value: filterDioceseId,
-              options: [{ id: '', name: '-- All --' }, ...dioceses.map((d) => ({ id: d.id, name: d.name }))],
-              onChange: (v: any) => { setFilterDioceseId((v === '' ? null : v) as number | null); if (v) { setFilterArchdeaconryId(null); setFilterChurchId(null) } },
-              placeholder: 'Diocese',
+              id: 'fellowship',
+              label: 'Fellowship',
+              value: filterFellowshipId,
+              options: [{ id: '', name: '-- All --' }, ...fellowships.map((f) => ({ id: f.id, name: f.name }))],
+              onChange: (v: any) => setFilterFellowshipId((v === '' ? null : v) as number | null),
+              placeholder: 'Fellowship',
             },
             {
               id: 'level',
@@ -321,6 +321,14 @@ const LeadershipAssignmentsPage: React.FC = () => {
               options: [{ id: '', name: '-- All --' }, ...levels.map((l) => ({ id: l, name: `${l.charAt(0)}${l.slice(1).toLowerCase()}` }))],
               onChange: (v: any) => { setFilterLevel((v === '' ? null : v) as string | null) },
               placeholder: 'Level',
+            },
+            {
+              id: 'diocese',
+              label: 'Diocese',
+              value: filterDioceseId,
+              options: [{ id: '', name: '-- All --' }, ...dioceses.map((d) => ({ id: d.id, name: d.name }))],
+              onChange: (v: any) => { setFilterDioceseId((v === '' ? null : v) as number | null); if (v) { setFilterArchdeaconryId(null); setFilterChurchId(null) } },
+              placeholder: 'Diocese',
             },
             {
               id: 'archdeaconry',
@@ -337,14 +345,6 @@ const LeadershipAssignmentsPage: React.FC = () => {
               options: [{ id: '', name: '-- All --' }, ...churches.map((c) => ({ id: c.id, name: c.name }))],
               onChange: (v: any) => setFilterChurchId((v === '' ? null : v) as number | null),
               placeholder: 'Church',
-            },
-            {
-              id: 'fellowship',
-              label: 'Fellowship',
-              value: filterFellowshipId,
-              options: [{ id: '', name: '-- All --' }, ...fellowships.map((f) => ({ id: f.id, name: f.name }))],
-              onChange: (v: any) => setFilterFellowshipId((v === '' ? null : v) as number | null),
-              placeholder: 'Fellowship',
             },
           ]}
         />
