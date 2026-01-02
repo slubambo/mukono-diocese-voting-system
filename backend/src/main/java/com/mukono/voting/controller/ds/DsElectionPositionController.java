@@ -60,7 +60,7 @@ public class DsElectionPositionController {
 
 		Pageable pageable = toPageable(page, size, sort);
 		var result = electionPositionService.listPositions(electionId, pageable)
-				.map(ElectionPositionResponse::fromEntity);
+				.map(electionPositionService::toEnrichedResponse);
 		return ResponseEntity.ok(result);
 	}
 
@@ -77,7 +77,7 @@ public class DsElectionPositionController {
 
 		var electionPosition = electionPositionService.getByElectionAndFellowshipPosition(electionId,
 				fellowshipPositionId);
-		return ResponseEntity.ok(ElectionPositionResponse.fromEntity(electionPosition));
+		return ResponseEntity.ok(electionPositionService.toEnrichedResponse(electionPosition));
 	}
 
 	/**

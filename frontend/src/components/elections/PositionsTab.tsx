@@ -70,7 +70,12 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
                 <TableRow>
                   <TableCell>Title</TableCell>
                   <TableCell>Fellowship</TableCell>
+                  <TableCell>Scope</TableCell>
                   <TableCell>Seats</TableCell>
+                  <TableCell align="right">Applicants</TableCell>
+                  <TableCell align="right">Approved</TableCell>
+                  <TableCell align="right">Pending</TableCell>
+                  <TableCell align="right">Rejected</TableCell>
                   {isAdmin && <TableCell align="right">Actions</TableCell>}
                 </TableRow>
               </TableHead>
@@ -78,12 +83,21 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
                 {positions.map(p => (
                   <TableRow key={p.id} hover>
                     <TableCell><Typography variant="body2">{p.fellowshipPosition?.titleName || p.title || p.positionId}</Typography></TableCell>
-                    <TableCell><Typography variant="body2">{p.fellowshipPosition?.fellowshipName ?? '-'}</Typography></TableCell>
+                    <TableCell><Typography variant="body2">{p.fellowshipPosition?.fellowshipName ?? p.fellowshipName ?? '-'}</Typography></TableCell>
+                    <TableCell><Typography variant="body2">{p.positionScope ?? p.fellowshipPosition?.scope ?? '—'}</Typography></TableCell>
                     <TableCell><Typography variant="body2">{p.seats ?? '-'}</Typography></TableCell>
+                    <TableCell align="right"><Typography variant="body2">{p.totalApplicants ?? 0}</Typography></TableCell>
+                    <TableCell align="right"><Typography variant="body2">{p.approvedApplicants ?? 0}</Typography></TableCell>
+                    <TableCell align="right"><Typography variant="body2">{p.pendingApplicants ?? 0}</Typography></TableCell>
+                    <TableCell align="right"><Typography variant="body2">{p.rejectedApplicants ?? 0}</Typography></TableCell>
                     {isAdmin && (
                       <TableCell align="right">
-                        <Tooltip title="Delete">
-                          <IconButton size="small" color="error" onClick={() => handleDelete(p)}><DeleteIcon fontSize="small" /></IconButton>
+                        <Tooltip title={p.canDelete === false ? 'Cannot delete: applicants exist' : 'Delete'}>
+                          <span>
+                            <IconButton size="small" color="error" onClick={() => handleDelete(p)} disabled={p.canDelete === false}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </span>
                         </Tooltip>
                       </TableCell>
                     )}
