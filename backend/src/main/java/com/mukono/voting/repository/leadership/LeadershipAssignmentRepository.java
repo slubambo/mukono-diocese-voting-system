@@ -115,6 +115,54 @@ public interface LeadershipAssignmentRepository extends JpaRepository<Leadership
      */
     Page<LeadershipAssignment> findByArchdeaconryId(Long archdeaconryId, Pageable pageable);
 
+    /**
+     * Find all assignments for a specific diocese.
+     * 
+     * @param dioceseId the diocese ID
+     * @param pageable pagination information
+     * @return a page of leadership assignments
+     */
+    Page<LeadershipAssignment> findByDioceseId(Long dioceseId, Pageable pageable);
+
+    /**
+     * Find all assignments for a specific church.
+     * 
+     * @param churchId the church ID
+     * @param pageable pagination information
+     * @return a page of leadership assignments
+     */
+    Page<LeadershipAssignment> findByChurchId(Long churchId, Pageable pageable);
+
+    /**
+     * Find all assignments for a specific diocese with status filter.
+     * 
+     * @param dioceseId the diocese ID
+     * @param status the record status
+     * @param pageable pagination information
+     * @return a page of leadership assignments
+     */
+    Page<LeadershipAssignment> findByDioceseIdAndStatus(Long dioceseId, RecordStatus status, Pageable pageable);
+
+    /**
+     * Find all assignments for a specific archdeaconry with status filter.
+     * 
+     * @param archdeaconryId the archdeaconry ID
+     * @param status the record status
+     * @param pageable pagination information
+     * @return a page of leadership assignments
+     */
+    Page<LeadershipAssignment> findByArchdeaconryIdAndStatus(Long archdeaconryId, RecordStatus status, Pageable pageable);
+
+    /**
+     * Find all assignments for a specific church with status filter.
+     * 
+     * @param churchId the church ID
+     * @param status the record status
+     * @param pageable pagination information
+     * @return a page of leadership assignments
+     */
+    Page<LeadershipAssignment> findByChurchIdAndStatus(Long churchId, RecordStatus status, Pageable pageable);
+
     // ========== Eligibility Queries (core for voting) ==========
     
     /**
@@ -147,6 +195,122 @@ public interface LeadershipAssignmentRepository extends JpaRepository<Leadership
         Long fellowshipId, 
         PositionScope scope, 
         RecordStatus status
+    );
+
+    /**
+     * Find assignments for a fellowship at a specific scope and diocese.
+     * 
+     * @param fellowshipId the fellowship ID
+     * @param scope the position scope
+     * @param dioceseId the diocese ID
+     * @param status the record status
+     * @param pageable pagination information
+     * @return a page of matching leadership assignments
+     */
+    Page<LeadershipAssignment> findByFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndDioceseIdAndStatus(
+        Long fellowshipId,
+        PositionScope scope,
+        Long dioceseId,
+        RecordStatus status,
+        Pageable pageable
+    );
+
+    /**
+     * Find assignments for a fellowship at a specific scope and archdeaconry.
+     * 
+     * @param fellowshipId the fellowship ID
+     * @param scope the position scope
+     * @param archdeaconryId the archdeaconry ID
+     * @param status the record status
+     * @param pageable pagination information
+     * @return a page of matching leadership assignments
+     */
+    Page<LeadershipAssignment> findByFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndArchdeaconryIdAndStatus(
+        Long fellowshipId,
+        PositionScope scope,
+        Long archdeaconryId,
+        RecordStatus status,
+        Pageable pageable
+    );
+
+    /**
+     * Find assignments for a fellowship at a specific scope and church.
+     * 
+     * @param fellowshipId the fellowship ID
+     * @param scope the position scope
+     * @param churchId the church ID
+     * @param status the record status
+     * @param pageable pagination information
+     * @return a page of matching leadership assignments
+     */
+    Page<LeadershipAssignment> findByFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndChurchIdAndStatus(
+        Long fellowshipId,
+        PositionScope scope,
+        Long churchId,
+        RecordStatus status,
+        Pageable pageable
+    );
+
+    /**
+     * Find assignments by scope and status.
+     * 
+     * @param scope the position scope
+     * @param status the record status
+     * @param pageable pagination information
+     * @return a page of matching leadership assignments
+     */
+    Page<LeadershipAssignment> findByFellowshipPositionScopeAndStatus(
+        PositionScope scope,
+        RecordStatus status,
+        Pageable pageable
+    );
+
+    /**
+     * Find assignments by scope, diocese, and status.
+     * 
+     * @param scope the position scope
+     * @param dioceseId the diocese ID
+     * @param status the record status
+     * @param pageable pagination information
+     * @return a page of matching leadership assignments
+     */
+    Page<LeadershipAssignment> findByFellowshipPositionScopeAndDioceseIdAndStatus(
+        PositionScope scope,
+        Long dioceseId,
+        RecordStatus status,
+        Pageable pageable
+    );
+
+    /**
+     * Find assignments by scope, archdeaconry, and status.
+     * 
+     * @param scope the position scope
+     * @param archdeaconryId the archdeaconry ID
+     * @param status the record status
+     * @param pageable pagination information
+     * @return a page of matching leadership assignments
+     */
+    Page<LeadershipAssignment> findByFellowshipPositionScopeAndArchdeaconryIdAndStatus(
+        PositionScope scope,
+        Long archdeaconryId,
+        RecordStatus status,
+        Pageable pageable
+    );
+
+    /**
+     * Find assignments by scope, church, and status.
+     * 
+     * @param scope the position scope
+     * @param churchId the church ID
+     * @param status the record status
+     * @param pageable pagination information
+     * @return a page of matching leadership assignments
+     */
+    Page<LeadershipAssignment> findByFellowshipPositionScopeAndChurchIdAndStatus(
+        PositionScope scope,
+        Long churchId,
+        RecordStatus status,
+        Pageable pageable
     );
 
     // ========== Duplicate Prevention Methods ==========
@@ -240,6 +404,31 @@ public interface LeadershipAssignmentRepository extends JpaRepository<Leadership
         Long archdeaconryId,
         Long churchId,
         RecordStatus status
+    );
+
+    /**
+     * Find a person's active assignment for a specific scope target (paginated).
+     * Used for API responses with pagination.
+     * 
+     * @param personId the person ID
+     * @param fellowshipId the fellowship ID
+     * @param scope the position scope (DIOCESE, ARCHDEACONRY, CHURCH)
+     * @param dioceseId the diocese ID (relevant if scope=DIOCESE)
+     * @param archdeaconryId the archdeaconry ID (relevant if scope=ARCHDEACONRY)
+     * @param churchId the church ID (relevant if scope=CHURCH)
+     * @param status the record status
+     * @param pageable pagination information
+     * @return page of matching assignments
+     */
+    Page<LeadershipAssignment> findByPersonIdAndFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndDioceseIdAndArchdeaconryIdAndChurchIdAndStatus(
+        Long personId,
+        Long fellowshipId,
+        PositionScope scope,
+        Long dioceseId,
+        Long archdeaconryId,
+        Long churchId,
+        RecordStatus status,
+        Pageable pageable
     );
 
     /**
