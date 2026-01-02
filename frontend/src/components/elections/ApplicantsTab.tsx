@@ -202,10 +202,7 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                     <TableRow>
                       <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Person</Typography></TableCell>
                       <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Position</Typography></TableCell>
-                      <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Source</Typography></TableCell>
                       <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Status</Typography></TableCell>
-                      <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Submitted</Typography></TableCell>
-                      <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>Decision</Typography></TableCell>
                       {isAdmin && <TableCell align="right"><Typography variant="body2" sx={{ fontWeight: 600 }}>Actions</Typography></TableCell>}
                     </TableRow>
                   </TableHead>
@@ -219,13 +216,12 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                             {a.fellowshipName ? ` — ${a.fellowshipName}` : ''}
                           </Typography>
                         </TableCell>
-                        <TableCell><Typography variant="body2">{a.source || '—'}</Typography></TableCell>
-                        <TableCell><StatusChip status={(a.status || 'pending') as any} /></TableCell>
-                        <TableCell><Typography variant="body2">{a.submittedAt ? new Date(a.submittedAt).toLocaleString() : '—'}</Typography></TableCell>
                         <TableCell>
-                          <Typography variant="body2">
-                            {a.decisionBy ? `${a.decisionBy}${a.decisionAt ? ` • ${new Date(a.decisionAt).toLocaleString()}` : ''}` : '—'}
-                          </Typography>
+                          <StatusChip
+                            status={(a.status || 'pending') as any}
+                            size="small"
+                            sx={{ fontWeight: 500, fontSize: '0.7rem', height: 20, '& .MuiChip-label': { px: 0.75 } }}
+                          />
                         </TableCell>
                         {isAdmin && <TableCell align="right">
                           {(() => {
