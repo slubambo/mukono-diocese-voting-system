@@ -139,6 +139,44 @@ const ElectionsPage: React.FC = () => {
     return Math.ceil((e - s) / (1000 * 60 * 60 * 24))
   }
 
+  const formatDuration = (start?: string | null, end?: string | null) => {
+    const days = calcDays(start ?? undefined, end ?? undefined)
+    if (days === null) return '—'
+    if (days >= 365) {
+      const years = Math.round(days / 365)
+      return `${years} ${years === 1 ? 'Year' : 'Years'}`
+    }
+    if (days >= 30) {
+      const months = Math.round(days / 30)
+      return `${months} ${months === 1 ? 'Month' : 'Months'}`
+    }
+    return `${days} ${days === 1 ? 'Day' : 'Days'}`
+  }
+
+  const formatVotingDate = (value?: string | null) => {
+    if (!value) return '—'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return '—'
+    const weekday = date.toLocaleDateString('en-GB', { weekday: 'long' })
+    const month = date.toLocaleDateString('en-GB', { month: 'long' })
+    const day = date.getDate()
+    const time = date
+      .toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true })
+      .toLowerCase()
+      .replace(':00', '')
+    const ordinal = (n: number) => {
+      const mod100 = n % 100
+      if (mod100 >= 11 && mod100 <= 13) return `${n}th`
+      switch (n % 10) {
+        case 1: return `${n}st`
+        case 2: return `${n}nd`
+        case 3: return `${n}rd`
+        default: return `${n}th`
+      }
+    }
+    return `${weekday}, ${ordinal(day)} ${month} ${time}`
+  }
+
   const fetchElections = async () => {
     setLoading(true)
     try {
@@ -330,20 +368,8 @@ const ElectionsPage: React.FC = () => {
                             return '—'
                           })()}
                         </TableCell>
-                        <TableCell>
-                          {e.termStartDate && e.termEndDate
-                            ? `${new Date(e.termStartDate).toLocaleDateString()} – ${new Date(e.termEndDate).toLocaleDateString()}`
-                            : e.termStartDate
-                              ? new Date(e.termStartDate).toLocaleDateString()
-                              : '—'}
-                        </TableCell>
-                        <TableCell>
-                          {e.votingStartAt && e.votingEndAt
-                            ? `${new Date(e.votingStartAt).toLocaleDateString()} – ${new Date(e.votingEndAt).toLocaleDateString()}`
-                            : e.votingStartAt
-                              ? new Date(e.votingStartAt).toLocaleDateString()
-                              : '—'}
-                        </TableCell>
+                        <TableCell>{formatDuration(e.termStartDate ?? null, e.termEndDate ?? null)}</TableCell>
+                        <TableCell>{formatVotingDate(e.votingStartAt ?? null)}</TableCell>
                         <TableCell>{votingDays !== null ? `${votingDays} days` : '—'}</TableCell>
                         {isAdmin && (
                           <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
