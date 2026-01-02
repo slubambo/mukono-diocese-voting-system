@@ -172,10 +172,10 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box component="form" onSubmit={handleSubmit(submit)} sx={{ display: 'grid', gap: 1.5 }}>
+      <Box component="form" onSubmit={handleSubmit(submit)} sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
         {showPersonSelector && (
           <Controller name="personId" control={control} render={({ field }) => (
-            <Autocomplete options={people} getOptionLabel={(p: any) => p.fullName} onChange={(_, v) => field.onChange(v?.id ?? 0)} renderInput={(params) => <TextField {...params} label="Person" required size="small" />} />
+            <Autocomplete options={people} getOptionLabel={(p: any) => p.fullName} onChange={(_, v) => field.onChange(v?.id ?? 0)} renderInput={(params) => <TextField {...params} label="Person" required size="small" />} sx={{ gridColumn: '1 / -1' }} />
           )} />
         )}
 
@@ -203,6 +203,7 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
             getOptionLabel={(p: any) => ((p.title && p.title.name) || p.titleName) + ' — ' + ((p.fellowship && p.fellowship.name) || p.fellowshipName)}
             onChange={(_, v) => field.onChange(v?.id ?? 0)}
             renderInput={(params) => <TextField {...params} label="Position" required size="small" />}
+            sx={{ gridColumn: '1 / -1' }}
           />
         )} />
 
@@ -231,7 +232,7 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
         )}
 
         {selectedLevel === 'CHURCH' && (
-          <FormControl fullWidth size="small">
+          <FormControl fullWidth size="small" sx={{ gridColumn: '1 / -1' }}>
             <InputLabel>Church</InputLabel>
             <Controller name="churchId" control={control} render={({ field }) => (
               <Select {...field} label="Church">
@@ -264,7 +265,7 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
           />
         )} />
 
-        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 0.5 }}>
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 0.5, gridColumn: '1 / -1' }}>
           <Button onClick={onCancel ?? (() => {})}>Cancel</Button>
           <Button type="submit" variant="contained">{assignment ? 'Save' : 'Assign'}</Button>
         </Box>
