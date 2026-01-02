@@ -233,17 +233,18 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
           {/* Ballot Header */}
           <Paper
             sx={{
-              p: 3,
-              mb: 3,
-              background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.1) 0%, rgba(88, 28, 135, 0.05) 100%)',
-              borderRadius: 2,
-              border: '2px solid rgba(88, 28, 135, 0.2)',
+              p: 2,
+              mb: 2,
+              background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.12) 0%, rgba(124, 58, 237, 0.08) 50%, rgba(88, 28, 135, 0.04) 100%)',
+              borderRadius: 2.5,
+              border: '2px solid rgba(88, 28, 135, 0.18)',
               textAlign: 'center',
+              boxShadow: '0 10px 24px rgba(88, 28, 135, 0.12)',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1 }}>
-              <HowToVoteIcon sx={{ color: 'primary.main', fontSize: 32 }} />
-              <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.main' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.25, mb: 0.25 }}>
+              <HowToVoteIcon sx={{ color: 'primary.main', fontSize: 30 }} />
+              <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.main' }}>
                 Official Ballot
               </Typography>
             </Box>
@@ -255,15 +256,22 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
           {/* Positions as Ballot Cards grouped by fellowship */}
           {filteredGroups.map(([fellowship, items]) => (
             <Box key={fellowship} sx={{ mb: 2 }}>
-              <Paper sx={{ p: 1.25, mb: 1.25, background: 'linear-gradient(120deg, rgba(88,28,135,0.06) 0%, rgba(168,85,247,0.04) 100%)', border: '1px solid rgba(88, 28, 135, 0.14)', borderRadius: 1.5 }}>
+              <Paper sx={{ p: 1.5, mb: 1.25, background: 'linear-gradient(120deg, rgba(88,28,135,0.07) 0%, rgba(168,85,247,0.05) 100%)', border: '1px solid rgba(88, 28, 135, 0.14)', borderRadius: 1.75 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                   <Box>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'primary.main' }}>{fellowship}</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'primary.main' }}>{fellowship}</Typography>
                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>{items.length} position{items.length === 1 ? '' : 's'}</Typography>
                   </Box>
-                  <IconButton size="small" onClick={() => setCollapsedGroups((prev) => ({ ...prev, [fellowship]: !prev[fellowship] }))}>
-                    {collapsedGroups[fellowship] ? <ExpandMoreIcon fontSize="small" /> : <ExpandLessIcon fontSize="small" />}
-                  </IconButton>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip
+                      label={`${items.reduce((sum, pos) => sum + (pos.candidates?.length || 0), 0)} candidate${items.reduce((sum, pos) => sum + (pos.candidates?.length || 0), 0) === 1 ? '' : 's'}`}
+                      size="small"
+                      sx={{ backgroundColor: 'rgba(88, 28, 135, 0.1)', color: 'primary.main', fontWeight: 600, height: 24 }}
+                    />
+                    <IconButton size="small" onClick={() => setCollapsedGroups((prev) => ({ ...prev, [fellowship]: !prev[fellowship] }))}>
+                      {collapsedGroups[fellowship] ? <ExpandMoreIcon fontSize="small" /> : <ExpandLessIcon fontSize="small" />}
+                    </IconButton>
+                  </Stack>
                 </Box>
               </Paper>
               <Collapse in={!collapsedGroups[fellowship]}>
@@ -294,19 +302,12 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                                 {pos.positionTitle || 'Position'}
                               </Typography>
                               <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                                {pos.fellowshipName && (
-                                  <Chip
-                                    label={pos.fellowshipName}
-                                    size="small"
-                                    sx={{ backgroundColor: 'rgba(88, 28, 135, 0.12)', color: 'primary.main', fontWeight: 500, height: 24 }}
-                                  />
-                                )}
                                 {pos.scope && (
                                   <Chip
                                     label={pos.scope}
                                     size="small"
                                     variant="outlined"
-                                    sx={{ borderColor: 'rgba(88, 28, 135, 0.2)', color: 'text.secondary', height: 24 }}
+                                    sx={{ borderColor: 'rgba(88, 28, 135, 0.2)', color: 'text.secondary', height: 24, fontWeight: 600 }}
                                   />
                                 )}
                                 {typeof pos.seats === 'number' && (
@@ -333,13 +334,13 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
 
                           {/* Candidates List */}
                           {(pos.candidates || []).length === 0 ? (
-                            <Box sx={{ py: 2, textAlign: 'center' }}>
+                            <Box sx={{ py: 2, textAlign: 'center', borderRadius: 1.5, border: '1px dashed rgba(88, 28, 135, 0.2)', backgroundColor: 'rgba(88, 28, 135, 0.03)' }}>
                               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                                 No candidates yet
                               </Typography>
                             </Box>
                           ) : (
-                            <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: pos.candidates && pos.candidates.length <= 3 ? '1fr' : { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
+                            <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: pos.candidates && pos.candidates.length <= 2 ? '1fr' : { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
                               {(pos.candidates || []).map((c, candIdx) => (
                                 <Paper
                                   key={String(c.candidateId)}
