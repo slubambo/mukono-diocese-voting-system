@@ -145,11 +145,18 @@ export const MasterDataHeader: React.FC<MasterDataHeaderProps> = ({
       {filters && filters.length > 0 && (
         <>
           <Divider sx={{ my: 2 }} />
-          <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 2 }}>
-            {filters.map((filter) => (
-              filter.options && filter.options.length > 0 ? (
-                <FormControl key={filter.id} sx={{ minWidth: 220 }} size="small">
-                  <InputLabel>{filter.label}</InputLabel>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: 1.5,
+            }}
+          >
+            {filters.map((filter) => {
+              const selectedOption = filter.options?.find((opt) => opt.id === filter.value)
+              return filter.options && filter.options.length > 0 ? (
+                <FormControl key={filter.id} size="small">
+                  <InputLabel sx={{ fontSize: '0.875rem' }}>{filter.label}</InputLabel>
                   <Select
                     value={filter.value ?? ''}
                     label={filter.label}
@@ -157,6 +164,7 @@ export const MasterDataHeader: React.FC<MasterDataHeaderProps> = ({
                     disabled={filter.disabled}
                     sx={{
                       borderRadius: 1,
+                      fontSize: '0.875rem',
                       '& .MuiOutlinedInput-root': {
                         '&:hover fieldset': {
                           borderColor: '#7c3aed',
@@ -167,11 +175,8 @@ export const MasterDataHeader: React.FC<MasterDataHeaderProps> = ({
                       },
                     }}
                   >
-                    <MenuItem value="" disabled>
-                      -- {filter.placeholder || 'Select'} --
-                    </MenuItem>
                     {filter.options.map((opt) => (
-                      <MenuItem key={opt.id} value={opt.id}>
+                      <MenuItem key={opt.id} value={opt.id ?? ''}>
                         {opt.name}
                       </MenuItem>
                     ))}
@@ -185,11 +190,11 @@ export const MasterDataHeader: React.FC<MasterDataHeaderProps> = ({
                   value={filter.value ?? ''}
                   onChange={(e) => filter.onChange(e.target.value === '' ? null : e.target.value)}
                   placeholder={filter.placeholder}
-                  sx={{ minWidth: 220 }}
+                  sx={{ fontSize: '0.875rem' }}
                 />
               )
-            ))}
-          </Stack>
+            })}
+          </Box>
         </>
       )}
     </Paper>
