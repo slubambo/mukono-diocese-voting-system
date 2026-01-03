@@ -500,7 +500,6 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                             <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.25 }}>
                               {voter.fullName}
                             </Typography>
-                            <Chip size="small" label={`#${voter.personId}`} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
                           </Box>
                         </TableCell>
                         <TableCell>
