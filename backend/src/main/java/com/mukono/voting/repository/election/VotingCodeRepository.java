@@ -163,11 +163,14 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
 
     /**
      * Search for eligible voters with optional filters and pagination.
+     * Includes both leadership assignment eligible voters and voter roll overrides.
      * 
      * @param electionId the election ID
      * @param votingPeriodId the voting period ID (optional)
      * @param status the vote/code status (ALL, VOTED, NOT_VOTED)
      * @param q search query for voter details (name, phone, email)
+     * @param fellowshipId optional filter by fellowship ID
+     * @param electionPositionId optional filter by election position ID
      * @param pageable pagination information
      * @return Page of eligible voters projection
      */
@@ -176,40 +179,60 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                p.full_name        AS fullName,
                p.phone_number     AS phoneNumber,
                p.email            AS email,
-               f.name             AS fellowshipName,
-               e.scope            AS scope,
-               COALESCE(d.name, ad.name, ch.name) AS scopeName,
-               CASE WHEN vr.person_id IS NOT NULL THEN TRUE ELSE FALSE END AS voted,
-               vr.submitted_at    AS voteCastAt,
+               COALESCE(f.name, 'Manual Override') AS fellowshipName,
+               COALESCE(e.scope, 'N/A') AS scope,
+               COALESCE(d.name, ad.name, ch.name, 'N/A') AS scopeName,
+               CASE WHEN vr_vote.person_id IS NOT NULL THEN 1 ELSE 0 END AS voted,
+               vr_vote.submitted_at AS voteCastAt,
                vc.status          AS lastCodeStatus,
                vc.issued_at       AS lastCodeIssuedAt,
-               vc.used_at         AS lastCodeUsedAt
-        FROM people p
-        JOIN leadership_assignments la ON la.person_id = p.id AND la.status = 'ACTIVE'
-        JOIN fellowship_positions fp ON fp.id = la.fellowship_position_id
-        JOIN fellowships f ON f.id = fp.fellowship_id
-        JOIN election_positions ep ON ep.fellowship_position_id = fp.id AND ep.election_id = :electionId
-        JOIN elections e ON e.id = ep.election_id
-        LEFT JOIN dioceses d ON la.diocese_id = d.id
-        LEFT JOIN archdeaconries ad ON la.archdeaconry_id = ad.id
-        LEFT JOIN churches ch ON la.church_id = ch.id
+               vc.used_at         AS lastCodeUsedAt,
+               vc.code            AS code,
+               CASE WHEN evr.id IS NOT NULL THEN 1 ELSE 0 END AS isOverride,
+               evr.reason         AS overrideReason,
+               la.id              AS leadershipAssignmentId
+        FROM (
+            -- Union of leadership assignment voters and voter roll voters
+            SELECT p.id, la.id as la_id, f.name, f.id as f_id, e.scope, 
+                   d.id as d_id, d.name as d_name, ad.id as ad_id, ad.name as ad_name, 
+                   ch.id as ch_id, ch.name as ch_name, ep.id as ep_id, NULL as evr_id
+            FROM people p
+            JOIN leadership_assignments la ON la.person_id = p.id AND la.status = 'ACTIVE'
+            JOIN fellowship_positions fp ON fp.id = la.fellowship_position_id
+            JOIN fellowships f ON f.id = fp.fellowship_id
+            JOIN election_positions ep ON ep.fellowship_position_id = fp.id AND ep.election_id = :electionId
+            JOIN elections e ON e.id = ep.election_id
+            LEFT JOIN dioceses d ON la.diocese_id = d.id
+            LEFT JOIN archdeaconries ad ON la.archdeaconry_id = ad.id
+            LEFT JOIN churches ch ON la.church_id = ch.id
+            UNION
+            SELECT p.id, NULL as la_id, NULL as f_name, NULL as f_id, NULL as e_scope,
+                   NULL as d_id, NULL as d_name, NULL as ad_id, NULL as ad_name,
+                   NULL as ch_id, NULL as ch_name, NULL as ep_id, evr.id as evr_id
+            FROM people p
+            JOIN election_voter_roll evr ON evr.person_id = p.id AND evr.election_id = :electionId AND evr.eligible = true
+        ) eligible_voters
+        LEFT JOIN leadership_assignments la ON la.id = eligible_voters.la_id
+        LEFT JOIN fellowship_positions fp ON fp.id = la.fellowship_position_id
+        LEFT JOIN fellowships f ON f.id = fp.fellowship_id
+        LEFT JOIN elections e ON e.id = :electionId
+        LEFT JOIN dioceses d ON d.id = eligible_voters.d_id
+        LEFT JOIN archdeaconries ad ON ad.id = eligible_voters.ad_id
+        LEFT JOIN churches ch ON ch.id = eligible_voters.ch_id
+        LEFT JOIN election_positions ep ON ep.id = eligible_voters.ep_id
+        LEFT JOIN election_voter_roll evr ON evr.id = eligible_voters.evr_id
+        JOIN people p ON p.id = eligible_voters.id
         LEFT JOIN (
             SELECT vr.person_id, MIN(vr.submitted_at) AS submitted_at
             FROM vote_records vr
             WHERE vr.election_id = :electionId
               AND (:votingPeriodId IS NULL OR vr.voting_period_id = :votingPeriodId)
             GROUP BY vr.person_id
-        ) vr ON vr.person_id = p.id
+        ) vr_vote ON vr_vote.person_id = p.id
         LEFT JOIN (
-            SELECT person_id,
-                   status,
-                   issued_at,
-                   used_at
+            SELECT person_id, code, status, issued_at, used_at
             FROM (
-                SELECT vc.person_id,
-                       vc.status,
-                       vc.issued_at,
-                       vc.used_at,
+                SELECT vc.person_id, vc.code, vc.status, vc.issued_at, vc.used_at,
                        ROW_NUMBER() OVER (PARTITION BY vc.person_id ORDER BY vc.issued_at DESC) AS rn
                 FROM voting_codes vc
                 WHERE vc.election_id = :electionId
@@ -217,63 +240,54 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
             ) t
             WHERE t.rn = 1
         ) vc ON vc.person_id = p.id
-        WHERE e.id = :electionId
-          AND (:fellowshipId IS NULL OR f.id = :fellowshipId)
-          AND (:electionPositionId IS NULL OR ep.id = :electionPositionId)
-          AND (:status = 'ALL'
-               OR (:status = 'VOTED' AND vr.person_id IS NOT NULL)
-               OR (:status = 'NOT_VOTED' AND vr.person_id IS NULL))
-          AND (:q IS NULL OR LOWER(p.full_name) LIKE CONCAT('%', LOWER(:q), '%')
-               OR LOWER(p.phone_number) LIKE CONCAT('%', LOWER(:q), '%')
-               OR LOWER(p.email) LIKE CONCAT('%', LOWER(:q), '%'))
-        GROUP BY p.id, p.full_name, p.phone_number, p.email, f.name, e.scope, d.name, ad.name, ch.name,
-                 vr.person_id, vr.submitted_at, vc.status, vc.issued_at, vc.used_at
+        WHERE (:fellowshipId IS NULL OR f.id = :fellowshipId)
+              AND (:electionPositionId IS NULL OR ep.id = :electionPositionId)
+              AND (:status = 'ALL'
+                   OR (:status = 'VOTED' AND vr_vote.person_id IS NOT NULL)
+                   OR (:status = 'NOT_VOTED' AND vr_vote.person_id IS NULL))
+              AND (:q IS NULL OR LOWER(p.full_name) LIKE CONCAT('%', LOWER(:q), '%')
+                   OR LOWER(p.phone_number) LIKE CONCAT('%', LOWER(:q), '%')
+                   OR LOWER(p.email) LIKE CONCAT('%', LOWER(:q), '%'))
+        GROUP BY p.id, p.full_name, p.phone_number, p.email, f.name, e.scope, 
+                 d.name, ad.name, ch.name, vr_vote.person_id, vr_vote.submitted_at, 
+                 vc.status, vc.issued_at, vc.used_at, vc.code, evr.id, evr.reason, la.id
         """,
         countQuery = """
-        SELECT COUNT(*)
+        SELECT COUNT(DISTINCT p.id)
         FROM (
-            SELECT p.id
+            -- Union of leadership assignment voters and voter roll voters
+            SELECT p.id, la.id as la_id, f.id as f_id, ep.id as ep_id, NULL as evr_id
             FROM people p
             JOIN leadership_assignments la ON la.person_id = p.id AND la.status = 'ACTIVE'
             JOIN fellowship_positions fp ON fp.id = la.fellowship_position_id
             JOIN fellowships f ON f.id = fp.fellowship_id
             JOIN election_positions ep ON ep.fellowship_position_id = fp.id AND ep.election_id = :electionId
-            JOIN elections e ON e.id = ep.election_id
-            LEFT JOIN (
-                SELECT vr.person_id, MIN(vr.submitted_at) AS submitted_at
-                FROM vote_records vr
-                WHERE vr.election_id = :electionId
-                  AND (:votingPeriodId IS NULL OR vr.voting_period_id = :votingPeriodId)
-                GROUP BY vr.person_id
-            ) vr ON vr.person_id = p.id
-            LEFT JOIN (
-                SELECT person_id,
-                       status,
-                       issued_at,
-                       used_at
-                FROM (
-                    SELECT vc.person_id,
-                           vc.status,
-                           vc.issued_at,
-                           vc.used_at,
-                           ROW_NUMBER() OVER (PARTITION BY vc.person_id ORDER BY vc.issued_at DESC) AS rn
-                    FROM voting_codes vc
-                    WHERE vc.election_id = :electionId
-                      AND (:votingPeriodId IS NULL OR vc.voting_period_id = :votingPeriodId)
-                ) t
-                WHERE t.rn = 1
-            ) vc ON vc.person_id = p.id
-            WHERE e.id = :electionId
-              AND (:status = 'ALL'
-                   OR (:status = 'VOTED' AND vr.person_id IS NOT NULL)
-                   OR (:status = 'NOT_VOTED' AND vr.person_id IS NULL))
-              AND (:fellowshipId IS NULL OR f.id = :fellowshipId)
+            WHERE :electionId IS NOT NULL
+            UNION
+            SELECT p.id, NULL as la_id, NULL as f_id, NULL as ep_id, evr.id as evr_id
+            FROM people p
+            JOIN election_voter_roll evr ON evr.person_id = p.id AND evr.election_id = :electionId AND evr.eligible = true
+        ) eligible_voters
+        LEFT JOIN people p ON p.id = eligible_voters.id
+        LEFT JOIN leadership_assignments la ON la.id = eligible_voters.la_id
+        LEFT JOIN fellowship_positions fp ON fp.id = la.fellowship_position_id
+        LEFT JOIN fellowships f ON f.id = fp.fellowship_id
+        LEFT JOIN election_positions ep ON ep.id = eligible_voters.ep_id
+        LEFT JOIN (
+            SELECT vr.person_id
+            FROM vote_records vr
+            WHERE vr.election_id = :electionId
+              AND (:votingPeriodId IS NULL OR vr.voting_period_id = :votingPeriodId)
+            GROUP BY vr.person_id
+        ) vr_vote ON vr_vote.person_id = p.id
+        WHERE (:fellowshipId IS NULL OR f.id = :fellowshipId)
               AND (:electionPositionId IS NULL OR ep.id = :electionPositionId)
+              AND (:status = 'ALL'
+                   OR (:status = 'VOTED' AND vr_vote.person_id IS NOT NULL)
+                   OR (:status = 'NOT_VOTED' AND vr_vote.person_id IS NULL))
               AND (:q IS NULL OR LOWER(p.full_name) LIKE CONCAT('%', LOWER(:q), '%')
                    OR LOWER(p.phone_number) LIKE CONCAT('%', LOWER(:q), '%')
                    OR LOWER(p.email) LIKE CONCAT('%', LOWER(:q), '%'))
-            GROUP BY p.id
-        ) sub
         """,
         nativeQuery = true)
     Page<EligibleVoterProjection> searchEligibleVoters(

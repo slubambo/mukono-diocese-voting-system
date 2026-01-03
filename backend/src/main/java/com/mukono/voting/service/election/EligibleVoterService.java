@@ -75,7 +75,11 @@ public class EligibleVoterService {
                 p.getVoteCastAt(),
                 p.getLastCodeStatus(),
                 p.getLastCodeIssuedAt(),
-                p.getLastCodeUsedAt()
+                p.getLastCodeUsedAt(),
+                p.getCode(), // voting code
+                p.getIsOverride() != null && p.getIsOverride() != 0, // Convert Integer (1/0) to boolean
+                p.getOverrideReason(),
+                p.getLeadershipAssignmentId()
         );
     }
 

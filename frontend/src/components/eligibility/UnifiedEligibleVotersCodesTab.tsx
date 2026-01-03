@@ -38,6 +38,7 @@ import VpnKeyIcon from '@mui/icons-material/VpnKey'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import { eligibleVotersApi } from '../../api/eligibleVoters.api'
 import { codesApi } from '../../api/codes.api'
+import { voterRollApi } from '../../api/voterRoll.api'
 import { useToast } from '../feedback/ToastProvider'
 import { getErrorMessage } from '../../api/errorHandler'
 import LoadingState from '../common/LoadingState'
@@ -167,6 +168,23 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
         q: debouncedSearch || undefined,
       })
       const voterList = votersRes.content || []
+      let overrideSet = new Set<number>()
+
+      try {
+        const overridesRes = await voterRollApi.list(electionId, {
+          page: 0,
+          size: 1000,
+          sort: 'addedAt,desc',
+        })
+        const overrideEntries = overridesRes.content || []
+        overrideSet = new Set(
+          overrideEntries
+            .map((entry) => entry.personId)
+            .filter((id): id is number => Boolean(id))
+        )
+      } catch {
+        overrideSet = new Set()
+      }
 
       // Fetch codes for all voters
       const codesMap = new Map<number, VotingCodeResponse>()
@@ -191,7 +209,7 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
       )
 
       setCodes(codesMap)
-      setOverrides(new Set()) // Initialize empty for now - will be populated if needed
+      setOverrides(overrideSet)
       setVoters(voterList)
       setTotal(votersRes.totalElements || voterList.length)
       setLastRefreshed(new Date())

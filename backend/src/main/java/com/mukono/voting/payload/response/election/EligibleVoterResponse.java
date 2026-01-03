@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 /**
  * DTO describing an eligible voter with their latest vote/code status for UI consumption.
+ * Includes information about overrides and voting codes.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class EligibleVoterResponse {
@@ -22,11 +23,18 @@ public class EligibleVoterResponse {
     private String lastCodeStatus;
     private LocalDateTime lastCodeIssuedAt;
     private LocalDateTime lastCodeUsedAt;
+    // New fields
+    private String code; // the actual voting code if available
+    private Boolean isOverride; // true if this voter was added via voter roll override
+    private String overrideReason; // reason for the override if applicable
+    private Long leadershipAssignmentId; // id of the leadership assignment for reference
 
     public EligibleVoterResponse(Long personId, String fullName, String phoneNumber, String email,
                                  String fellowshipName, String scope, String scopeName, boolean voted,
                                  Instant voteCastAt, String lastCodeStatus,
-                                 LocalDateTime lastCodeIssuedAt, LocalDateTime lastCodeUsedAt) {
+                                 LocalDateTime lastCodeIssuedAt, LocalDateTime lastCodeUsedAt,
+                                 String code, Boolean isOverride, String overrideReason,
+                                 Long leadershipAssignmentId) {
         this.personId = personId;
         this.fullName = fullName;
         this.phoneNumber = phoneNumber;
@@ -39,8 +47,13 @@ public class EligibleVoterResponse {
         this.lastCodeStatus = lastCodeStatus;
         this.lastCodeIssuedAt = lastCodeIssuedAt;
         this.lastCodeUsedAt = lastCodeUsedAt;
+        this.code = code;
+        this.isOverride = isOverride;
+        this.overrideReason = overrideReason;
+        this.leadershipAssignmentId = leadershipAssignmentId;
     }
 
+    // Getters
     public Long getPersonId() { return personId; }
     public String getFullName() { return fullName; }
     public String getPhoneNumber() { return phoneNumber; }
@@ -53,4 +66,8 @@ public class EligibleVoterResponse {
     public String getLastCodeStatus() { return lastCodeStatus; }
     public LocalDateTime getLastCodeIssuedAt() { return lastCodeIssuedAt; }
     public LocalDateTime getLastCodeUsedAt() { return lastCodeUsedAt; }
+    public String getCode() { return code; }
+    public Boolean getIsOverride() { return isOverride; }
+    public String getOverrideReason() { return overrideReason; }
+    public Long getLeadershipAssignmentId() { return leadershipAssignmentId; }
 }
