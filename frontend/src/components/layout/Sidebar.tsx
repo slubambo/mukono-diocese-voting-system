@@ -119,13 +119,21 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
     return item.children.some(child => isSectionActive(child.path))
   }, [isSectionActive])
 
+  const isChildActive = useCallback((path: string) => {
+    if (isExactActive(path)) return true
+    if (path === '/admin/elections' || path === '/ds/elections') {
+      return isSectionActive(path) && !location.pathname.startsWith(`${path}/eligibility-codes`)
+    }
+    return false
+  }, [isExactActive, isSectionActive, location.pathname])
+
   const renderMenuItem = useCallback((item: MenuItem, level: number = 0) => {
     const Icon = item.icon
     const hasChildren = item.children && item.children.length > 0
     const isExpanded = expandedItems[item.id] || false
     const parentActive = isParentActive(item)
     const isChildItem = level > 0
-    const active = isChildItem ? isSectionActive(item.path) : isSectionActive(item.path)
+    const active = isChildItem ? isChildActive(item.path) : isSectionActive(item.path)
 
     return (
       <React.Fragment key={item.id}>
