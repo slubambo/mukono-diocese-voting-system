@@ -190,7 +190,22 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                vc.code            AS code,
                CASE WHEN evr.id IS NOT NULL THEN 1 ELSE 0 END AS isOverride,
                evr.reason         AS overrideReason,
-               la.id              AS leadershipAssignmentId
+               la.id              AS leadershipAssignmentId,
+               -- build JSON history of previous codes for this person
+               (
+                   SELECT JSON_ARRAYAGG(JSON_OBJECT(
+                       'code', all_vc.code,
+                       'status', all_vc.status,
+                       'issuedAt', all_vc.issued_at,
+                       'usedAt', all_vc.used_at,
+                       'revokedAt', all_vc.revoked_at,
+                       'expiredAt', all_vc.expired_at
+                   ))
+                   FROM voting_codes all_vc
+                   WHERE all_vc.election_id = :electionId
+                     AND (:votingPeriodId IS NULL OR all_vc.voting_period_id = :votingPeriodId)
+                     AND all_vc.person_id = p.id
+               ) AS codeHistoryJson
         FROM (
             -- Union of leadership assignment voters and voter roll voters
             SELECT p.id, la.id as la_id, f.name, f.id as f_id, e.scope, 

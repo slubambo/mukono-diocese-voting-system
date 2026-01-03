@@ -1,7 +1,10 @@
 package com.mukono.voting.service.election;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mukono.voting.payload.response.common.CountResponse;
 import com.mukono.voting.payload.response.election.EligibleVoterResponse;
+import com.mukono.voting.payload.response.election.EligibleVoterResponse.VotingCodeHistory;
 import com.mukono.voting.repository.election.VoteRecordRepository;
 import com.mukono.voting.repository.election.VotingCodeRepository;
 import com.mukono.voting.repository.election.projection.EligibleVoterProjection;
@@ -11,17 +14,22 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @Transactional(readOnly = true)
 public class EligibleVoterService {
 
     private final VotingCodeRepository votingCodeRepository;
     private final VoteRecordRepository voteRecordRepository;
+    private final ObjectMapper objectMapper;
 
     public EligibleVoterService(VotingCodeRepository votingCodeRepository,
-                                VoteRecordRepository voteRecordRepository) {
+                                VoteRecordRepository voteRecordRepository,
+                                ObjectMapper objectMapper) {
         this.votingCodeRepository = votingCodeRepository;
         this.voteRecordRepository = voteRecordRepository;
+        this.objectMapper = objectMapper;
     }
 
     public Page<EligibleVoterResponse> listEligibleVoters(Long electionId,
@@ -63,6 +71,13 @@ public class EligibleVoterService {
     }
 
     private EligibleVoterResponse map(EligibleVoterProjection p) {
+        List<VotingCodeHistory> history = null;
+        try {
+            if (p.getCodeHistoryJson() != null) {
+                history = objectMapper.readValue(p.getCodeHistoryJson(), new TypeReference<List<VotingCodeHistory>>() {});
+            }
+        } catch (Exception ignored) {}
+
         return new EligibleVoterResponse(
                 p.getPersonId(),
                 p.getFullName(),
@@ -79,7 +94,8 @@ public class EligibleVoterService {
                 p.getCode(), // voting code
                 p.getIsOverride() != null && p.getIsOverride() != 0, // Convert Integer (1/0) to boolean
                 p.getOverrideReason(),
-                p.getLeadershipAssignmentId()
+                p.getLeadershipAssignmentId(),
+                history
         );
     }
 

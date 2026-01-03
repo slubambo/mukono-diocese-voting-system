@@ -25,4 +25,6 @@ public interface EligibleVoterProjection {
     Integer getIsOverride(); // 1/0 from CASE WHEN - true if from voter roll
     String getOverrideReason(); // reason for the override if applicable
     Long getLeadershipAssignmentId(); // id of the leadership assignment
+    // Code history as JSON; will be mapped in service
+    String getCodeHistoryJson();
 }

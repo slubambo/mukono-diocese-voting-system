@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * DTO describing an eligible voter with their latest vote/code status for UI consumption.
@@ -28,13 +29,14 @@ public class EligibleVoterResponse {
     private Boolean isOverride; // true if this voter was added via voter roll override
     private String overrideReason; // reason for the override if applicable
     private Long leadershipAssignmentId; // id of the leadership assignment for reference
+    private List<VotingCodeHistory> codeHistory; // full history of codes for this voter
 
     public EligibleVoterResponse(Long personId, String fullName, String phoneNumber, String email,
                                  String fellowshipName, String scope, String scopeName, boolean voted,
                                  Instant voteCastAt, String lastCodeStatus,
                                  LocalDateTime lastCodeIssuedAt, LocalDateTime lastCodeUsedAt,
                                  String code, Boolean isOverride, String overrideReason,
-                                 Long leadershipAssignmentId) {
+                                 Long leadershipAssignmentId, List<VotingCodeHistory> codeHistory) {
         this.personId = personId;
         this.fullName = fullName;
         this.phoneNumber = phoneNumber;
@@ -51,6 +53,7 @@ public class EligibleVoterResponse {
         this.isOverride = isOverride;
         this.overrideReason = overrideReason;
         this.leadershipAssignmentId = leadershipAssignmentId;
+        this.codeHistory = codeHistory;
     }
 
     // Getters
@@ -70,4 +73,32 @@ public class EligibleVoterResponse {
     public Boolean getIsOverride() { return isOverride; }
     public String getOverrideReason() { return overrideReason; }
     public Long getLeadershipAssignmentId() { return leadershipAssignmentId; }
+    public List<VotingCodeHistory> getCodeHistory() { return codeHistory; }
+
+    // Lightweight history entry for voting codes
+    public static class VotingCodeHistory {
+        private final String code;
+        private final String status;
+        private final LocalDateTime issuedAt;
+        private final LocalDateTime usedAt;
+        private final LocalDateTime revokedAt;
+        private final LocalDateTime expiredAt;
+
+        public VotingCodeHistory(String code, String status, LocalDateTime issuedAt,
+                                 LocalDateTime usedAt, LocalDateTime revokedAt, LocalDateTime expiredAt) {
+            this.code = code;
+            this.status = status;
+            this.issuedAt = issuedAt;
+            this.usedAt = usedAt;
+            this.revokedAt = revokedAt;
+            this.expiredAt = expiredAt;
+        }
+
+        public String getCode() { return code; }
+        public String getStatus() { return status; }
+        public LocalDateTime getIssuedAt() { return issuedAt; }
+        public LocalDateTime getUsedAt() { return usedAt; }
+        public LocalDateTime getRevokedAt() { return revokedAt; }
+        public LocalDateTime getExpiredAt() { return expiredAt; }
+    }
 }
