@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
-  Autocomplete,
+  Avatar,
   Box,
   Button,
   Chip,
@@ -31,17 +31,20 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
+import GroupIcon from '@mui/icons-material/Group'
+import HowToVoteIcon from '@mui/icons-material/HowToVote'
+import PersonOffIcon from '@mui/icons-material/PersonOff'
+import VpnKeyIcon from '@mui/icons-material/VpnKey'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import { eligibleVotersApi } from '../../api/eligibleVoters.api'
 import { codesApi } from '../../api/codes.api'
 import { useToast } from '../feedback/ToastProvider'
 import { getErrorMessage } from '../../api/errorHandler'
-import usePersonSearch from './usePersonSearch'
 import LoadingState from '../common/LoadingState'
 import EmptyState from '../common/EmptyState'
 import StatusChip from '../common/StatusChip'
 import type { EligibleVoterResponse } from '../../types/eligibility'
 import type { VotingCodeResponse } from '../../types/eligibility'
-import type { PersonResponse } from '../../types/leadership'
 
 interface Props {
   electionId: number | string
@@ -73,7 +76,6 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
   votingPeriodStatus,
 }) => {
   const toast = useToast()
-  const { options: personOptions, search: searchPeople, loading: searchingPeople } = usePersonSearch()
 
   // Voters and codes data
   const [voters, setVoters] = useState<VoterCodeRow[]>([])
@@ -103,11 +105,9 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
   })
   const [, setLastRefreshed] = useState<Date | null>(null)
 
-  // Issue code dialog
-  const [issuePerson, setIssuePerson] = useState<PersonResponse | null>(null)
-  const [remarks, setRemarks] = useState('')
-  const [issuing, setIssuing] = useState(false)
-  const [issueResultDialog, setIssueResultDialog] = useState<{ code?: string; personName?: string } | null>(null)
+  // Issue code state
+  const [issuingFor, setIssuingFor] = useState<number | null>(null)
+  const [issueResultDialog, setIssueResultDialog] = useState<{ code?: string; personName?: string; personId?: number } | null>(null)
 
   // Revoke/regenerate dialog
   const [reasonDialog, setReasonDialog] = useState<{ mode: 'regenerate' | 'revoke'; code: VotingCodeResponse } | null>(null)
@@ -228,30 +228,29 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
     setPage(0)
   }
 
-  const handleIssueCode = async () => {
-    if (!issuePerson?.id) {
-      toast.error('Select a person')
+  const handleIssueCode = async (personId: number, personName: string) => {
+    if (!personId) {
+      toast.error('Invalid person')
       return
     }
-    setIssuing(true)
+    setIssuingFor(personId)
     try {
       const res = await codesApi.issue(electionId, votingPeriodId, {
-        personId: issuePerson.id,
-        remarks: remarks.trim() || undefined,
+        personId,
+        remarks: undefined,
       })
       setIssueResultDialog({
         code: res.code,
-        personName: issuePerson.fullName,
+        personName,
+        personId,
       })
       toast.success('Voting code issued')
-      setRemarks('')
-      setIssuePerson(null)
       fetchCodeCounts()
       fetchVoters()
     } catch (err: any) {
       toast.error(getErrorMessage(err) || 'Unable to issue code')
     } finally {
-      setIssuing(false)
+      setIssuingFor(null)
     }
   }
 
@@ -315,39 +314,64 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
   const canIssue = isAdmin && votingPeriodStatus === 'OPEN'
 
   return (
-    <Box sx={{ display: 'grid', gap: 3 }}>
-      {/* Stats Row */}
+    <Box sx={{ display: 'grid', gap: 2.5 }}>
+      {/* Stats Row with Colored Icons */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' }, gap: 1.5 }}>
-        <Paper sx={{ p: 1.5, bgcolor: 'background.default' }}>
-          <Typography variant="caption" color="text.secondary" display="block">
-            Total Eligible
-          </Typography>
-          <Typography variant="h6">{counts.total}</Typography>
-        </Paper>
-        <Paper sx={{ p: 1.5, bgcolor: 'background.default' }}>
-          <Typography variant="caption" color="text.secondary" display="block">
-            Voted
-          </Typography>
-          <Typography variant="h6">{counts.voted}</Typography>
-        </Paper>
-        <Paper sx={{ p: 1.5, bgcolor: 'background.default' }}>
-          <Typography variant="caption" color="text.secondary" display="block">
-            Not Voted
-          </Typography>
-          <Typography variant="h6">{counts.notVoted}</Typography>
-        </Paper>
-        <Paper sx={{ p: 1.5, bgcolor: 'background.default' }}>
-          <Typography variant="caption" color="text.secondary" display="block">
-            Codes Active
-          </Typography>
-          <Typography variant="h6">{codeCounts.active}</Typography>
-        </Paper>
-        <Paper sx={{ p: 1.5, bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Paper sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
+            <GroupIcon />
+          </Avatar>
           <Box>
             <Typography variant="caption" color="text.secondary" display="block">
-              Codes Used
+              Total Eligible
             </Typography>
-            <Typography variant="h6">{codeCounts.used}</Typography>
+            <Typography variant="h6" fontWeight="600">{counts.total}</Typography>
+          </Box>
+        </Paper>
+        <Paper sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar sx={{ bgcolor: 'success.main', width: 40, height: 40 }}>
+            <HowToVoteIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Voted
+            </Typography>
+            <Typography variant="h6" fontWeight="600">{counts.voted}</Typography>
+          </Box>
+        </Paper>
+        <Paper sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar sx={{ bgcolor: 'warning.main', width: 40, height: 40 }}>
+            <PersonOffIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Not Voted
+            </Typography>
+            <Typography variant="h6" fontWeight="600">{counts.notVoted}</Typography>
+          </Box>
+        </Paper>
+        <Paper sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar sx={{ bgcolor: 'info.main', width: 40, height: 40 }}>
+            <VpnKeyIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Active Codes
+            </Typography>
+            <Typography variant="h6" fontWeight="600">{codeCounts.active}</Typography>
+          </Box>
+        </Paper>
+        <Paper sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 1.5, justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Avatar sx={{ bgcolor: 'secondary.main', width: 40, height: 40 }}>
+              <CheckCircleIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="caption" color="text.secondary" display="block">
+                Used Codes
+              </Typography>
+              <Typography variant="h6" fontWeight="600">{codeCounts.used}</Typography>
+            </Box>
           </Box>
           <Tooltip title="Refresh">
             <IconButton size="small" onClick={() => { fetchCounts(); fetchCodeCounts(); fetchVoters() }} disabled={loading}>
@@ -356,42 +380,6 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
           </Tooltip>
         </Paper>
       </Box>
-
-      {/* Issue Code Section */}
-      {canIssue && (
-        <Paper sx={{ p: 1.5 }}>
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Autocomplete
-              sx={{ minWidth: 240, flex: 1 }}
-              options={personOptions}
-              loading={searchingPeople}
-              getOptionLabel={(option) => option.fullName || ''}
-              onInputChange={(_, value) => searchPeople(value)}
-              value={issuePerson}
-              onChange={(_, value) => setIssuePerson(value)}
-              size="small"
-              renderInput={(params) => (
-                <TextField {...params} label="Person" placeholder="Search people" helperText="Type 2+ characters" />
-              )}
-            />
-            <TextField
-              label="Remarks (optional)"
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              size="small"
-              sx={{ minWidth: 200, flex: 1 }}
-            />
-            <Button
-              startIcon={<AddIcon />}
-              variant="contained"
-              onClick={handleIssueCode}
-              disabled={issuing}
-            >
-              Issue Code
-            </Button>
-          </Box>
-        </Paper>
-      )}
 
       {/* Filters Section */}
       <Paper sx={{ p: 1.5 }}>
@@ -458,14 +446,15 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
         ) : (
           <>
             <TableContainer>
-              <Table size="small">
+              <Table size="small" sx={{ '& .MuiTableCell-root': { py: 1 } }}>
                 <TableHead>
-                  <TableRow sx={{ bgcolor: 'action.hover' }}>
+                  <TableRow sx={{ bgcolor: 'primary.main', '& .MuiTableCell-root': { color: 'primary.contrastText', fontWeight: 600 } }}>
                     <TableCell>
                       <TableSortLabel
                         active={sortField === 'fullName'}
                         direction={sortField === 'fullName' ? sortDirection : 'asc'}
                         onClick={() => handleSort('fullName')}
+                        sx={{ '&.MuiTableSortLabel-root': { color: 'inherit' }, '&.Mui-active': { color: 'inherit' }, '& .MuiTableSortLabel-icon': { color: 'inherit !important' } }}
                       >
                         Person
                       </TableSortLabel>
@@ -476,6 +465,7 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                         active={sortField === 'fellowshipName'}
                         direction={sortField === 'fellowshipName' ? sortDirection : 'asc'}
                         onClick={() => handleSort('fellowshipName')}
+                        sx={{ '&.MuiTableSortLabel-root': { color: 'inherit' }, '&.Mui-active': { color: 'inherit' }, '& .MuiTableSortLabel-icon': { color: 'inherit !important' } }}
                       >
                         Fellowship
                       </TableSortLabel>
@@ -486,6 +476,7 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                         active={sortField === 'voted'}
                         direction={sortField === 'voted' ? sortDirection : 'asc'}
                         onClick={() => handleSort('voted')}
+                        sx={{ '&.MuiTableSortLabel-root': { color: 'inherit' }, '&.Mui-active': { color: 'inherit' }, '& .MuiTableSortLabel-icon': { color: 'inherit !important' } }}
                       >
                         Vote Status
                       </TableSortLabel>
@@ -496,6 +487,7 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                         active={sortField === 'lastCodeStatus'}
                         direction={sortField === 'lastCodeStatus' ? sortDirection : 'asc'}
                         onClick={() => handleSort('lastCodeStatus')}
+                        sx={{ '&.MuiTableSortLabel-root': { color: 'inherit' }, '&.Mui-active': { color: 'inherit' }, '& .MuiTableSortLabel-icon': { color: 'inherit !important' } }}
                       >
                         Code
                       </TableSortLabel>
@@ -510,20 +502,18 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                     return (
                       <TableRow key={voter.personId} hover>
                         <TableCell>
-                          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.25 }}>
                               {voter.fullName}
                             </Typography>
-                            <Chip size="small" label={`#${voter.personId}`} variant="outlined" />
+                            <Chip size="small" label={`#${voter.personId}`} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Box sx={{ display: 'grid', gap: 0.25 }}>
-                            <Typography variant="caption">{voter.phoneNumber || '—'}</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {voter.email || '—'}
-                            </Typography>
-                          </Box>
+                          <Typography variant="caption" display="block">{voter.phoneNumber || '—'}</Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            {voter.email || '—'}
+                          </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">{voter.fellowshipName || '—'}</Typography>
@@ -617,21 +607,15 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                               </>
                             )}
                             {canIssue && !code && (
-                              <Tooltip title="Issue code">
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  startIcon={<AddIcon />}
-                                  onClick={() => {
-                                    setIssuePerson({
-                                      id: voter.personId,
-                                      fullName: voter.fullName,
-                                    } as PersonResponse)
-                                  }}
-                                >
-                                  Issue
-                                </Button>
-                              </Tooltip>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                startIcon={<AddIcon />}
+                                onClick={() => handleIssueCode(voter.personId, voter.fullName)}
+                                disabled={issuingFor === voter.personId}
+                              >
+                                Issue Code
+                              </Button>
                             )}
                           </Box>
                         </TableCell>
@@ -656,37 +640,96 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
         )}
       </Paper>
 
-      {/* Issue Result Dialog */}
-      <Dialog open={Boolean(issueResultDialog)} onClose={() => setIssueResultDialog(null)}>
-        <DialogTitle>Code Issued Successfully</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'grid', gap: 2, mt: 2 }}>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
+      {/* Issue Result Dialog - Large and Clean */}
+      <Dialog 
+        open={Boolean(issueResultDialog)} 
+        onClose={() => setIssueResultDialog(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            p: 2,
+          }
+        }}
+      >
+        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ bgcolor: 'success.main', width: 64, height: 64 }}>
+              <CheckCircleIcon sx={{ fontSize: 40 }} />
+            </Avatar>
+            <Typography variant="h5" fontWeight="600">Code Issued Successfully</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Box sx={{ display: 'grid', gap: 3 }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
                 Person
               </Typography>
-              <Typography variant="body2">{issueResultDialog?.personName}</Typography>
+              <Typography variant="h6" fontWeight="500">{issueResultDialog?.personName}</Typography>
+              <Chip 
+                size="small" 
+                label={`ID: ${issueResultDialog?.personId}`} 
+                sx={{ mt: 0.5 }} 
+              />
             </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Code
+            <Box 
+              sx={{ 
+                textAlign: 'center',
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                p: 4,
+                borderRadius: 2,
+                position: 'relative'
+              }}
+            >
+              <Typography variant="caption" display="block" sx={{ mb: 1, opacity: 0.9 }}>
+                VOTING CODE
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <Chip label={issueResultDialog?.code} />
-                <Tooltip title="Copy">
-                  <IconButton
-                    size="small"
-                    onClick={() => handleCopyCode(issueResultDialog?.code)}
-                  >
-                    <ContentCopyIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
+              <Typography 
+                variant="h3" 
+                fontWeight="700" 
+                letterSpacing={4}
+                sx={{ 
+                  fontFamily: 'monospace',
+                  userSelect: 'all',
+                  wordBreak: 'break-all'
+                }}
+              >
+                {issueResultDialog?.code}
+              </Typography>
+              <Button
+                startIcon={<ContentCopyIcon />}
+                onClick={() => handleCopyCode(issueResultDialog?.code)}
+                variant="contained"
+                sx={{ 
+                  mt: 3,
+                  bgcolor: 'rgba(255, 255, 255, 0.2)',
+                  '&:hover': {
+                    bgcolor: 'rgba(255, 255, 255, 0.3)',
+                  }
+                }}
+              >
+                Copy Code
+              </Button>
+            </Box>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="caption" color="text.secondary">
+                Write down this code. The voter will need it to cast their vote.
+              </Typography>
             </Box>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIssueResultDialog(null)}>Done</Button>
+        <DialogActions sx={{ justifyContent: 'center', pb: 2, pt: 1 }}>
+          <Button 
+            onClick={() => setIssueResultDialog(null)} 
+            variant="outlined"
+            size="large"
+            sx={{ minWidth: 120 }}
+          >
+            Done
+          </Button>
         </DialogActions>
       </Dialog>
 

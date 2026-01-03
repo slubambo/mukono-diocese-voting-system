@@ -283,17 +283,14 @@ const EligibilityCodesPage: React.FC = () => {
                 scrollButtons="auto"
                 sx={{ '& .MuiTab-root': { py: 1, minHeight: 'auto' } }}
               >
-                <Tab label="Eligibility" />
                 <Tab label="Eligible Voters & Codes" />
+                <Tab label="Eligibility" />
               </Tabs>
             </Paper>
 
             {/* Tab Content */}
-            {tab === 0 && selectedElection && (
-              <EligibilityTab electionId={selectedElection.id} isAdmin={isAdmin} />
-            )}
-            {tab === 1 && (
-              votingPeriodReady && selectedElection && selectedPeriod ? (
+            {tab === 0 && selectedElection && selectedPeriod && (
+              votingPeriodReady ? (
                 <UnifiedEligibleVotersCodesTab 
                   electionId={selectedElection.id} 
                   votingPeriodId={selectedPeriod.id}
@@ -305,6 +302,9 @@ const EligibilityCodesPage: React.FC = () => {
                   <Typography color="text.secondary">Select a voting period to view eligible voters and manage codes.</Typography>
                 </Paper>
               )
+            )}
+            {tab === 1 && selectedElection && (
+              <EligibilityTab electionId={selectedElection.id} isAdmin={isAdmin} />
             )}
           </>
         )}
