@@ -191,6 +191,12 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                CASE WHEN evr.id IS NOT NULL THEN 1 ELSE 0 END AS isOverride,
                evr.reason         AS overrideReason,
                la.id              AS leadershipAssignmentId,
+               -- Position + location string, e.g., "Chairperson (Misindye Church)"
+               CASE 
+                 WHEN la.id IS NOT NULL THEN CONCAT(pt.name, ' (', COALESCE(d.name, ad.name, ch.name, 'N/A'), ')')
+                 WHEN evr.id IS NOT NULL THEN 'Manual Override (N/A)'
+                 ELSE 'N/A'
+               END AS positionAndLocation,
                -- build JSON history of previous codes for this person
                (
                    SELECT JSON_ARRAYAGG(JSON_OBJECT(
@@ -214,6 +220,7 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
             FROM people p
             JOIN leadership_assignments la ON la.person_id = p.id AND la.status = 'ACTIVE'
             JOIN fellowship_positions fp ON fp.id = la.fellowship_position_id
+            JOIN position_titles pt ON pt.id = fp.title_id
             JOIN fellowships f ON f.id = fp.fellowship_id
             JOIN election_positions ep ON ep.fellowship_position_id = fp.id AND ep.election_id = :electionId
             JOIN elections e ON e.id = ep.election_id
@@ -229,6 +236,7 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
         ) eligible_voters
         LEFT JOIN leadership_assignments la ON la.id = eligible_voters.la_id
         LEFT JOIN fellowship_positions fp ON fp.id = la.fellowship_position_id
+        LEFT JOIN position_titles pt ON pt.id = fp.title_id
         LEFT JOIN fellowships f ON f.id = fp.fellowship_id
         LEFT JOIN elections e ON e.id = :electionId
         LEFT JOIN dioceses d ON d.id = eligible_voters.d_id
@@ -265,7 +273,7 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                    OR LOWER(p.email) LIKE CONCAT('%', LOWER(:q), '%'))
         GROUP BY p.id, p.full_name, p.phone_number, p.email, f.name, e.scope, 
                  d.name, ad.name, ch.name, vr_vote.person_id, vr_vote.submitted_at, 
-                 vc.status, vc.issued_at, vc.used_at, vc.code, evr.id, evr.reason, la.id
+                 vc.status, vc.issued_at, vc.used_at, vc.code, evr.id, evr.reason, la.id, pt.name
         """,
         countQuery = """
         SELECT COUNT(DISTINCT p.id)

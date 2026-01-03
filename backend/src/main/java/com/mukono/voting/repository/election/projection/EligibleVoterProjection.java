@@ -21,10 +21,12 @@ public interface EligibleVoterProjection {
     LocalDateTime getLastCodeIssuedAt();
     LocalDateTime getLastCodeUsedAt();
     // New fields
+    Long getLeadershipAssignmentId(); // id of the leadership assignment
     String getCode(); // the voting code value
     Integer getIsOverride(); // 1/0 from CASE WHEN - true if from voter roll
     String getOverrideReason(); // reason for the override if applicable
-    Long getLeadershipAssignmentId(); // id of the leadership assignment
     // Code history as JSON; will be mapped in service
     String getCodeHistoryJson();
+    // New: position and location string
+    String getPositionAndLocation();
 }

@@ -30,13 +30,15 @@ public class EligibleVoterResponse {
     private String overrideReason; // reason for the override if applicable
     private Long leadershipAssignmentId; // id of the leadership assignment for reference
     private List<VotingCodeHistory> codeHistory; // full history of codes for this voter
+    private String positionAndLocation; // e.g., "Chairperson (Misindye Church)"
 
     public EligibleVoterResponse(Long personId, String fullName, String phoneNumber, String email,
                                  String fellowshipName, String scope, String scopeName, boolean voted,
                                  Instant voteCastAt, String lastCodeStatus,
                                  LocalDateTime lastCodeIssuedAt, LocalDateTime lastCodeUsedAt,
                                  String code, Boolean isOverride, String overrideReason,
-                                 Long leadershipAssignmentId, List<VotingCodeHistory> codeHistory) {
+                                 Long leadershipAssignmentId, List<VotingCodeHistory> codeHistory,
+                                 String positionAndLocation) {
         this.personId = personId;
         this.fullName = fullName;
         this.phoneNumber = phoneNumber;
@@ -54,6 +56,7 @@ public class EligibleVoterResponse {
         this.overrideReason = overrideReason;
         this.leadershipAssignmentId = leadershipAssignmentId;
         this.codeHistory = codeHistory;
+        this.positionAndLocation = positionAndLocation;
     }
 
     // Getters
@@ -74,6 +77,7 @@ public class EligibleVoterResponse {
     public String getOverrideReason() { return overrideReason; }
     public Long getLeadershipAssignmentId() { return leadershipAssignmentId; }
     public List<VotingCodeHistory> getCodeHistory() { return codeHistory; }
+    public String getPositionAndLocation() { return positionAndLocation; }
 
     // Lightweight history entry for voting codes
     public static class VotingCodeHistory {

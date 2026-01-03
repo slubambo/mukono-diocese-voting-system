@@ -95,7 +95,8 @@ public class EligibleVoterService {
                 p.getIsOverride() != null && p.getIsOverride() != 0, // Convert Integer (1/0) to boolean
                 p.getOverrideReason(),
                 p.getLeadershipAssignmentId(),
-                history
+                history,
+                p.getPositionAndLocation()
         );
     }
 
