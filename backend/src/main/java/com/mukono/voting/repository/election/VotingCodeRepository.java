@@ -191,12 +191,8 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                CASE WHEN evr.id IS NOT NULL THEN 1 ELSE 0 END AS isOverride,
                evr.reason         AS overrideReason,
                la.id              AS leadershipAssignmentId,
-               -- Position + location string, e.g., "Chairperson (Misindye Church)"
-               CASE 
-                 WHEN la.id IS NOT NULL THEN CONCAT(pt.name, ' (', COALESCE(d.name, ad.name, ch.name, 'N/A'), ')')
-                 WHEN evr.id IS NOT NULL THEN 'Manual Override (N/A)'
-                 ELSE 'N/A'
-               END AS positionAndLocation,
+               -- Position name only (scopeName and fellowshipName provided separately)
+               COALESCE(pt.name, 'Manual Override') AS positionAndLocation,
                -- build JSON history of previous codes for this person
                (
                    SELECT JSON_ARRAYAGG(JSON_OBJECT(
@@ -273,7 +269,7 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                    OR LOWER(p.email) LIKE CONCAT('%', LOWER(:q), '%'))
         GROUP BY p.id, p.full_name, p.phone_number, p.email, f.name, e.scope, 
                  d.name, ad.name, ch.name, vr_vote.person_id, vr_vote.submitted_at, 
-                 vc.status, vc.issued_at, vc.used_at, vc.code, evr.id, evr.reason, la.id, pt.name
+                 vc.status, vc.issued_at, vc.used_at, vc.code, evr.id, evr.reason, la.id, COALESCE(pt.name, 'Manual Override')
         """,
         countQuery = """
         SELECT COUNT(DISTINCT p.id)

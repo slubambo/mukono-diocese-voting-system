@@ -94,6 +94,7 @@ export type EligibleVoterResponse = {
   isOverride?: boolean | null
   overrideReason?: string | null
   leadershipAssignmentId?: number | null
+  positionAndLocation?: string | null
 }
 
 export type EligibleVoterFilters = PagingParams & {

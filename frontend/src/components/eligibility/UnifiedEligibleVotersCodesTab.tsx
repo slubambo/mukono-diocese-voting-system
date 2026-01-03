@@ -36,6 +36,7 @@ import HowToVoteIcon from '@mui/icons-material/HowToVote'
 import PersonOffIcon from '@mui/icons-material/PersonOff'
 import VpnKeyIcon from '@mui/icons-material/VpnKey'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import HistoryIcon from '@mui/icons-material/History'
 import { eligibleVotersApi } from '../../api/eligibleVoters.api'
 import { codesApi } from '../../api/codes.api'
 import { useToast } from '../feedback/ToastProvider'
@@ -66,6 +67,19 @@ const maskCode = (code?: string) => {
   return `••••••${visible}`
 }
 
+const formatDate = (value?: string | null) => {
+  if (!value) return '—'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+  return parsed.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
 const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
   electionId,
   votingPeriodId,
@@ -76,7 +90,7 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
 
   // Voters and codes data
   const [voters, setVoters] = useState<VoterCodeRow[]>([])
-  const [codeIndex, setCodeIndex] = useState<Map<number, VotingCodeResponse>>(new Map())
+  const [codeHistory, setCodeHistory] = useState<Map<number, VotingCodeResponse[]>>(new Map())
   
   // Table state
   const [voteStatusFilter, setVoteStatusFilter] = useState<VoteStatusFilter>('ALL')
@@ -109,6 +123,8 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
   const [reasonDialog, setReasonDialog] = useState<{ mode: 'regenerate' | 'revoke'; code: VotingCodeResponse } | null>(null)
   const [reasonText, setReasonText] = useState('')
   const [reasonBusy, setReasonBusy] = useState(false)
+
+  const [historyDialog, setHistoryDialog] = useState<{ personName: string; codes: VotingCodeResponse[] } | null>(null)
 
   // Revealed codes
   const [revealed, setRevealed] = useState<Record<number, boolean>>({})
@@ -164,7 +180,7 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
       })
       const voterList = votersRes.content || []
       const personIds = new Set(voterList.map((v) => v.personId))
-      const nextCodeIndex = new Map<number, VotingCodeResponse>()
+      const nextCodeHistory = new Map<number, VotingCodeResponse[]>()
       try {
         const codesRes = await codesApi.list(electionId, votingPeriodId, {
           page: 0,
@@ -174,13 +190,23 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
         const codeList = codesRes.content || []
         codeList.forEach((code) => {
           if (!code.personId || !personIds.has(code.personId)) return
-          if (!nextCodeIndex.has(code.personId)) nextCodeIndex.set(code.personId, code)
+          const existing = nextCodeHistory.get(code.personId) || []
+          existing.push(code)
+          nextCodeHistory.set(code.personId, existing)
+        })
+        nextCodeHistory.forEach((list, personId) => {
+          list.sort((a, b) => {
+            const aTime = a.issuedAt ? new Date(a.issuedAt).getTime() : 0
+            const bTime = b.issuedAt ? new Date(b.issuedAt).getTime() : 0
+            return bTime - aTime
+          })
+          nextCodeHistory.set(personId, list)
         })
       } catch {
         // ignore code index fetch errors
       }
       setVoters(voterList)
-      setCodeIndex(nextCodeIndex)
+      setCodeHistory(nextCodeHistory)
       setTotal(votersRes.totalElements || voterList.length)
       setLastRefreshed(new Date())
     } catch (err: any) {
@@ -459,7 +485,7 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                         onClick={() => handleSort('fellowshipName')}
                         sx={{ '&.MuiTableSortLabel-root': { color: 'inherit' }, '&.Mui-active': { color: 'inherit' }, '& .MuiTableSortLabel-icon': { color: 'inherit !important' } }}
                       >
-                        Fellowship
+                        Position
                       </TableSortLabel>
                     </TableCell>
                     <TableCell>Scope</TableCell>
@@ -489,10 +515,14 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                 </TableHead>
                 <TableBody>
                   {voters.map((voter) => {
-                    const codeEntry = codeIndex.get(voter.personId)
-                    const code = codeEntry?.code || voter.code || undefined
+                    const codes = codeHistory.get(voter.personId) || []
+                    const latestCode = codes[0]
+                    const activeCode = codes.find((entry) => entry.status === 'ACTIVE')
+                    const code = latestCode?.code || voter.code || undefined
                     const hasOverride = Boolean(voter.isOverride)
                     const overrideReason = voter.overrideReason || undefined
+                    const positionLabel = voter.positionAndLocation?.trim() || undefined
+                    const fellowshipLabel = voter.fellowshipName?.trim() || undefined
                     return (
                       <TableRow key={voter.personId} hover>
                         <TableCell>
@@ -509,7 +539,11 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2">{voter.fellowshipName || '—'}</Typography>
+                          <Typography variant="body2">
+                            {positionLabel
+                              ? `${positionLabel}${fellowshipLabel ? ` (${fellowshipLabel})` : ''}`
+                              : fellowshipLabel || '—'}
+                          </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">{voter.scopeName || voter.scope || '—'}</Typography>
@@ -545,6 +579,16 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                                 label={voter.lastCodeStatus || '—'}
                                 size="small"
                               />
+                              {codes.length > 1 && (
+                                <Tooltip title="View code history">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => setHistoryDialog({ personName: voter.fullName, codes })}
+                                  >
+                                    <HistoryIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
                             </Box>
                           ) : (
                             <Typography variant="caption" color="text.secondary">—</Typography>
@@ -588,7 +632,7 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                                           setReasonText('')
                                           setReasonDialog({
                                             mode: 'regenerate',
-                                            code: (codeEntry || { code, personId: voter.personId }) as VotingCodeResponse,
+                                            code: (activeCode || latestCode || { code, personId: voter.personId }) as VotingCodeResponse,
                                           })
                                         }}
                                       >
@@ -599,11 +643,11 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                                       <IconButton
                                         size="small"
                                         onClick={() => {
-                                          if (!codeEntry?.id) return
+                                          if (!activeCode?.id) return
                                           setReasonText('')
-                                          setReasonDialog({ mode: 'revoke', code: codeEntry })
+                                          setReasonDialog({ mode: 'revoke', code: activeCode })
                                         }}
-                                        disabled={!codeEntry?.id}
+                                        disabled={!activeCode?.id}
                                       >
                                         <DeleteIcon fontSize="small" />
                                       </IconButton>
@@ -768,6 +812,39 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
           >
             {reasonDialog?.mode === 'revoke' ? 'Revoke' : 'Regenerate'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(historyDialog)} onClose={() => setHistoryDialog(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Code History{historyDialog?.personName ? ` · ${historyDialog.personName}` : ''}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'grid', gap: 1.5, mt: 1 }}>
+            {historyDialog?.codes.map((entry, index) => (
+              <Box
+                key={entry.id ?? `${entry.code}-${index}`}
+                sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}
+              >
+                <Box>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                    {maskCode(entry.code)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Issued {formatDate(entry.issuedAt)}
+                  </Typography>
+                </Box>
+                <StatusChip
+                  status={(entry.status as any) || 'inactive'}
+                  label={entry.status || '—'}
+                  size="small"
+                />
+              </Box>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHistoryDialog(null)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>
