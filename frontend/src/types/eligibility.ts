@@ -90,6 +90,10 @@ export type EligibleVoterResponse = {
   lastCodeStatus?: VotingCodeStatus | null
   lastCodeIssuedAt?: string | null
   lastCodeUsedAt?: string | null
+  code?: string | null
+  isOverride?: boolean | null
+  overrideReason?: string | null
+  leadershipAssignmentId?: number | null
 }
 
 export type EligibleVoterFilters = PagingParams & {

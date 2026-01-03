@@ -38,7 +38,6 @@ import VpnKeyIcon from '@mui/icons-material/VpnKey'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import { eligibleVotersApi } from '../../api/eligibleVoters.api'
 import { codesApi } from '../../api/codes.api'
-import { voterRollApi } from '../../api/voterRoll.api'
 import { useToast } from '../feedback/ToastProvider'
 import { getErrorMessage } from '../../api/errorHandler'
 import LoadingState from '../common/LoadingState'
@@ -58,10 +57,7 @@ type VoteStatusFilter = 'ALL' | 'VOTED' | 'NOT_VOTED'
 type SortField = 'fullName' | 'fellowshipName' | 'voted' | 'lastCodeStatus'
 type SortDirection = 'asc' | 'desc'
 
-interface VoterCodeRow extends EligibleVoterResponse {
-  code?: VotingCodeResponse
-  hasOverride?: boolean
-}
+interface VoterCodeRow extends EligibleVoterResponse {}
 
 const maskCode = (code?: string) => {
   if (!code) return '—'
@@ -80,8 +76,7 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
 
   // Voters and codes data
   const [voters, setVoters] = useState<VoterCodeRow[]>([])
-  const [codes, setCodes] = useState<Map<number, VotingCodeResponse>>(new Map())
-  const [overrides, setOverrides] = useState<Set<number>>(new Set())
+  const [codeIndex, setCodeIndex] = useState<Map<number, VotingCodeResponse>>(new Map())
   
   // Table state
   const [voteStatusFilter, setVoteStatusFilter] = useState<VoteStatusFilter>('ALL')
@@ -168,49 +163,24 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
         q: debouncedSearch || undefined,
       })
       const voterList = votersRes.content || []
-      let overrideSet = new Set<number>()
-
+      const personIds = new Set(voterList.map((v) => v.personId))
+      const nextCodeIndex = new Map<number, VotingCodeResponse>()
       try {
-        const overridesRes = await voterRollApi.list(electionId, {
+        const codesRes = await codesApi.list(electionId, votingPeriodId, {
           page: 0,
           size: 1000,
-          sort: 'addedAt,desc',
+          sort: 'issuedAt,desc',
+        } as any)
+        const codeList = codesRes.content || []
+        codeList.forEach((code) => {
+          if (!code.personId || !personIds.has(code.personId)) return
+          if (!nextCodeIndex.has(code.personId)) nextCodeIndex.set(code.personId, code)
         })
-        const overrideEntries = overridesRes.content || []
-        overrideSet = new Set(
-          overrideEntries
-            .map((entry) => entry.personId)
-            .filter((id): id is number => Boolean(id))
-        )
       } catch {
-        overrideSet = new Set()
+        // ignore code index fetch errors
       }
-
-      // Fetch codes for all voters
-      const codesMap = new Map<number, VotingCodeResponse>()
-
-      await Promise.all(
-        voterList.map(async (voter) => {
-          try {
-            const codesRes = await codesApi.list(electionId, votingPeriodId, {
-              page: 0,
-              size: 1,
-              sort: 'issuedAt,desc',
-            } as any)
-            // Filter codes by personId on client side if API doesn't support it
-            const voterCode = codesRes.content?.find((c: any) => c.personId === voter.personId)
-            if (voterCode) {
-              codesMap.set(voter.personId, voterCode)
-            }
-          } catch {
-            // ignore
-          }
-        })
-      )
-
-      setCodes(codesMap)
-      setOverrides(overrideSet)
       setVoters(voterList)
+      setCodeIndex(nextCodeIndex)
       setTotal(votersRes.totalElements || voterList.length)
       setLastRefreshed(new Date())
     } catch (err: any) {
@@ -288,9 +258,13 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
       toast.error('Reason is required')
       return
     }
+    if (!reasonDialog.code.id) {
+      toast.error('Unable to revoke: code not found')
+      return
+    }
     setReasonBusy(true)
     try {
-      await codesApi.revoke(electionId, votingPeriodId, reasonDialog.code.id!, reasonText.trim())
+      await codesApi.revoke(electionId, votingPeriodId, reasonDialog.code.id, reasonText.trim())
       toast.success('Code revoked')
       setReasonDialog(null)
       fetchCodeCounts()
@@ -515,8 +489,10 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                 </TableHead>
                 <TableBody>
                   {voters.map((voter) => {
-                    const code = codes.get(voter.personId)
-                    const hasOverride = overrides.has(voter.personId)
+                    const codeEntry = codeIndex.get(voter.personId)
+                    const code = codeEntry?.code || voter.code || undefined
+                    const hasOverride = Boolean(voter.isOverride)
+                    const overrideReason = voter.overrideReason || undefined
                     return (
                       <TableRow key={voter.personId} hover>
                         <TableCell>
@@ -548,7 +524,9 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                         </TableCell>
                         <TableCell>
                           {hasOverride ? (
-                            <Chip label="Override" size="small" variant="filled" color="warning" />
+                            <Tooltip title={overrideReason || 'Eligibility override'}>
+                              <Chip label="Override" size="small" variant="filled" color="warning" />
+                            </Tooltip>
                           ) : (
                             <Typography variant="caption" color="text.secondary">—</Typography>
                           )}
@@ -558,14 +536,14 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                             <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                               <Chip
                                 label={
-                                  revealed[code.id!] ? code.code : maskCode(code.code)
+                                  revealed[voter.personId] ? code : maskCode(code)
                                 }
                                 size="small"
                                 variant="outlined"
                               />
                               <StatusChip
-                                status={(code.status as any) || 'inactive'}
-                                label={code.status || '—'}
+                                status={(voter.lastCodeStatus as any) || 'inactive'}
+                                label={voter.lastCodeStatus || '—'}
                                 size="small"
                               />
                             </Box>
@@ -577,17 +555,17 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
                             {code && (
                               <>
-                                <Tooltip title={revealed[code.id!] ? 'Hide' : 'Show'}>
+                                <Tooltip title={revealed[voter.personId] ? 'Hide' : 'Show'}>
                                   <IconButton
                                     size="small"
                                     onClick={() => {
                                       setRevealed((prev) => ({
                                         ...prev,
-                                        [code.id!]: !prev[code.id!],
+                                        [voter.personId]: !prev[voter.personId],
                                       }))
                                     }}
                                   >
-                                    {revealed[code.id!] ? (
+                                    {revealed[voter.personId] ? (
                                       <VisibilityOffIcon fontSize="small" />
                                     ) : (
                                       <VisibilityIcon fontSize="small" />
@@ -597,17 +575,23 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                                 <Tooltip title="Copy code">
                                   <IconButton
                                     size="small"
-                                    onClick={() => handleCopyCode(code.code)}
+                                    onClick={() => handleCopyCode(code)}
                                   >
                                     <ContentCopyIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
-                                {isAdmin && code.status === 'ACTIVE' && (
+                                {isAdmin && voter.lastCodeStatus === 'ACTIVE' && (
                                   <>
                                     <Tooltip title="Regenerate">
                                       <IconButton
                                         size="small"
-                                        onClick={() => setReasonDialog({ mode: 'regenerate', code })}
+                                        onClick={() => {
+                                          setReasonText('')
+                                          setReasonDialog({
+                                            mode: 'regenerate',
+                                            code: (codeEntry || { code, personId: voter.personId }) as VotingCodeResponse,
+                                          })
+                                        }}
                                       >
                                         <AutorenewIcon fontSize="small" />
                                       </IconButton>
@@ -615,7 +599,12 @@ const UnifiedEligibleVotersCodesTab: React.FC<Props> = ({
                                     <Tooltip title="Revoke">
                                       <IconButton
                                         size="small"
-                                        onClick={() => setReasonDialog({ mode: 'revoke', code })}
+                                        onClick={() => {
+                                          if (!codeEntry?.id) return
+                                          setReasonText('')
+                                          setReasonDialog({ mode: 'revoke', code: codeEntry })
+                                        }}
+                                        disabled={!codeEntry?.id}
                                       >
                                         <DeleteIcon fontSize="small" />
                                       </IconButton>
