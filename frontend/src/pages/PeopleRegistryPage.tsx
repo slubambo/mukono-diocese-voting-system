@@ -42,6 +42,7 @@ import type { PersonResponse, CreatePersonRequest, UpdatePersonRequest } from '.
 import type { LeadershipAssignmentResponse } from '../types/leadership'
 import StatusChip from '../components/common/StatusChip'
 import AssignmentForm from '../components/leadership/AssignmentForm'
+import PersonAssignmentForm from '../components/leadership/PersonAssignmentForm'
 import LoadingState from '../components/common/LoadingState'
 import EmptyState from '../components/common/EmptyState'
 import PageLayout from '../components/layout/PageLayout'
@@ -68,6 +69,7 @@ const PeopleRegistryPage: React.FC = () => {
   const [editing, setEditing] = useState<PersonResponse | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [toDelete, setToDelete] = useState<PersonResponse | null>(null)
+  const [createAssignmentOpen, setCreateAssignmentOpen] = useState(false)
   // Assignments UI
   const [assignmentsOpen, setAssignmentsOpen] = useState(false)
   const [assignments, setAssignments] = useState<LeadershipAssignmentResponse[]>([])
@@ -212,6 +214,7 @@ const PeopleRegistryPage: React.FC = () => {
   }
 
   const openCreate = () => { setEditing(null); reset({ fullName: '', email: '', phoneNumber: '', gender: '', dateOfBirth: '' }); setDialogOpen(true) }
+  const openCreateWithAssignment = () => { setCreateAssignmentOpen(true) }
   const openEdit = (p: PersonResponse) => { setEditing(p); reset({ fullName: p.fullName, email: p.email || '', phoneNumber: p.phoneNumber || '', gender: p.gender || '', dateOfBirth: p.dateOfBirth || '' }); setDialogOpen(true) }
 
   const onSubmit = async (data: FormValues) => {
@@ -251,8 +254,9 @@ const PeopleRegistryPage: React.FC = () => {
           title="People Registry"
           subtitle="Manage person records used for leadership and elections."
           onAddClick={isAdmin ? openCreate : undefined}
-          addButtonLabel="Create Person"
+          addButtonLabel="Create Person (Only)"
           isAdmin={isAdmin}
+          actions={isAdmin ? [{ id: 'create-person-assignment', label: 'Create + Assign', onClick: openCreateWithAssignment }] : undefined}
           filters={[
             {
               id: 'search',
@@ -279,7 +283,16 @@ const PeopleRegistryPage: React.FC = () => {
           {loading ? (
             <LoadingState count={5} variant="row" />
           ) : displayPeople.length === 0 ? (
-            <EmptyState title="No people" description={isAdmin ? 'Create your first person.' : 'No people found.'} action={isAdmin ? <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Create Person</Button> : undefined} />
+            <EmptyState
+              title="No people"
+              description={isAdmin ? 'Create your first person.' : 'No people found.'}
+              action={isAdmin ? (
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Create Person (Only)</Button>
+                  <Button variant="outlined" onClick={openCreateWithAssignment}>Create + Assign</Button>
+                </Box>
+              ) : undefined}
+            />
           ) : (
             <>
               <TableContainer>
@@ -462,6 +475,16 @@ const PeopleRegistryPage: React.FC = () => {
               assignment={editingAssignment}
               onSaved={() => { setAssignDialogOpen(false); if (currentPerson) loadPersonAssignments(currentPerson.id) }}
               onCancel={() => setAssignDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={createAssignmentOpen} onClose={() => setCreateAssignmentOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Create Person + Assign Position</DialogTitle>
+          <DialogContent>
+            <PersonAssignmentForm
+              onSaved={() => { setCreateAssignmentOpen(false); fetchPeople() }}
+              onCancel={() => setCreateAssignmentOpen(false)}
             />
           </DialogContent>
         </Dialog>

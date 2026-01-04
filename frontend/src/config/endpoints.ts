@@ -65,6 +65,7 @@ export const FELLOWSHIP_POSITION_ENDPOINTS = {
 export const PEOPLE_ENDPOINTS = {
   LIST: `${API_ENV.API_V1}/people`,
   CREATE: `${API_ENV.API_V1}/people`,
+  CREATE_WITH_ASSIGNMENT: `${API_ENV.API_V1}/people/with-assignment`,
   GET: (id: number) => `${API_ENV.API_V1}/people/${id}`,
   UPDATE: (id: number) => `${API_ENV.API_V1}/people/${id}`,
   DELETE: (id: number) => `${API_ENV.API_V1}/people/${id}`,

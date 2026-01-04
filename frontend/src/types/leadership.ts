@@ -208,6 +208,8 @@ export interface CreateLeadershipAssignmentRequest {
   notes?: string
 }
 
+export type CreatePersonWithAssignmentRequest = CreatePersonRequest & Omit<CreateLeadershipAssignmentRequest, 'personId'>
+
 export interface UpdateLeadershipAssignmentRequest {
   termStartDate?: string
   termEndDate?: string
