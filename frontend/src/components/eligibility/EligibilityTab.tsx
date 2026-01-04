@@ -272,7 +272,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, votingPerio
 
       {/* Eligibility Check - Compact and Inline */}
       <Paper sx={{ p: 1.5 }}>
-        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <Autocomplete
             sx={{ minWidth: 240, flex: 1 }}
             options={personOptions}
@@ -284,11 +284,13 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, votingPerio
             value={checkPerson}
             renderInput={(params) => <TextField {...params} label="Person" placeholder="Search people" helperText="Type 2+ characters" />}
           />
-          <Button 
+          <Button
             variant="contained" 
             onClick={handleCheck} 
             disabled={checking || !checkPerson}
             startIcon={<AssignmentIcon />}
+            size="small"
+            sx={{ mt: '4px', whiteSpace: 'nowrap' }}
           >
             Check Eligibility
           </Button>
