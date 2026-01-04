@@ -303,9 +303,19 @@ const EligibilityCodesPage: React.FC = () => {
                 </Paper>
               )
             )}
-            {tab === 1 && selectedElection && (
-              <EligibilityTab electionId={selectedElection.id} isAdmin={isAdmin} />
-            )}
+            {tab === 1 && selectedElection && selectedPeriod ? (
+              votingPeriodReady ? (
+                <EligibilityTab
+                  electionId={selectedElection.id}
+                  votingPeriodId={selectedPeriod.id}
+                  isAdmin={isAdmin}
+                />
+              ) : (
+                <Paper sx={{ p: 4, textAlign: 'center' }}>
+                  <Typography color="text.secondary">Select a voting period to manage overrides.</Typography>
+                </Paper>
+              )
+            ) : null}
           </>
         )}
       </PageLayout>

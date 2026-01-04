@@ -51,6 +51,7 @@ import { getErrorMessage } from '../../api/errorHandler'
 
 interface EligibilityTabProps {
   electionId: number | string
+  votingPeriodId: number | string
   isAdmin: boolean
 }
 
@@ -68,7 +69,7 @@ const formatDate = (value?: string) => {
   return Number.isNaN(dt.getTime()) ? '—' : dt.toLocaleString()
 }
 
-const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) => {
+const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, votingPeriodId, isAdmin }) => {
   const toast = useToast()
   const { options: personOptions, search: searchPeople, loading: searchingPeople } = usePersonSearch()
 
@@ -97,8 +98,8 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
   const loadCounts = async () => {
     try {
       const [eligibleRes, ineligibleRes] = await Promise.all([
-        voterRollApi.count(electionId, true),
-        voterRollApi.count(electionId, false),
+        voterRollApi.count(electionId, votingPeriodId, true),
+        voterRollApi.count(electionId, votingPeriodId, false),
       ])
       setEligibleCount(eligibleRes.count ?? 0)
       setIneligibleCount(ineligibleRes.count ?? 0)
@@ -141,7 +142,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
       const params: any = { page, size, sort: 'addedAt,desc' }
       if (eligibleFilter === 'eligible') params.eligible = true
       if (eligibleFilter === 'ineligible') params.eligible = false
-      const res = await voterRollApi.list(electionId, params)
+      const res = await voterRollApi.list(electionId, votingPeriodId, params)
       const content = res.content || []
       setRows(content)
       setTotal(res.totalElements || 0)
@@ -159,12 +160,12 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
   useEffect(() => {
     loadCounts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [electionId])
+  }, [electionId, votingPeriodId])
 
   useEffect(() => {
     fetchOverrides()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [electionId, page, size, eligibleFilter])
+  }, [electionId, votingPeriodId, page, size, eligibleFilter])
 
   const filteredRows = useMemo(() => {
     if (!searchTerm.trim()) return rows
@@ -211,7 +212,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
     if (!deleteTarget?.personId) return
     setDeleteBusy(true)
     try {
-      await voterRollApi.remove(electionId, deleteTarget.personId)
+      await voterRollApi.remove(electionId, votingPeriodId, deleteTarget.personId)
       toast.success('Override removed')
       setDeleteTarget(null)
       fetchOverrides()
@@ -604,7 +605,7 @@ const OverrideDialog: React.FC<OverrideDialogProps> = ({ open, onClose, onSaved,
     }
     setSaving(true)
     try {
-      await voterRollApi.upsert(electionId, person.id, {
+      await voterRollApi.upsert(electionId, votingPeriodId, person.id, {
         eligible,
         reason: reason.trim(),
         addedBy: user?.username,
