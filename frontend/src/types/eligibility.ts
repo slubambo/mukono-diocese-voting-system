@@ -5,6 +5,7 @@ export type EligibilityDecisionResponse = {
 }
 
 export type VoterRollOverrideRequest = {
+  votingPeriodId: number
   eligible: boolean
   addedBy?: string
   reason?: string
@@ -90,6 +91,11 @@ export type EligibleVoterResponse = {
   lastCodeStatus?: VotingCodeStatus | null
   lastCodeIssuedAt?: string | null
   lastCodeUsedAt?: string | null
+  code?: string | null
+  isOverride?: boolean | null
+  overrideReason?: string | null
+  leadershipAssignmentId?: number | null
+  positionAndLocation?: string | null
 }
 
 export type EligibleVoterFilters = PagingParams & {

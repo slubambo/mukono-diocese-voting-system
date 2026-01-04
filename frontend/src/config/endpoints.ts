@@ -100,15 +100,20 @@ export const USER_ENDPOINTS = {
 
 // UI-E: Eligibility helpers
 export const ELIGIBILITY_ENDPOINTS = {
-  CHECK: (electionId: number | string) => `${API_ENV.API_V1}/elections/${electionId}/eligibility/me`,
+  CHECK: (electionId: number | string, votingPeriodId: number | string) =>
+    `${API_ENV.API_V1}/elections/${electionId}/voting-periods/${votingPeriodId}/eligibility/me`,
 } as const
 
 // UI-E: Voter roll overrides
 export const VOTER_ROLL_ENDPOINTS = {
-  LIST: (electionId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voter-roll`,
-  COUNT: (electionId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voter-roll/count`,
-  UPSERT: (electionId: number | string, personId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voter-roll/${personId}`,
-  REMOVE: (electionId: number | string, personId: number | string) => `${API_ENV.API_V1}/admin/elections/${electionId}/voter-roll/${personId}`,
+  LIST: (electionId: number | string, votingPeriodId: number | string) =>
+    `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/${votingPeriodId}/voter-roll`,
+  COUNT: (electionId: number | string, votingPeriodId: number | string) =>
+    `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/${votingPeriodId}/voter-roll/count`,
+  UPSERT: (electionId: number | string, votingPeriodId: number | string, personId: number | string) =>
+    `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/${votingPeriodId}/voter-roll/${personId}`,
+  REMOVE: (electionId: number | string, votingPeriodId: number | string, personId: number | string) =>
+    `${API_ENV.API_V1}/admin/elections/${electionId}/voting-periods/${votingPeriodId}/voter-roll/${personId}`,
 } as const
 
 // UI-E: Voting codes

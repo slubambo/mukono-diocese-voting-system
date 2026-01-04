@@ -5,20 +5,23 @@ import java.time.Instant;
 /**
  * Response DTO for voter roll entries (overrides).
  * Maps from ElectionVoterRoll entity (without nested objects).
+ * Scoped to a specific voting period.
  */
 public class VoterRollEntryResponse {
     private Long id;
     private Long electionId;
+    private Long votingPeriodId;
     private Long personId;
     private Boolean eligible;
     private String reason;
     private String addedBy;
     private Instant addedAt;
 
-    public VoterRollEntryResponse(Long id, Long electionId, Long personId, Boolean eligible, 
+    public VoterRollEntryResponse(Long id, Long electionId, Long votingPeriodId, Long personId, Boolean eligible, 
                                  String reason, String addedBy, Instant addedAt) {
         this.id = id;
         this.electionId = electionId;
+        this.votingPeriodId = votingPeriodId;
         this.personId = personId;
         this.eligible = eligible;
         this.reason = reason;
@@ -32,6 +35,10 @@ public class VoterRollEntryResponse {
 
     public Long getElectionId() {
         return electionId;
+    }
+
+    public Long getVotingPeriodId() {
+        return votingPeriodId;
     }
 
     public Long getPersonId() {

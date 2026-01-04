@@ -4,9 +4,12 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Request DTO for adding/updating voter roll overrides (whitelist/blacklist).
+ * Request DTO for adding/updating voter roll overrides (whitelist/blacklist) for a specific voting period.
  */
 public class VoterRollOverrideRequest {
+    @NotNull(message = "Voting period ID is required")
+    private Long votingPeriodId;
+
     @NotNull(message = "Eligible flag is required")
     private Boolean eligible;
 
@@ -19,10 +22,19 @@ public class VoterRollOverrideRequest {
     public VoterRollOverrideRequest() {
     }
 
-    public VoterRollOverrideRequest(Boolean eligible, String addedBy, String reason) {
+    public VoterRollOverrideRequest(Long votingPeriodId, Boolean eligible, String addedBy, String reason) {
+        this.votingPeriodId = votingPeriodId;
         this.eligible = eligible;
         this.addedBy = addedBy;
         this.reason = reason;
+    }
+
+    public Long getVotingPeriodId() {
+        return votingPeriodId;
+    }
+
+    public void setVotingPeriodId(Long votingPeriodId) {
+        this.votingPeriodId = votingPeriodId;
     }
 
     public Boolean getEligible() {

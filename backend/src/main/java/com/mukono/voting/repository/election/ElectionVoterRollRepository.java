@@ -23,73 +23,89 @@ public interface ElectionVoterRollRepository extends JpaRepository<ElectionVoter
     // =========================================================================
 
     /**
-     * Find a voter roll entry for a person in an election.
-     * Used to check eligibility overrides.
+     * Find a voter roll entry for a person in an election and specific voting period.
+     * Used to check eligibility overrides for the voting period.
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @param personId the person ID
      * @return Optional containing the voter roll entry if found
      */
-    Optional<ElectionVoterRoll> findByElectionIdAndPersonId(Long electionId, Long personId);
+    Optional<ElectionVoterRoll> findByElectionIdAndVotingPeriodIdAndPersonId(Long electionId, Long votingPeriodId, Long personId);
 
     /**
-     * Check if a voter roll entry exists for a person in an election.
+     * Check if a voter roll entry exists for a person in an election and voting period.
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @param personId the person ID
      * @return true if entry exists, false otherwise
      */
-    boolean existsByElectionIdAndPersonId(Long electionId, Long personId);
+    boolean existsByElectionIdAndVotingPeriodIdAndPersonId(Long electionId, Long votingPeriodId, Long personId);
 
     /**
-     * Find all voter roll entries for an election (paginated).
+     * Find all voter roll entries for an election and voting period (paginated).
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @param pageable pagination information
      * @return page of voter roll entries
      */
-    Page<ElectionVoterRoll> findByElectionId(Long electionId, Pageable pageable);
+    Page<ElectionVoterRoll> findByElectionIdAndVotingPeriodId(Long electionId, Long votingPeriodId, Pageable pageable);
 
     /**
-     * Find voter roll entries filtered by eligibility (paginated).
+     * Find voter roll entries filtered by eligibility for a voting period (paginated).
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @param eligible the eligibility flag (true for whitelist, false for blacklist)
      * @param pageable pagination information
      * @return page of voter roll entries with matching eligibility
      */
-    Page<ElectionVoterRoll> findByElectionIdAndEligible(Long electionId, Boolean eligible, Pageable pageable);
+    Page<ElectionVoterRoll> findByElectionIdAndVotingPeriodIdAndEligible(Long electionId, Long votingPeriodId, Boolean eligible, Pageable pageable);
 
     // =========================================================================
     // COUNTS
     // =========================================================================
 
     /**
-     * Count voter roll entries by eligibility for an election.
+     * Count voter roll entries for an election and voting period.
+     * 
+     * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
+     * @return count of voter roll entries
+     */
+    long countByElectionIdAndVotingPeriodId(Long electionId, Long votingPeriodId);
+
+    /**
+     * Count voter roll entries by eligibility for an election and voting period.
      * Useful for dashboard statistics (eligible vs ineligible voters).
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @param eligible the eligibility flag
      * @return count of voters with the specified eligibility
      */
-    long countByElectionIdAndEligible(Long electionId, Boolean eligible);
+    long countByElectionIdAndVotingPeriodIdAndEligible(Long electionId, Long votingPeriodId, Boolean eligible);
 
     // =========================================================================
     // JPQL QUERIES
     // =========================================================================
 
     /**
-     * Fetch all eligible overrides (whitelisted voters) for an election.
+     * Fetch all eligible overrides (whitelisted voters) for an election and voting period.
      * Used for audit exports and voter management dashboards.
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @return list of eligible voter roll entries
      */
     @Query("""
         SELECT vr FROM ElectionVoterRoll vr
         WHERE vr.election.id = :electionId
+          AND vr.votingPeriod.id = :votingPeriodId
           AND vr.eligible = true
         ORDER BY vr.addedAt DESC
     """)
-    List<ElectionVoterRoll> findEligibleOverrides(@Param("electionId") Long electionId);
+    List<ElectionVoterRoll> findEligibleOverrides(@Param("electionId") Long electionId, @Param("votingPeriodId") Long votingPeriodId);
 }

@@ -80,10 +80,10 @@ public class BallotService {
             throw new IllegalArgumentException("Voting is not within the period time window");
         }
 
-        // 4. Validate voter eligibility
-        EligibilityDecision eligibility = eligibilityService.checkEligibility(electionId, personId);
+        // 4. Validate voter eligibility for this voting period
+        EligibilityDecision eligibility = eligibilityService.checkEligibility(electionId, votingPeriodId, personId);
         if (!eligibility.isEligible()) {
-            throw new IllegalArgumentException("Voter not eligible for this election: " + eligibility.getReason());
+            throw new IllegalArgumentException("Voter not eligible for this election voting period: " + eligibility.getReason());
         }
 
         Election election = votingPeriod.getElection();

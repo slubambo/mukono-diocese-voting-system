@@ -59,11 +59,12 @@ public class ElectionVotingService {
     }
 
     /**
-     * Cast a vote for a candidate in an election position.
+     * Cast a vote for a candidate in an election position during a voting period.
      * 
-     * Applies rules R1-R6: validates election, position, candidate, eligibility, and prevents duplicates.
+     * Applies rules R1-R6: validates election, position, candidate, voting-period-specific eligibility, and prevents duplicates.
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @param electionPositionId the election position ID
      * @param candidateId the candidate ID
      * @param voterId the voter's person ID
@@ -71,7 +72,7 @@ public class ElectionVotingService {
      * @return the created ElectionVote
      * @throws IllegalArgumentException if any rule is violated
      */
-    public ElectionVote castVote(Long electionId, Long electionPositionId, Long candidateId,
+    public ElectionVote castVote(Long electionId, Long votingPeriodId, Long electionPositionId, Long candidateId,
                                  Long voterId, String source) {
         // R1: Election exists + status is VOTING_OPEN
         Election election = electionRepository.findById(electionId)
@@ -81,6 +82,8 @@ public class ElectionVotingService {
             throw new IllegalArgumentException("Voting is not open for this election");
         }
 
+        // ...existing code...
+
         // R2: Position belongs to election
         ElectionPosition position = electionPositionRepository.findById(electionPositionId)
                 .orElseThrow(() -> new IllegalArgumentException("Election position not found"));
@@ -88,6 +91,8 @@ public class ElectionVotingService {
         if (!position.getElection().getId().equals(electionId)) {
             throw new IllegalArgumentException("Election position does not belong to this election");
         }
+
+        // ...existing code...
 
         // R3: Candidate belongs to election + position
         ElectionCandidate candidate = electionCandidateRepository.findById(candidateId)
@@ -101,15 +106,19 @@ public class ElectionVotingService {
             throw new IllegalArgumentException("Candidate does not belong to this position");
         }
 
-        // R4: Voter eligibility
-        if (!eligibilityService.isEligible(electionId, voterId)) {
-            throw new IllegalArgumentException("You are not eligible to vote in this election");
+        // R4: Voter eligibility for this voting period
+        if (!eligibilityService.isEligible(electionId, votingPeriodId, voterId)) {
+            throw new IllegalArgumentException("You are not eligible to vote in this election voting period");
         }
+
+        // ...existing code...
 
         // R5: One cast vote per position
         if (electionVoteRepository.hasCastVote(electionId, electionPositionId, voterId)) {
             throw new IllegalArgumentException("You have already voted for this position");
         }
+
+        // ...existing code...
 
         // Create and persist vote
         ElectionVote vote = new ElectionVote(election, position, candidate,
@@ -153,7 +162,7 @@ public class ElectionVotingService {
     }
 
     /**
-     * Recast a vote (soft recast: automatically revokes existing CAST vote, then casts new one).
+     * Recast a vote (soft recast: automatically revokes existing CAST vote, then casts new one) during a voting period.
      * 
      * This implements Option B logic: if a CAST vote exists, it's automatically revoked,
      * and then a new vote is cast for the new candidate.
@@ -162,6 +171,7 @@ public class ElectionVotingService {
      * Rule R7: Recast logic (soft implementation)
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @param electionPositionId the election position ID
      * @param candidateId the new candidate ID
      * @param voterId the voter's person ID
@@ -169,7 +179,7 @@ public class ElectionVotingService {
      * @return the new ElectionVote
      * @throws IllegalArgumentException if any rule is violated
      */
-    public ElectionVote recastVote(Long electionId, Long electionPositionId, Long candidateId,
+    public ElectionVote recastVote(Long electionId, Long votingPeriodId, Long electionPositionId, Long candidateId,
                                    Long voterId, String source) {
         // Check if a CAST vote exists
         Optional<ElectionVote> existingVote = electionVoteRepository
@@ -180,8 +190,8 @@ public class ElectionVotingService {
             revokeVote(electionId, electionPositionId, voterId, null, "Auto-revoked for recast");
         }
 
-        // Cast the new vote (this will perform all R1-R6 validations)
-        return castVote(electionId, electionPositionId, candidateId, voterId, source);
+        // Cast the new vote (this will perform all R1-R6 validations including voting-period-specific eligibility)
+        return castVote(electionId, votingPeriodId, electionPositionId, candidateId, voterId, source);
     }
 
     /**

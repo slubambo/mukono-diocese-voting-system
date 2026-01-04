@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   Autocomplete,
+  Avatar,
   Box,
   Button,
   Chip,
@@ -10,6 +11,7 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
+  InputAdornment,
   Paper,
   Switch,
   Table,
@@ -27,6 +29,13 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import RefreshIcon from '@mui/icons-material/Refresh'
+import SearchIcon from '@mui/icons-material/Search'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import CancelIcon from '@mui/icons-material/Cancel'
+import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck'
+import ThumbUpIcon from '@mui/icons-material/ThumbUp'
+import ThumbDownIcon from '@mui/icons-material/ThumbDown'
+import AssignmentIcon from '@mui/icons-material/Assignment'
 import { eligibilityApi } from '../../api/eligibility.api'
 import { voterRollApi } from '../../api/voterRoll.api'
 import { peopleApi } from '../../api/people.api'
@@ -42,6 +51,7 @@ import { getErrorMessage } from '../../api/errorHandler'
 
 interface EligibilityTabProps {
   electionId: number | string
+  votingPeriodId: number | string
   isAdmin: boolean
 }
 
@@ -59,13 +69,14 @@ const formatDate = (value?: string) => {
   return Number.isNaN(dt.getTime()) ? '—' : dt.toLocaleString()
 }
 
-const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) => {
+const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, votingPeriodId, isAdmin }) => {
   const toast = useToast()
   const { options: personOptions, search: searchPeople, loading: searchingPeople } = usePersonSearch()
 
   const [checkPerson, setCheckPerson] = useState<PersonResponse | null>(null)
   const [decision, setDecision] = useState<DecisionState | null>(null)
   const [checking, setChecking] = useState(false)
+  const [decisionDialogOpen, setDecisionDialogOpen] = useState(false)
 
   const [eligibleCount, setEligibleCount] = useState<number | null>(null)
   const [ineligibleCount, setIneligibleCount] = useState<number | null>(null)
@@ -87,8 +98,8 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
   const loadCounts = async () => {
     try {
       const [eligibleRes, ineligibleRes] = await Promise.all([
-        voterRollApi.count(electionId, true),
-        voterRollApi.count(electionId, false),
+        voterRollApi.count(electionId, votingPeriodId, true),
+        voterRollApi.count(electionId, votingPeriodId, false),
       ])
       setEligibleCount(eligibleRes.count ?? 0)
       setIneligibleCount(ineligibleRes.count ?? 0)
@@ -131,7 +142,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
       const params: any = { page, size, sort: 'addedAt,desc' }
       if (eligibleFilter === 'eligible') params.eligible = true
       if (eligibleFilter === 'ineligible') params.eligible = false
-      const res = await voterRollApi.list(electionId, params)
+      const res = await voterRollApi.list(electionId, votingPeriodId, params)
       const content = res.content || []
       setRows(content)
       setTotal(res.totalElements || 0)
@@ -149,12 +160,12 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
   useEffect(() => {
     loadCounts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [electionId])
+  }, [electionId, votingPeriodId])
 
   useEffect(() => {
     fetchOverrides()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [electionId, page, size, eligibleFilter])
+  }, [electionId, votingPeriodId, page, size, eligibleFilter])
 
   const filteredRows = useMemo(() => {
     if (!searchTerm.trim()) return rows
@@ -176,8 +187,9 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
     }
     setChecking(true)
     try {
-      const res = await eligibilityApi.check(electionId, checkPerson.id)
+      const res = await eligibilityApi.check(electionId, votingPeriodId, checkPerson.id)
       setDecision(res || null)
+      setDecisionDialogOpen(true)
     } catch (err: any) {
       toast.error(getErrorMessage(err) || 'Failed to check eligibility')
       setDecision(null)
@@ -200,7 +212,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
     if (!deleteTarget?.personId) return
     setDeleteBusy(true)
     try {
-      await voterRollApi.remove(electionId, deleteTarget.personId)
+      await voterRollApi.remove(electionId, votingPeriodId, deleteTarget.personId)
       toast.success('Override removed')
       setDeleteTarget(null)
       fetchOverrides()
@@ -213,99 +225,131 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
   }
 
   return (
-    <Box sx={{ display: 'grid', gap: 3 }}>
-      {/* Eligibility checker */}
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>Eligibility Check</Typography>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+    <Box sx={{ display: 'grid', gap: 2.5 }}>
+      {/* Stats Row with Colored Icons */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+        <Paper sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar sx={{ bgcolor: 'success.main', width: 40, height: 40 }}>
+            <ThumbUpIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Eligible Overrides
+            </Typography>
+            <Typography variant="h6" fontWeight="600">{eligibleCount ?? '—'}</Typography>
+          </Box>
+        </Paper>
+        <Paper sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar sx={{ bgcolor: 'error.main', width: 40, height: 40 }}>
+            <ThumbDownIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Ineligible Overrides
+            </Typography>
+            <Typography variant="h6" fontWeight="600">{ineligibleCount ?? '—'}</Typography>
+          </Box>
+        </Paper>
+        <Paper sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 1.5, justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
+              <PlaylistAddCheckIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="caption" color="text.secondary" display="block">
+                Total Overrides
+              </Typography>
+              <Typography variant="h6" fontWeight="600">{(eligibleCount ?? 0) + (ineligibleCount ?? 0)}</Typography>
+            </Box>
+          </Box>
+          <Tooltip title="Refresh">
+            <IconButton size="small" onClick={() => { loadCounts(); fetchOverrides() }} disabled={loading}>
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Paper>
+      </Box>
+
+      {/* Eligibility Check - Compact and Inline */}
+      <Paper sx={{ p: 1.5 }}>
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <Autocomplete
-            sx={{ minWidth: 280, flex: 1 }}
+            sx={{ minWidth: 240, flex: 1 }}
             options={personOptions}
             loading={searchingPeople}
             getOptionLabel={(option) => option.fullName || ''}
             onInputChange={(_, value) => searchPeople(value)}
             onChange={(_, value) => setCheckPerson(value)}
-            renderInput={(params) => <TextField {...params} label="Person" placeholder="Search people" helperText="Type 2+ characters to search" />}
+            size="small"
+            value={checkPerson}
+            renderInput={(params) => <TextField {...params} label="Person" placeholder="Search people" helperText="Type 2+ characters" />}
           />
-          <Button variant="contained" onClick={handleCheck} disabled={checking}>Check Eligibility</Button>
-        </Box>
-        {decision && (
-          <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Chip
-              label={decision.eligible ? 'Eligible' : 'Not eligible'}
-              color={decision.eligible ? 'success' : 'error'}
-              variant="outlined"
-            />
-            {decision.rule && <Typography variant="body2">Rule: {decision.rule}</Typography>}
-            {decision.reason && <Typography variant="body2">Reason: {decision.reason}</Typography>}
-            {!decision.eligible && isAdmin && (
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                You may add an override below (admin only).
-              </Typography>
-            )}
-          </Box>
-        )}
-      </Paper>
-
-      {/* Summary cards */}
-      <Paper sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Box sx={{ display: 'grid' }}>
-            <Typography variant="caption" color="text.secondary">Eligible overrides</Typography>
-            <Typography variant="h5">{eligibleCount ?? '—'}</Typography>
-          </Box>
-          <Box sx={{ display: 'grid' }}>
-            <Typography variant="caption" color="text.secondary">Ineligible overrides</Typography>
-            <Typography variant="h5">{ineligibleCount ?? '—'}</Typography>
-          </Box>
-          <Box sx={{ display: 'grid' }}>
-            <Typography variant="caption" color="text.secondary">Total overrides</Typography>
-            <Typography variant="h5">{(eligibleCount ?? 0) + (ineligibleCount ?? 0)}</Typography>
-          </Box>
-          <Box sx={{ flex: 1 }} />
-          <Tooltip title="Refresh counts and overrides">
-            <span>
-              <Button startIcon={<RefreshIcon />} onClick={() => { loadCounts(); fetchOverrides() }} disabled={loading}>
-                Refresh
-              </Button>
-            </span>
-          </Tooltip>
-          {lastRefreshed && (
-            <Typography variant="caption" color="text.secondary">Updated {lastRefreshed.toLocaleTimeString()}</Typography>
-          )}
+          <Button
+            variant="contained" 
+            onClick={handleCheck} 
+            disabled={checking || !checkPerson}
+            startIcon={<AssignmentIcon />}
+            size="small"
+            sx={{ mt: '4px', whiteSpace: 'nowrap' }}
+          >
+            Check Eligibility
+          </Button>
         </Box>
       </Paper>
 
-      {/* Overrides table */}
-      <Paper>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', p: 2, flexWrap: 'wrap' }}>
+      {/* Filters and Actions - Compact and Inline */}
+      <Paper sx={{ p: 1.5 }}>
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
           <TextField
             select
             SelectProps={{ native: true }}
             label="Eligibility"
             value={eligibleFilter}
             onChange={(e) => { setEligibleFilter(e.target.value as EligibleFilter); setPage(0) }}
-            sx={{ minWidth: 160 }}
+            size="small"
+            sx={{ minWidth: 140 }}
           >
             <option value="all">All</option>
-            <option value="eligible">Eligible only</option>
-            <option value="ineligible">Ineligible only</option>
+            <option value="eligible">Eligible</option>
+            <option value="ineligible">Ineligible</option>
           </TextField>
           <TextField
-            label="Search reason or person"
+            label="Search"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ minWidth: 240 }}
-            placeholder="Search name, ID, or reason"
-            helperText="Type to filter within the loaded page"
+            size="small"
+            placeholder="Name, ID, or reason..."
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ minWidth: 280, flex: 1 }}
           />
+          <Tooltip title="Clear filters">
+            <IconButton
+              size="small"
+              onClick={() => {
+                setEligibleFilter('all')
+                setSearchTerm('')
+                setPage(0)
+              }}
+            >
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           {isAdmin && (
-            <Button startIcon={<AddIcon />} variant="contained" onClick={openCreate} sx={{ ml: 'auto' }}>
+            <Button startIcon={<AddIcon />} variant="contained" onClick={openCreate}>
               Add Override
             </Button>
           )}
         </Box>
+      </Paper>
 
+      {/* Overrides Table */}
+      <Paper>
         {loading ? (
           <LoadingState />
         ) : filteredRows.length === 0 ? (
@@ -317,9 +361,9 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
         ) : (
           <>
             <TableContainer>
-              <Table>
+              <Table size="small" sx={{ '& .MuiTableCell-root': { py: 1 } }}>
                 <TableHead>
-                  <TableRow>
+                  <TableRow sx={{ bgcolor: 'primary.main', '& .MuiTableCell-root': { color: 'primary.contrastText', fontWeight: 600 } }}>
                     <TableCell>Person</TableCell>
                     <TableCell>Eligible</TableCell>
                     <TableCell>Reason</TableCell>
@@ -333,18 +377,23 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
                     <TableRow key={String(row.id || row.personId)} hover>
                       <TableCell>
                         {row.personId ? (
-                          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                            <Typography>{personNames[row.personId] || `Person #${row.personId}`}</Typography>
-                            <Chip size="small" label={`ID: ${row.personId}`} />
-                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {personNames[row.personId] || 'Unknown person'}
+                          </Typography>
                         ) : '—'}
                       </TableCell>
                       <TableCell>
-                        <StatusChip status={row.eligible ? 'ACTIVE' : 'inactive'} label={row.eligible ? 'Yes' : 'No'} />
+                        <StatusChip status={row.eligible ? 'ACTIVE' : 'inactive'} label={row.eligible ? 'Yes' : 'No'} size="small" />
                       </TableCell>
-                      <TableCell>{row.reason || '—'}</TableCell>
-                      <TableCell>{row.addedBy || '—'}</TableCell>
-                      <TableCell>{formatDate(row.addedAt)}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2">{row.reason || '—'}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">{row.addedBy || '—'}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" color="text.secondary">{formatDate(row.addedAt)}</Typography>
+                      </TableCell>
                       {isAdmin && (
                         <TableCell align="right">
                           <Tooltip title="Edit">
@@ -376,10 +425,122 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, isAdmin }) 
         )}
       </Paper>
 
+      {/* Eligibility Decision Dialog - Modern and Slick */}
+      <Dialog 
+        open={decisionDialogOpen} 
+        onClose={() => setDecisionDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            p: 2,
+          }
+        }}
+      >
+        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <Avatar 
+              sx={{ 
+                bgcolor: decision?.eligible ? 'success.main' : 'error.main', 
+                width: 64, 
+                height: 64 
+              }}
+            >
+              {decision?.eligible ? (
+                <CheckCircleIcon sx={{ fontSize: 40 }} />
+              ) : (
+                <CancelIcon sx={{ fontSize: 40 }} />
+              )}
+            </Avatar>
+            <Typography variant="h5" fontWeight="600">
+              {decision?.eligible ? 'Eligible to Vote' : 'Not Eligible to Vote'}
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Box sx={{ display: 'grid', gap: 3 }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                Person
+              </Typography>
+              <Typography variant="h6" fontWeight="500">{checkPerson?.fullName}</Typography>
+              {checkPerson?.id && (
+                <Chip 
+                  size="small" 
+                  label={`ID: ${checkPerson.id}`} 
+                  sx={{ mt: 0.5 }} 
+                />
+              )}
+            </Box>
+            {decision?.rule && (
+              <Box 
+                sx={{ 
+                  bgcolor: 'background.default',
+                  p: 2,
+                  borderRadius: 1,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                  Rule Applied
+                </Typography>
+                <Typography variant="body1" fontWeight="500">
+                  {decision.rule}
+                </Typography>
+              </Box>
+            )}
+            {decision?.reason && (
+              <Box 
+                sx={{ 
+                  bgcolor: 'background.default',
+                  p: 2,
+                  borderRadius: 1,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                  Reason
+                </Typography>
+                <Typography variant="body1">
+                  {decision.reason}
+                </Typography>
+              </Box>
+            )}
+            {!decision?.eligible && isAdmin && (
+              <Box sx={{ textAlign: 'center', mt: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  You may add an eligibility override for this person if needed.
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 2, pt: 1, gap: 1 }}>
+          {!decision?.eligible && isAdmin && (
+            <Button 
+              onClick={() => {
+                setDecisionDialogOpen(false)
+                openCreate()
+              }} 
+              variant="contained"
+              startIcon={<AddIcon />}
+            >
+              Add Override
+            </Button>
+          )}
+          <Button 
+            onClick={() => setDecisionDialogOpen(false)} 
+            variant="outlined"
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <OverrideDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         electionId={electionId}
+        votingPeriodId={votingPeriodId}
         onSaved={() => { setDialogOpen(false); fetchOverrides(); loadCounts() }}
         existing={editing}
         isAdmin={isAdmin}
@@ -406,11 +567,20 @@ interface OverrideDialogProps {
   onClose: () => void
   onSaved: () => void
   electionId: number | string
+  votingPeriodId: number | string
   existing: VoterRollEntryResponse | null
   isAdmin: boolean
 }
 
-const OverrideDialog: React.FC<OverrideDialogProps> = ({ open, onClose, onSaved, electionId, existing, isAdmin }) => {
+const OverrideDialog: React.FC<OverrideDialogProps> = ({
+  open,
+  onClose,
+  onSaved,
+  electionId,
+  votingPeriodId,
+  existing,
+  isAdmin,
+}) => {
   const toast = useToast()
   const { user } = useAuth()
   const { options, search, loading } = usePersonSearch()
@@ -444,7 +614,8 @@ const OverrideDialog: React.FC<OverrideDialogProps> = ({ open, onClose, onSaved,
     }
     setSaving(true)
     try {
-      await voterRollApi.upsert(electionId, person.id, {
+      await voterRollApi.upsert(electionId, votingPeriodId, person.id, {
+        votingPeriodId: Number(votingPeriodId),
         eligible,
         reason: reason.trim(),
         addedBy: user?.username,

@@ -132,10 +132,26 @@ public class TestDataBuilder {
     }
 
     /**
-     * Build a test ElectionVoterRoll entry.
+     * Build a test VotingPeriod.
      */
-    public static ElectionVoterRoll buildElectionVoterRoll(Election election, Person person, boolean eligible) {
-        ElectionVoterRoll entry = new ElectionVoterRoll(election, person, eligible);
+    public static VotingPeriod buildVotingPeriod(String name, Election election) {
+        VotingPeriod period = new VotingPeriod();
+        period.setName(name);
+        period.setElection(election);
+        period.setStatus(VotingPeriodStatus.OPEN);
+        
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        period.setStartTime(now.minusHours(1));
+        period.setEndTime(now.plusHours(1));
+        
+        return period;
+    }
+
+    /**
+     * Build a test ElectionVoterRoll entry for a specific voting period.
+     */
+    public static ElectionVoterRoll buildElectionVoterRoll(Election election, VotingPeriod votingPeriod, Person person, boolean eligible) {
+        ElectionVoterRoll entry = new ElectionVoterRoll(election, votingPeriod, person, eligible);
         entry.setReason(eligible ? "Whitelisted for testing" : "Blacklisted for testing");
         entry.setAddedBy("test@example.com");
         entry.setAddedAt(Instant.now());
