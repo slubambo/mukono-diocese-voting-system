@@ -31,6 +31,7 @@ public class EligibleVoterResponse {
     private Long leadershipAssignmentId; // id of the leadership assignment for reference
     private List<VotingCodeHistory> codeHistory; // full history of codes for this voter
     private String positionAndLocation; // e.g., "Chairperson (Misindye Church)"
+    private List<PositionSummary> positionsSummary; // all positions/fellowships for this voter on the day
 
     public EligibleVoterResponse(Long personId, String fullName, String phoneNumber, String email,
                                  String fellowshipName, String scope, String scopeName, boolean voted,
@@ -38,7 +39,7 @@ public class EligibleVoterResponse {
                                  LocalDateTime lastCodeIssuedAt, LocalDateTime lastCodeUsedAt,
                                  String code, Boolean isOverride, String overrideReason,
                                  Long leadershipAssignmentId, List<VotingCodeHistory> codeHistory,
-                                 String positionAndLocation) {
+                                 String positionAndLocation, List<PositionSummary> positionsSummary) {
         this.personId = personId;
         this.fullName = fullName;
         this.phoneNumber = phoneNumber;
@@ -57,6 +58,7 @@ public class EligibleVoterResponse {
         this.leadershipAssignmentId = leadershipAssignmentId;
         this.codeHistory = codeHistory;
         this.positionAndLocation = positionAndLocation;
+        this.positionsSummary = positionsSummary;
     }
 
     // Getters
@@ -78,6 +80,7 @@ public class EligibleVoterResponse {
     public Long getLeadershipAssignmentId() { return leadershipAssignmentId; }
     public List<VotingCodeHistory> getCodeHistory() { return codeHistory; }
     public String getPositionAndLocation() { return positionAndLocation; }
+    public List<PositionSummary> getPositionsSummary() { return positionsSummary; }
 
     // Lightweight history entry for voting codes
     public static class VotingCodeHistory {
@@ -104,5 +107,25 @@ public class EligibleVoterResponse {
         public LocalDateTime getUsedAt() { return usedAt; }
         public LocalDateTime getRevokedAt() { return revokedAt; }
         public LocalDateTime getExpiredAt() { return expiredAt; }
+    }
+
+    // Summary of positions/fellowships for a voter
+    public static class PositionSummary {
+        private final String positionName;
+        private final String fellowshipName;
+        private final String scope;
+        private final String scopeName;
+
+        public PositionSummary(String positionName, String fellowshipName, String scope, String scopeName) {
+            this.positionName = positionName;
+            this.fellowshipName = fellowshipName;
+            this.scope = scope;
+            this.scopeName = scopeName;
+        }
+
+        public String getPositionName() { return positionName; }
+        public String getFellowshipName() { return fellowshipName; }
+        public String getScope() { return scope; }
+        public String getScopeName() { return scopeName; }
     }
 }

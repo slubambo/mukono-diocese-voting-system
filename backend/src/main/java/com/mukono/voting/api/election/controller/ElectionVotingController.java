@@ -42,16 +42,17 @@ public class ElectionVotingController {
     }
 
     /**
-     * Check voter eligibility for an election.
+     * Check voter eligibility for an election and voting period.
      * 
-     * GET /api/v1/elections/{electionId}/eligibility/me?voterPersonId=123
+     * GET /api/v1/elections/{electionId}/voting-periods/{votingPeriodId}/eligibility/me?voterPersonId=123
      */
-    @GetMapping("/eligibility/me")
+    @GetMapping("/voting-periods/{votingPeriodId}/eligibility/me")
     public ResponseEntity<EligibilityDecisionResponse> checkEligibility(
             @PathVariable @NotNull(message = "Election ID is required") Long electionId,
+            @PathVariable @NotNull(message = "Voting Period ID is required") Long votingPeriodId,
             @RequestParam @NotNull(message = "Voter Person ID is required") Long voterPersonId) {
         
-        EligibilityDecision decision = eligibilityService.checkEligibility(electionId, voterPersonId);
+        EligibilityDecision decision = eligibilityService.checkEligibility(electionId, votingPeriodId, voterPersonId);
         EligibilityDecisionResponse response = new EligibilityDecisionResponse(
                 decision.isEligible(),
                 decision.getRule(),
@@ -62,19 +63,21 @@ public class ElectionVotingController {
     }
 
     /**
-     * Cast a vote for a position.
+     * Cast a vote for a position in a voting period.
      * 
-     * POST /api/v1/elections/{electionId}/positions/{positionId}/votes
+     * POST /api/v1/elections/{electionId}/voting-periods/{votingPeriodId}/positions/{positionId}/votes
      * Body: {candidateId, voterId, source}
      */
-    @PostMapping("/positions/{positionId}/votes")
+    @PostMapping("/voting-periods/{votingPeriodId}/positions/{positionId}/votes")
     public ResponseEntity<VoteResponse> castVote(
             @PathVariable @NotNull(message = "Election ID is required") Long electionId,
+            @PathVariable @NotNull(message = "Voting Period ID is required") Long votingPeriodId,
             @PathVariable @NotNull(message = "Position ID is required") Long positionId,
             @Valid @RequestBody CastVoteRequest request) {
         
         ElectionVote vote = votingService.castVote(
                 electionId,
+                votingPeriodId,
                 positionId,
                 request.getCandidateId(),
                 request.getVoterId(),
@@ -86,19 +89,21 @@ public class ElectionVotingController {
     }
 
     /**
-     * Recast a vote (change vote).
+     * Recast a vote (change vote) in a voting period.
      * 
-     * PUT /api/v1/elections/{electionId}/positions/{positionId}/votes
+     * PUT /api/v1/elections/{electionId}/voting-periods/{votingPeriodId}/positions/{positionId}/votes
      * Body: {candidateId, voterId, source}
      */
-    @PutMapping("/positions/{positionId}/votes")
+    @PutMapping("/voting-periods/{votingPeriodId}/positions/{positionId}/votes")
     public ResponseEntity<VoteResponse> recastVote(
             @PathVariable @NotNull(message = "Election ID is required") Long electionId,
+            @PathVariable @NotNull(message = "Voting Period ID is required") Long votingPeriodId,
             @PathVariable @NotNull(message = "Position ID is required") Long positionId,
             @Valid @RequestBody RecastVoteRequest request) {
         
         ElectionVote vote = votingService.recastVote(
                 electionId,
+                votingPeriodId,
                 positionId,
                 request.getCandidateId(),
                 request.getVoterId(),

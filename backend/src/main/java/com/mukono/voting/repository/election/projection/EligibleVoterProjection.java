@@ -29,4 +29,5 @@ public interface EligibleVoterProjection {
     String getCodeHistoryJson();
     // New: position and location string
     String getPositionAndLocation();
+    String getPositionsSummaryJson();
 }

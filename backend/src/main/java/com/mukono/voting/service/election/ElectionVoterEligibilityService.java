@@ -50,6 +50,7 @@ public class ElectionVoterEligibilityService {
     private final ArchdeaconryRepository archdeaconryRepository;
     private final ChurchRepository churchRepository;
     private final ElectionPositionRepository electionPositionRepository;
+    private final com.mukono.voting.repository.election.VotingPeriodRepository votingPeriodRepository;
 
     @Autowired
     public ElectionVoterEligibilityService(
@@ -60,7 +61,8 @@ public class ElectionVoterEligibilityService {
             DioceseRepository dioceseRepository,
             ArchdeaconryRepository archdeaconryRepository,
             ChurchRepository churchRepository,
-            ElectionPositionRepository electionPositionRepository) {
+            ElectionPositionRepository electionPositionRepository,
+            com.mukono.voting.repository.election.VotingPeriodRepository votingPeriodRepository) {
         this.electionRepository = electionRepository;
         this.electionVoterRollRepository = electionVoterRollRepository;
         this.personRepository = personRepository;
@@ -69,52 +71,58 @@ public class ElectionVoterEligibilityService {
         this.archdeaconryRepository = archdeaconryRepository;
         this.churchRepository = churchRepository;
         this.electionPositionRepository = electionPositionRepository;
+        this.votingPeriodRepository = votingPeriodRepository;
     }
 
     /**
-     * Simple boolean check for voter eligibility.
+     * Simple boolean check for voter eligibility for a specific voting period.
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @param voterPersonId the voter's person ID
      * @return true if eligible, false otherwise
      */
     @Transactional(readOnly = true)
-    public boolean isEligible(Long electionId, Long voterPersonId) {
-        return checkEligibility(electionId, voterPersonId).isEligible();
+    public boolean isEligible(Long electionId, Long votingPeriodId, Long voterPersonId) {
+        return checkEligibility(electionId, votingPeriodId, voterPersonId).isEligible();
     }
 
     /**
-     * Comprehensive eligibility check with detailed reasoning.
+     * Comprehensive eligibility check with detailed reasoning for a specific voting period.
      * 
-     * Tier 1 — Voter Roll Override (highest priority)
+     * Tier 1 — Voter Roll Override (highest priority, voting-period-specific)
      * Tier 2 — Fellowship Membership Check
      * Tier 3 — Scope-Target Membership Check
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @param voterPersonId the voter's person ID
      * @return EligibilityDecision with detailed reason and rule
      */
     @Transactional(readOnly = true)
-    public EligibilityDecision checkEligibility(Long electionId, Long voterPersonId) {
+    public EligibilityDecision checkEligibility(Long electionId, Long votingPeriodId, Long voterPersonId) {
         // Validate inputs
         Election election = electionRepository.findById(electionId)
                 .orElseThrow(() -> new IllegalArgumentException("Election not found: " + electionId));
         
+        com.mukono.voting.model.election.VotingPeriod votingPeriod = votingPeriodRepository.findById(votingPeriodId)
+                .orElseThrow(() -> new IllegalArgumentException("Voting period not found: " + votingPeriodId));
+        
         Person voter = personRepository.findById(voterPersonId)
                 .orElseThrow(() -> new IllegalArgumentException("Voter not found: " + voterPersonId));
 
-        // === TIER 1: VOTER ROLL OVERRIDE ===
+        // === TIER 1: VOTER ROLL OVERRIDE (VOTING-PERIOD-SPECIFIC) ===
         Optional<ElectionVoterRoll> rollEntry = electionVoterRollRepository
-                .findByElectionIdAndPersonId(electionId, voterPersonId);
+                .findByElectionIdAndVotingPeriodIdAndPersonId(electionId, votingPeriodId, voterPersonId);
         
         if (rollEntry.isPresent()) {
             ElectionVoterRoll entry = rollEntry.get();
             if (entry.getEligible()) {
                 return new EligibilityDecision(true, "VOTER_ROLL_ALLOW",
-                        "Whitelisted voter: " + (entry.getReason() != null ? entry.getReason() : "Special voter"));
+                        "Whitelisted voter for this voting period: " + (entry.getReason() != null ? entry.getReason() : "Special voter"));
             } else {
                 return new EligibilityDecision(false, "VOTER_ROLL_BLOCK",
-                        "Blacklisted voter: " + (entry.getReason() != null ? entry.getReason() : "Ineligible per override"));
+                        "Blacklisted voter for this voting period: " + (entry.getReason() != null ? entry.getReason() : "Ineligible per override"));
             }
         }
 
@@ -284,27 +292,33 @@ public class ElectionVoterEligibilityService {
     }
 
     /**
-     * Add or update a voter roll override entry.
+     * Add or update a voter roll override entry for a specific voting period (whitelist or blacklist).
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @param personId the person ID
      * @param eligible whether to whitelist (true) or blacklist (false)
      * @param addedBy username/email of administrator
      * @param reason explanation for override
      * @return the saved ElectionVoterRoll entry
      */
-    public ElectionVoterRoll addOrUpdateOverride(Long electionId, Long personId, boolean eligible,
+    public ElectionVoterRoll addOrUpdateOverride(Long electionId, Long votingPeriodId, Long personId, boolean eligible,
                                                   String addedBy, String reason) {
         Election election = electionRepository.findById(electionId)
                 .orElseThrow(() -> new IllegalArgumentException("Election not found: " + electionId));
         
+        com.mukono.voting.model.election.VotingPeriod votingPeriod = votingPeriodRepository.findById(votingPeriodId)
+                .orElseThrow(() -> new IllegalArgumentException("Voting period not found: " + votingPeriodId));
+        
         Person person = personRepository.findById(personId)
                 .orElseThrow(() -> new IllegalArgumentException("Person not found: " + personId));
 
-        ElectionVoterRoll entry = electionVoterRollRepository.findByElectionIdAndPersonId(electionId, personId)
+        ElectionVoterRoll entry = electionVoterRollRepository
+                .findByElectionIdAndVotingPeriodIdAndPersonId(electionId, votingPeriodId, personId)
                 .orElse(new ElectionVoterRoll());
 
         entry.setElection(election);
+        entry.setVotingPeriod(votingPeriod);
         entry.setPerson(person);
         entry.setEligible(eligible);
         entry.setReason(reason);
@@ -315,14 +329,15 @@ public class ElectionVoterEligibilityService {
     }
 
     /**
-     * Remove a voter roll override entry.
+     * Remove a voter roll override entry for a specific voting period.
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @param personId the person ID
      */
-    public void removeOverride(Long electionId, Long personId) {
+    public void removeOverride(Long electionId, Long votingPeriodId, Long personId) {
         Optional<ElectionVoterRoll> entry = electionVoterRollRepository
-                .findByElectionIdAndPersonId(electionId, personId);
+                .findByElectionIdAndVotingPeriodIdAndPersonId(electionId, votingPeriodId, personId);
         
         if (entry.isPresent()) {
             electionVoterRollRepository.delete(entry.get());
@@ -330,33 +345,35 @@ public class ElectionVoterEligibilityService {
     }
 
     /**
-     * List voter roll overrides for an election (paginated).
+     * List voter roll overrides for an election and voting period (paginated).
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @param eligible filter by eligibility (null = all)
      * @param pageable pagination info
      * @return page of voter roll entries
      */
     @Transactional(readOnly = true)
-    public Page<ElectionVoterRoll> listOverrides(Long electionId, Boolean eligible, Pageable pageable) {
+    public Page<ElectionVoterRoll> listOverrides(Long electionId, Long votingPeriodId, Boolean eligible, Pageable pageable) {
         if (eligible == null) {
-            return electionVoterRollRepository.findByElectionId(electionId, pageable);
+            return electionVoterRollRepository.findByElectionIdAndVotingPeriodId(electionId, votingPeriodId, pageable);
         }
-        return electionVoterRollRepository.findByElectionIdAndEligible(electionId, eligible, pageable);
+        return electionVoterRollRepository.findByElectionIdAndVotingPeriodIdAndEligible(electionId, votingPeriodId, eligible, pageable);
     }
 
     /**
-     * Count voter roll overrides for an election.
+     * Count voter roll overrides for an election and voting period.
      * 
      * @param electionId the election ID
+     * @param votingPeriodId the voting period ID
      * @param eligible filter by eligibility (null = all)
      * @return count of entries
      */
     @Transactional(readOnly = true)
-    public long countOverrides(Long electionId, Boolean eligible) {
+    public long countOverrides(Long electionId, Long votingPeriodId, Boolean eligible) {
         if (eligible == null) {
-            return electionVoterRollRepository.findByElectionId(electionId, Pageable.unpaged()).getTotalElements();
+            return electionVoterRollRepository.countByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
         }
-        return electionVoterRollRepository.countByElectionIdAndEligible(electionId, eligible);
+        return electionVoterRollRepository.countByElectionIdAndVotingPeriodIdAndEligible(electionId, votingPeriodId, eligible);
     }
 }

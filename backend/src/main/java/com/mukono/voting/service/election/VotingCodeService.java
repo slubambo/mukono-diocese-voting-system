@@ -110,11 +110,11 @@ public class VotingCodeService {
         Person issuedBy = personRepository.findById(issuedByPersonId)
                 .orElseThrow(() -> new IllegalArgumentException("Issuer person not found: " + issuedByPersonId));
         
-        // Check voter eligibility
-        EligibilityDecision eligibility = eligibilityService.checkEligibility(electionId, personId);
+        // Check voter eligibility for this voting period
+        EligibilityDecision eligibility = eligibilityService.checkEligibility(electionId, votingPeriodId, personId);
         if (!eligibility.isEligible()) {
             throw new IllegalArgumentException(
-                    "Person " + personId + " is not eligible for election " + electionId + ": " + eligibility.getReason());
+                    "Person " + personId + " is not eligible for election " + electionId + " voting period " + votingPeriodId + ": " + eligibility.getReason());
         }
         
         // Check for existing ACTIVE code

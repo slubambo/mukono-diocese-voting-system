@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mukono.voting.payload.response.common.CountResponse;
 import com.mukono.voting.payload.response.election.EligibleVoterResponse;
+import com.mukono.voting.payload.response.election.EligibleVoterResponse.PositionSummary;
 import com.mukono.voting.payload.response.election.EligibleVoterResponse.VotingCodeHistory;
 import com.mukono.voting.repository.election.VoteRecordRepository;
 import com.mukono.voting.repository.election.VotingCodeRepository;
@@ -72,9 +73,13 @@ public class EligibleVoterService {
 
     private EligibleVoterResponse map(EligibleVoterProjection p) {
         List<VotingCodeHistory> history = null;
+        List<PositionSummary> positions = null;
         try {
             if (p.getCodeHistoryJson() != null) {
                 history = objectMapper.readValue(p.getCodeHistoryJson(), new TypeReference<List<VotingCodeHistory>>() {});
+            }
+            if (p.getPositionsSummaryJson() != null) {
+                positions = objectMapper.readValue(p.getPositionsSummaryJson(), new TypeReference<List<PositionSummary>>() {});
             }
         } catch (Exception ignored) {}
 
@@ -96,7 +101,8 @@ public class EligibleVoterService {
                 p.getOverrideReason(),
                 p.getLeadershipAssignmentId(),
                 history,
-                p.getPositionAndLocation()
+                p.getPositionAndLocation(),
+                positions
         );
     }
 

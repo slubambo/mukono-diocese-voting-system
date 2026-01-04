@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
 import java.time.Instant;
 
 /**
- * ElectionVoterRoll entity representing voter eligibility overrides for an election.
+ * ElectionVoterRoll entity representing voter eligibility overrides for a specific voting period in an election.
  * Supports voter whitelisting, blacklisting, and special voter management.
  * Enables eligibility enforcement in combination with fellowship + scope rules.
  * Extends DateAudit for automatic timestamp tracking.
@@ -18,13 +18,14 @@ import java.time.Instant;
 @Table(name = "election_voter_roll", uniqueConstraints = {
     @UniqueConstraint(
         name = "uk_election_voter_roll_unique",
-        columnNames = {"election_id", "person_id"}
+        columnNames = {"election_id", "voting_period_id", "person_id"}
     )
 }, indexes = {
     @Index(name = "idx_voter_roll_election", columnList = "election_id"),
+    @Index(name = "idx_voter_roll_voting_period", columnList = "voting_period_id"),
     @Index(name = "idx_voter_roll_person", columnList = "person_id"),
     @Index(name = "idx_voter_roll_eligible", columnList = "eligible"),
-    @Index(name = "idx_voter_roll_election_eligible", columnList = "election_id, eligible")
+    @Index(name = "idx_voter_roll_election_period_eligible", columnList = "election_id, voting_period_id, eligible")
 })
 public class ElectionVoterRoll extends DateAudit {
 
@@ -37,6 +38,11 @@ public class ElectionVoterRoll extends DateAudit {
     @JoinColumn(name = "election_id", nullable = false)
     @NotNull(message = "Election is required")
     private Election election;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "voting_period_id", nullable = false)
+    @NotNull(message = "Voting period is required")
+    private VotingPeriod votingPeriod;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "person_id", nullable = false)
@@ -65,21 +71,30 @@ public class ElectionVoterRoll extends DateAudit {
     public ElectionVoterRoll() {
     }
 
-    public ElectionVoterRoll(Election election, Person person, Boolean eligible) {
+    public ElectionVoterRoll(Election election, VotingPeriod votingPeriod, Person person, Boolean eligible) {
         this.election = election;
+        this.votingPeriod = votingPeriod;
         this.person = person;
         this.eligible = eligible;
     }
 
-    public ElectionVoterRoll(Election election, Person person, Boolean eligible, String reason, String addedBy) {
+    public ElectionVoterRoll(Election election, VotingPeriod votingPeriod, Person person, Boolean eligible, String reason, String addedBy) {
         this.election = election;
+        this.votingPeriod = votingPeriod;
         this.person = person;
         this.eligible = eligible;
         this.reason = reason;
         this.addedBy = addedBy;
     }
 
-    // Lifecycle callbacks
+    // ...existing code...
+    public VotingPeriod getVotingPeriod() {
+        return votingPeriod;
+    }
+
+    public void setVotingPeriod(VotingPeriod votingPeriod) {
+        this.votingPeriod = votingPeriod;
+    }
     @PrePersist
     public void prePersist() {
         if (this.addedAt == null) {
