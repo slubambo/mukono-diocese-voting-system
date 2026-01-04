@@ -100,7 +100,8 @@ export const USER_ENDPOINTS = {
 
 // UI-E: Eligibility helpers
 export const ELIGIBILITY_ENDPOINTS = {
-  CHECK: (electionId: number | string) => `${API_ENV.API_V1}/elections/${electionId}/eligibility/me`,
+  CHECK: (electionId: number | string, votingPeriodId: number | string) =>
+    `${API_ENV.API_V1}/elections/${electionId}/voting-periods/${votingPeriodId}/eligibility/me`,
 } as const
 
 // UI-E: Voter roll overrides
