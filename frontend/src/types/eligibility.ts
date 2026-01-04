@@ -5,6 +5,7 @@ export type EligibilityDecisionResponse = {
 }
 
 export type VoterRollOverrideRequest = {
+  votingPeriodId: number
   eligible: boolean
   addedBy?: string
   reason?: string

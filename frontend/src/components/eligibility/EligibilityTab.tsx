@@ -541,6 +541,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, votingPerio
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         electionId={electionId}
+        votingPeriodId={votingPeriodId}
         onSaved={() => { setDialogOpen(false); fetchOverrides(); loadCounts() }}
         existing={editing}
         isAdmin={isAdmin}
@@ -567,11 +568,20 @@ interface OverrideDialogProps {
   onClose: () => void
   onSaved: () => void
   electionId: number | string
+  votingPeriodId: number | string
   existing: VoterRollEntryResponse | null
   isAdmin: boolean
 }
 
-const OverrideDialog: React.FC<OverrideDialogProps> = ({ open, onClose, onSaved, electionId, existing, isAdmin }) => {
+const OverrideDialog: React.FC<OverrideDialogProps> = ({
+  open,
+  onClose,
+  onSaved,
+  electionId,
+  votingPeriodId,
+  existing,
+  isAdmin,
+}) => {
   const toast = useToast()
   const { user } = useAuth()
   const { options, search, loading } = usePersonSearch()
@@ -606,6 +616,7 @@ const OverrideDialog: React.FC<OverrideDialogProps> = ({ open, onClose, onSaved,
     setSaving(true)
     try {
       await voterRollApi.upsert(electionId, votingPeriodId, person.id, {
+        votingPeriodId: Number(votingPeriodId),
         eligible,
         reason: reason.trim(),
         addedBy: user?.username,
