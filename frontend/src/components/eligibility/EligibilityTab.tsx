@@ -187,7 +187,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, votingPerio
     }
     setChecking(true)
     try {
-      const res = await eligibilityApi.check(electionId, checkPerson.id)
+      const res = await eligibilityApi.check(electionId, votingPeriodId, checkPerson.id)
       setDecision(res || null)
       setDecisionDialogOpen(true)
     } catch (err: any) {
