@@ -377,12 +377,9 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, votingPerio
                     <TableRow key={String(row.id || row.personId)} hover>
                       <TableCell>
                         {row.personId ? (
-                          <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.25 }}>
-                              {personNames[row.personId] || `Person #${row.personId}`}
-                            </Typography>
-                            <Chip size="small" label={`#${row.personId}`} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
-                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {personNames[row.personId] || 'Unknown person'}
+                          </Typography>
                         ) : '—'}
                       </TableCell>
                       <TableCell>
