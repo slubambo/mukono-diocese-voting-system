@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.*;
  * - GET /api/v1/admin/elections/{electionId}/voter-roll/count?eligible=true
  */
 @RestController
-@RequestMapping("/api/v1/admin/elections/{electionId}/voter-roll")
+@RequestMapping("/api/v1/admin/elections/{electionId}")
 @Validated
 public class ElectionVoterRollAdminController {
 
