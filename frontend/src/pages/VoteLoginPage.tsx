@@ -339,16 +339,17 @@ const VoteLoginPage: React.FC = () => {
                 <Box
                   sx={{
                     display: 'grid',
-                    gridTemplateColumns: `repeat(${CODE_LENGTH}, minmax(0, 1fr))`,
+                    gridTemplateColumns: `repeat(4, minmax(0, 1fr)) auto repeat(4, minmax(0, 1fr))`,
                     gap: { xs: 0.75, sm: 1 },
                     width: '100%',
                     maxWidth: 520,
+                    alignItems: 'center',
                   }}
                 >
                   {Array.from({ length: CODE_LENGTH }).map((_, index) => {
                     const char = normalizedCode[index] || ''
                     const isActive = normalizedCode.length === index && !isLoading
-                    return (
+                    const box = (
                       <Box
                         key={`code-box-${index}`}
                         sx={{
@@ -370,6 +371,26 @@ const VoteLoginPage: React.FC = () => {
                         {char}
                       </Box>
                     )
+
+                    if (index === 3) {
+                      return [
+                        box,
+                        <Box
+                          key="code-dash"
+                          sx={{
+                            color: 'text.secondary',
+                            fontWeight: 700,
+                            fontSize: { xs: '1rem', sm: '1.1rem' },
+                            textAlign: 'center',
+                            px: { xs: 0.25, sm: 0.5 },
+                          }}
+                        >
+                          -
+                        </Box>,
+                      ]
+                    }
+
+                    return box
                   })}
                 </Box>
 
@@ -430,7 +451,7 @@ const VoteLoginPage: React.FC = () => {
                 variant="contained"
                 color="primary"
                 size="large"
-                disabled={isLoading || !normalizedCode.trim() || isCodeLocked}
+                disabled={isLoading || normalizedCode.length !== CODE_LENGTH || isCodeLocked}
                 sx={{
                   mt: 3,
                   py: { xs: 1.75, sm: 2 },
