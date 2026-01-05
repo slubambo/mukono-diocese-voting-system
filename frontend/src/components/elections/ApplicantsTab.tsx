@@ -23,6 +23,7 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   const [manualPersonId, setManualPersonId] = useState('')
   const [manualPositionId, setManualPositionId] = useState('')
   const [manualNotes, setManualNotes] = useState('')
+  const [selectedFellowshipId, setSelectedFellowshipId] = useState('')
   const [positions, setPositions] = useState<Position[]>([])
   const [peopleOptions, setPeopleOptions] = useState<PersonResponse[]>([])
   const [peopleQuery, setPeopleQuery] = useState('')
@@ -96,6 +97,10 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
   }, [electionId])
 
   useEffect(() => {
+    setManualPositionId('')
+  }, [selectedFellowshipId])
+
+  useEffect(() => {
     if (!showManual) return
     const handle = setTimeout(async () => {
       setPeopleLoading(true)
@@ -121,6 +126,24 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
     }, {})
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b))
   }, [applicants])
+
+  const fellowshipOptions = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>()
+    positions.forEach((p) => {
+      const id = String(p.fellowshipPosition?.fellowshipId ?? p.fellowshipId ?? 'other')
+      const name = p.fellowshipPosition?.fellowshipName || p.fellowshipName || 'Other'
+      map.set(id, { id, name })
+    })
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [positions])
+
+  const filteredPositions = useMemo(() => {
+    if (!selectedFellowshipId) return []
+    return positions.filter((p) => {
+      const id = String(p.fellowshipPosition?.fellowshipId ?? p.fellowshipId ?? 'other')
+      return id === selectedFellowshipId
+    })
+  }, [positions, selectedFellowshipId])
 
   const openDecision = (action: 'approve' | 'reject' | 'revert' | 'withdraw', applicant: Applicant) => {
     if (!isAdmin) return
@@ -186,11 +209,11 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
           <Tab label={`Pending`} />
           <Tab label={`All${count !== null ? ` (${count})` : ''}`} />
         </Tabs>
-        {isAdmin && <Button variant="contained" onClick={() => { setSelectedPerson(null); setManualPersonId(''); setManualPositionId(''); setManualNotes(''); setShowManual(true) }}>Add Applicant</Button>}
+        {isAdmin && <Button variant="contained" onClick={() => { setSelectedPerson(null); setManualPersonId(''); setManualPositionId(''); setManualNotes(''); setSelectedFellowshipId(''); setShowManual(true) }}>Add Applicant</Button>}
       </Box>
 
       {applicants.length === 0 ? (
-        <EmptyState title="No applicants" description="There are no applicants to display." action={isAdmin ? <Button onClick={() => setShowManual(true)}>Add Applicant</Button> : undefined} />
+        <EmptyState title="No applicants" description="There are no applicants to display." action={isAdmin ? <Button onClick={() => { setSelectedPerson(null); setManualPersonId(''); setManualPositionId(''); setManualNotes(''); setSelectedFellowshipId(''); setShowManual(true) }}>Add Applicant</Button> : undefined} />
       ) : (
         <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', lg: 'repeat(auto-fit, minmax(420px, 1fr))' } }}>
           {groupedApplicants.map(([fellowship, items]) => (
@@ -276,6 +299,37 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
         <DialogTitle>Add Applicant</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1fr)', gap: 1.5, mt: 1 }}>
+            <TextField
+              select
+              label="Fellowship"
+              fullWidth
+              value={selectedFellowshipId}
+              onChange={(e) => setSelectedFellowshipId(e.target.value)}
+              size="small"
+            >
+              <MenuItem value="">Select fellowship</MenuItem>
+              {fellowshipOptions.map((f) => (
+                <MenuItem key={f.id} value={f.id}>
+                  {f.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Election Position"
+              fullWidth
+              value={manualPositionId}
+              onChange={(e) => setManualPositionId(e.target.value)}
+              size="small"
+              disabled={!selectedFellowshipId}
+            >
+              {filteredPositions.map((p) => (
+                <MenuItem key={p.id} value={p.id}>
+                  {(p.fellowshipPosition?.titleName || p.title || p.positionId)}
+                  {p.fellowshipPosition?.fellowshipName ? ` — ${p.fellowshipPosition.fellowshipName}` : ''}
+                </MenuItem>
+              ))}
+            </TextField>
             <Autocomplete
               options={peopleOptions}
               loading={peopleLoading}
@@ -302,21 +356,6 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                 />
               )}
             />
-            <TextField
-              select
-              label="Election Position"
-              fullWidth
-              value={manualPositionId}
-              onChange={(e) => setManualPositionId(e.target.value)}
-              size="small"
-            >
-              {positions.map((p) => (
-                <MenuItem key={p.id} value={p.id}>
-                  {(p.fellowshipPosition?.titleName || p.title || p.positionId)}
-                  {p.fellowshipPosition?.fellowshipName ? ` — ${p.fellowshipPosition.fellowshipName}` : ''}
-                </MenuItem>
-              ))}
-            </TextField>
             <TextField label="Notes" fullWidth multiline minRows={2} value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} size="small" />
           </Box>
         </DialogContent>
