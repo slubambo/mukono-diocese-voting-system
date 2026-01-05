@@ -221,6 +221,13 @@ const PeopleRegistryPage: React.FC = () => {
     return `${dayjs().diff(d, 'year')}`
   }
 
+  const formatDob = (dob?: string | null) => {
+    if (!dob) return '—'
+    const d = dayjs(dob)
+    if (!d.isValid()) return '—'
+    return d.format('Do MMMM YYYY')
+  }
+
   const openCreate = () => { setEditing(null); reset({ fullName: '', email: '', phoneNumber: '', gender: '', dateOfBirth: '' }); setDialogOpen(true) }
   const openCreateWithAssignment = () => { setCreateAssignmentOpen(true) }
   const openEdit = (p: PersonResponse) => { setEditing(p); reset({ fullName: p.fullName, email: p.email || '', phoneNumber: p.phoneNumber || '', gender: p.gender || '', dateOfBirth: p.dateOfBirth || '' }); setDialogOpen(true) }
@@ -359,7 +366,7 @@ const PeopleRegistryPage: React.FC = () => {
                         {isColumnVisible('email') && <TableCell>{p.email ? <Link href={`mailto:${p.email}`} underline="hover" color="inherit">{p.email}</Link> : ''}</TableCell>}
                         {isColumnVisible('phone') && <TableCell>{p.phoneNumber ? <Link href={`tel:${p.phoneNumber}`} underline="hover" color="inherit">{p.phoneNumber}</Link> : ''}</TableCell>}
                         {isColumnVisible('gender') && <TableCell>{p.gender ? p.gender.charAt(0) + p.gender.slice(1).toLowerCase() : ''}</TableCell>}
-                        {isColumnVisible('dob') && <TableCell>{p.dateOfBirth ? new Date(p.dateOfBirth).toLocaleDateString() : ''}</TableCell>}
+                        {isColumnVisible('dob') && <TableCell>{formatDob(p.dateOfBirth)}</TableCell>}
                         {isColumnVisible('age') && <TableCell>{formatAge(p.dateOfBirth)}</TableCell>}
                         {isAdmin && (
                           <TableCell align="right">

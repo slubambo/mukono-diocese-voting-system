@@ -22,6 +22,8 @@ import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 // VisibilityIcon removed (not used)
+// @ts-ignore - dayjs module resolution
+import dayjs from 'dayjs'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/feedback/ToastProvider'
 import { leadershipApi } from '../api/leadership.api'
@@ -61,7 +63,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
   const [filterChurchId, setFilterChurchId] = useState<number | null>(null)
   const [filterFellowshipId, setFilterFellowshipId] = useState<number | null>(null)
   const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(['phone', 'position', 'fellowship', 'scope', 'termStart', 'termEnd'])
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['phone', 'position', 'fellowship', 'scope', 'term'])
   
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
@@ -248,6 +250,14 @@ const LeadershipAssignmentsPage: React.FC = () => {
   }
 
   const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString() : '—')
+  const formatTerm = (start?: string | null, end?: string | null) => {
+    const startYear = start ? dayjs(start).year() : null
+    const endYear = end ? dayjs(end).year() : null
+    if (startYear && endYear) return startYear === endYear ? `${startYear}` : `${startYear} - ${endYear}`
+    if (startYear) return `${startYear}`
+    if (endYear) return `${endYear}`
+    return '—'
+  }
 
   const openCreate = () => {
     setEditing(null)
@@ -329,8 +339,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
                 { id: 'position', name: 'Position' },
                 { id: 'fellowship', name: 'Fellowship' },
                 { id: 'scope', name: 'Scope' },
-                { id: 'termStart', name: 'Term Start' },
-                { id: 'termEnd', name: 'Term End' },
+                { id: 'term', name: 'Term' },
               ],
               onChange: (value) => setVisibleColumns(Array.isArray(value) ? value : []),
               multiple: true,
@@ -413,20 +422,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
                       {isColumnVisible('position') && <TableCell>Position</TableCell>}
                       {isColumnVisible('fellowship') && <TableCell>Fellowship</TableCell>}
                       {isColumnVisible('scope') && <TableCell>Scope</TableCell>}
-                      {isColumnVisible('termStart') && (
-                        <TableCell sortDirection={getSortDirection('start') || false}>
-                          <TableSortLabel active={Boolean(getSortDirection('start'))} direction={(getSortDirection('start') as any) || 'asc'} onClick={() => toggleSort('start')}>
-                            Term Start
-                          </TableSortLabel>
-                        </TableCell>
-                      )}
-                      {isColumnVisible('termEnd') && (
-                        <TableCell sortDirection={getSortDirection('end') || false}>
-                          <TableSortLabel active={Boolean(getSortDirection('end'))} direction={(getSortDirection('end') as any) || 'asc'} onClick={() => toggleSort('end')}>
-                            Term End
-                          </TableSortLabel>
-                        </TableCell>
-                      )}
+                      {isColumnVisible('term') && <TableCell>Term</TableCell>}
                       {isAdmin && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
                   </TableHead>
@@ -439,8 +435,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
                         {isColumnVisible('position') && <TableCell>{((a.fellowshipPosition as any)?.titleName) ?? (a.fellowshipPosition as any)?.title?.name ?? '—'}</TableCell>}
                         {isColumnVisible('fellowship') && <TableCell>{((a.fellowshipPosition as any)?.fellowshipName) ?? a.fellowship?.name ?? '—'}</TableCell>}
                         {isColumnVisible('scope') && <TableCell>{(((a.fellowshipPosition as any)?.scope) ?? '').charAt(0) + (((a.fellowshipPosition as any)?.scope) ?? '').slice(1).toLowerCase()}</TableCell>}
-                        {isColumnVisible('termStart') && <TableCell>{formatDate(a.termStartDate)}</TableCell>}
-                        {isColumnVisible('termEnd') && <TableCell>{formatDate(a.termEndDate)}</TableCell>}
+                        {isColumnVisible('term') && <TableCell>{formatTerm(a.termStartDate, a.termEndDate)}</TableCell>}
                         {isAdmin && (
                           <TableCell align="right">
                             <IconButton size="small" onClick={() => openEdit(a)} color="primary"><EditIcon fontSize="small"/></IconButton>
