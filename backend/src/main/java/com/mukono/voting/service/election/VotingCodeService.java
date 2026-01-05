@@ -499,6 +499,29 @@ public class VotingCodeService {
     }
 
     /**
+     * Mark a voting code as USED by ID with enhanced validation and idempotency.
+     * Period must be OPEN and within time window.
+     * Idempotent: if already USED, returns success (no-op).
+     */
+    public void markCodeUsedSafeById(Long codeId) {
+        VotingCode votingCode = votingCodeRepository.findById(codeId)
+                .orElseThrow(() -> new IllegalArgumentException("Voting code not found"));
+
+        if (votingCode.getStatus() == VotingCodeStatus.USED) {
+            return;
+        }
+
+        validateTransition(votingCode.getStatus(), VotingCodeStatus.USED);
+
+        VotingPeriod period = votingCode.getVotingPeriod();
+        validatePeriodForVoting(period);
+
+        votingCode.setStatus(VotingCodeStatus.USED);
+        votingCode.setUsedAt(LocalDateTime.now());
+        votingCodeRepository.save(votingCode);
+    }
+
+    /**
      * Validate a voting code for use with enhanced checks.
      * Must be ACTIVE, period must be OPEN, within time window.
      * Does not mark code as USED.

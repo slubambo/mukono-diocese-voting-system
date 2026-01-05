@@ -7,15 +7,20 @@ public class VoteLoginResponse {
     private Long personId;
     private Long electionId;
     private Long votingPeriodId;
+    private boolean hasPhone;
+    private String phoneLast3;
 
     public VoteLoginResponse() {}
 
-    public VoteLoginResponse(String accessToken, long expiresIn, Long personId, Long electionId, Long votingPeriodId) {
+    public VoteLoginResponse(String accessToken, long expiresIn, Long personId, Long electionId, Long votingPeriodId,
+                             boolean hasPhone, String phoneLast3) {
         this.accessToken = accessToken;
         this.expiresIn = expiresIn;
         this.personId = personId;
         this.electionId = electionId;
         this.votingPeriodId = votingPeriodId;
+        this.hasPhone = hasPhone;
+        this.phoneLast3 = phoneLast3;
     }
 
     public String getAccessToken() { return accessToken; }
@@ -35,4 +40,10 @@ public class VoteLoginResponse {
 
     public Long getVotingPeriodId() { return votingPeriodId; }
     public void setVotingPeriodId(Long votingPeriodId) { this.votingPeriodId = votingPeriodId; }
+
+    public boolean isHasPhone() { return hasPhone; }
+    public void setHasPhone(boolean hasPhone) { this.hasPhone = hasPhone; }
+
+    public String getPhoneLast3() { return phoneLast3; }
+    public void setPhoneLast3(String phoneLast3) { this.phoneLast3 = phoneLast3; }
 }

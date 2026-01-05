@@ -42,10 +42,21 @@ public class VoteAuthController {
         // 2.2 Issue voter JWT with short TTL (15 minutes)
         String token = voterJwtService.generateVoterToken(personId, electionId, votingPeriodId, Duration.ofMinutes(15), vc.getId());
 
-        // 2.3 Mark code as used (idempotent)
-        votingCodeService.markCodeUsedSafe(code);
+        String phoneLast3 = extractPhoneLast3(vc.getPerson().getPhoneNumber());
+        boolean hasPhone = phoneLast3 != null;
 
-        VoteLoginResponse response = new VoteLoginResponse(token, 900L, personId, electionId, votingPeriodId);
+        VoteLoginResponse response = new VoteLoginResponse(token, 900L, personId, electionId, votingPeriodId, hasPhone, phoneLast3);
         return ResponseEntity.ok(response);
+    }
+
+    private String extractPhoneLast3(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            return null;
+        }
+        String digits = phoneNumber.replaceAll("\\D", "");
+        if (digits.length() < 3) {
+            return null;
+        }
+        return digits.substring(digits.length() - 3);
     }
 }
