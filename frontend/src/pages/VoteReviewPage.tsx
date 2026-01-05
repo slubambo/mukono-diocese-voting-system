@@ -134,23 +134,23 @@ const VoteReviewPage: React.FC = () => {
       {/* Position Summaries */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {positions.map((position: Position) => {
-          const selectedIds = selections[position.id]
+          const selectedIds = selections[position.positionId]
           const selectedArray = Array.isArray(selectedIds) ? selectedIds : [selectedIds]
-          const selectedCandidates = position.candidates.filter(c => selectedArray.includes(c.id))
+          const selectedCandidates = position.candidates.filter(c => selectedArray.includes(c.candidateId))
 
           return (
-            <Card key={position.id} elevation={1}>
+            <Card key={position.positionId} elevation={1}>
               <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                 {/* Position Title */}
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-                  {position.title}
+                  {position.positionName}
                 </Typography>
 
                 {/* Selected Candidates */}
                 <Box sx={{ mb: 2 }}>
                   {selectedCandidates.map(candidate => (
                     <Box
-                      key={candidate.id}
+                      key={candidate.candidateId}
                       sx={{
                         p: 1.5,
                         mb: 1,
@@ -161,7 +161,7 @@ const VoteReviewPage: React.FC = () => {
                       }}
                     >
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {candidate.name}
+                        {candidate.fullName}
                       </Typography>
                     </Box>
                   ))}

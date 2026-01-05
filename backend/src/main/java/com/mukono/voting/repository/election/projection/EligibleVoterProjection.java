@@ -30,4 +30,8 @@ public interface EligibleVoterProjection {
     // New: position and location string
     String getPositionAndLocation();
     String getPositionsSummaryJson();
+    // Individual position attributes for quick access
+    String getPosition(); // first position title name
+    String getLocation(); // scope name (diocese/archdeaconry/church)
+    String getFellowship(); // first fellowship name
 }

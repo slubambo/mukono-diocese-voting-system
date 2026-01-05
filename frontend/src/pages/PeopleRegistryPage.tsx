@@ -40,8 +40,8 @@ import { leadershipApi } from '../api/leadership.api'
 
 import type { PersonResponse, CreatePersonRequest, UpdatePersonRequest } from '../types/leadership'
 import type { LeadershipAssignmentResponse } from '../types/leadership'
-import StatusChip from '../components/common/StatusChip'
 import AssignmentForm from '../components/leadership/AssignmentForm'
+import PersonAssignmentForm from '../components/leadership/PersonAssignmentForm'
 import LoadingState from '../components/common/LoadingState'
 import EmptyState from '../components/common/EmptyState'
 import PageLayout from '../components/layout/PageLayout'
@@ -63,11 +63,14 @@ const PeopleRegistryPage: React.FC = () => {
   const [query, setQuery] = useState<string>('')
   const [debouncedQuery, setDebouncedQuery] = useState<string>('')
   const [sort, setSort] = useState('fullName,asc')
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['phone', 'gender', 'dob', 'age'])
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<PersonResponse | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [toDelete, setToDelete] = useState<PersonResponse | null>(null)
+  const [createAssignmentOpen, setCreateAssignmentOpen] = useState(false)
   // Assignments UI
   const [assignmentsOpen, setAssignmentsOpen] = useState(false)
   const [assignments, setAssignments] = useState<LeadershipAssignmentResponse[]>([])
@@ -77,11 +80,18 @@ const PeopleRegistryPage: React.FC = () => {
   
 
   const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues: { fullName: '', email: '', phoneNumber: '', gender: '', dateOfBirth: '' } })
+  const isColumnVisible = (key: string) => visibleColumns.includes(key)
 
   const fetchPeople = async () => {
     try {
       setLoading(true)
-      const resp = await peopleApi.list({ q: debouncedQuery || undefined, page, size: rowsPerPage, sort: 'id,desc' })
+      const resp = await peopleApi.list({
+        q: debouncedQuery || undefined,
+        page,
+        size: rowsPerPage,
+        sort: 'id,desc',
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
+      })
       setPeople(resp.content)
       setTotal(resp.totalElements)
     } catch (error: any) {
@@ -140,7 +150,7 @@ const PeopleRegistryPage: React.FC = () => {
     return () => clearTimeout(timer)
   }, [query])
 
-  useEffect(() => { fetchPeople() }, [page, rowsPerPage, debouncedQuery])
+  useEffect(() => { fetchPeople() }, [page, rowsPerPage, debouncedQuery, statusFilter])
 
   const sortOptions = [
     { id: 'fullName,asc', name: 'Name (A-Z)' },
@@ -211,7 +221,15 @@ const PeopleRegistryPage: React.FC = () => {
     return `${dayjs().diff(d, 'year')}`
   }
 
+  const formatDob = (dob?: string | null) => {
+    if (!dob) return '—'
+    const d = dayjs(dob)
+    if (!d.isValid()) return '—'
+    return d.format('Do MMMM YYYY')
+  }
+
   const openCreate = () => { setEditing(null); reset({ fullName: '', email: '', phoneNumber: '', gender: '', dateOfBirth: '' }); setDialogOpen(true) }
+  const openCreateWithAssignment = () => { setCreateAssignmentOpen(true) }
   const openEdit = (p: PersonResponse) => { setEditing(p); reset({ fullName: p.fullName, email: p.email || '', phoneNumber: p.phoneNumber || '', gender: p.gender || '', dateOfBirth: p.dateOfBirth || '' }); setDialogOpen(true) }
 
   const onSubmit = async (data: FormValues) => {
@@ -251,8 +269,9 @@ const PeopleRegistryPage: React.FC = () => {
           title="People Registry"
           subtitle="Manage person records used for leadership and elections."
           onAddClick={isAdmin ? openCreate : undefined}
-          addButtonLabel="Create Person"
+          addButtonLabel="Create Person (Only)"
           isAdmin={isAdmin}
+          actions={isAdmin ? [{ id: 'create-person-assignment', label: 'Create + Assign', onClick: openCreateWithAssignment }] : undefined}
           filters={[
             {
               id: 'search',
@@ -272,6 +291,32 @@ const PeopleRegistryPage: React.FC = () => {
               },
               placeholder: 'Sort by',
             },
+            {
+              id: 'columns',
+              label: 'Columns',
+              value: visibleColumns,
+              options: [
+                { id: 'email', name: 'Email' },
+                { id: 'phone', name: 'Phone' },
+                { id: 'gender', name: 'Gender' },
+                { id: 'dob', name: 'Date of Birth' },
+                { id: 'age', name: 'Age' },
+              ],
+              onChange: (value) => setVisibleColumns(Array.isArray(value) ? value : []),
+              multiple: true,
+            },
+            {
+              id: 'status',
+              label: 'Status',
+              value: statusFilter,
+              options: [
+                { id: 'ACTIVE', name: 'Active' },
+                { id: 'INACTIVE', name: 'Inactive' },
+                { id: 'ALL', name: 'All' },
+              ],
+              onChange: (value) => { setStatusFilter((value as any) || 'ALL'); setPage(0) },
+              placeholder: 'Status',
+            },
           ]}
         />
 
@@ -279,7 +324,16 @@ const PeopleRegistryPage: React.FC = () => {
           {loading ? (
             <LoadingState count={5} variant="row" />
           ) : displayPeople.length === 0 ? (
-            <EmptyState title="No people" description={isAdmin ? 'Create your first person.' : 'No people found.'} action={isAdmin ? <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Create Person</Button> : undefined} />
+            <EmptyState
+              title="No people"
+              description={isAdmin ? 'Create your first person.' : 'No people found.'}
+              action={isAdmin ? (
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Create Person (Only)</Button>
+                  <Button variant="outlined" onClick={openCreateWithAssignment}>Create + Assign</Button>
+                </Box>
+              ) : undefined}
+            />
           ) : (
             <>
               <TableContainer>
@@ -291,16 +345,17 @@ const PeopleRegistryPage: React.FC = () => {
                           Full Name
                         </TableSortLabel>
                       </TableCell>
-                      <TableCell>Email</TableCell>
-                      <TableCell>Phone</TableCell>
-                      <TableCell>Gender</TableCell>
-                      <TableCell sortDirection={getSortDirection('dateOfBirth') || false}>
-                        <TableSortLabel active={Boolean(getSortDirection('dateOfBirth'))} direction={(getSortDirection('dateOfBirth') as any) || 'asc'} onClick={() => toggleSort('dateOfBirth')}>
-                          Date of Birth
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell>Age</TableCell>
-                      <TableCell>Status</TableCell>
+                      {isColumnVisible('email') && <TableCell>Email</TableCell>}
+                      {isColumnVisible('phone') && <TableCell>Phone</TableCell>}
+                      {isColumnVisible('gender') && <TableCell>Gender</TableCell>}
+                      {isColumnVisible('dob') && (
+                        <TableCell sortDirection={getSortDirection('dateOfBirth') || false}>
+                          <TableSortLabel active={Boolean(getSortDirection('dateOfBirth'))} direction={(getSortDirection('dateOfBirth') as any) || 'asc'} onClick={() => toggleSort('dateOfBirth')}>
+                            Date of Birth
+                          </TableSortLabel>
+                        </TableCell>
+                      )}
+                      {isColumnVisible('age') && <TableCell>Age</TableCell>}
                       {isAdmin && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
                   </TableHead>
@@ -308,12 +363,11 @@ const PeopleRegistryPage: React.FC = () => {
                     {displayPeople.map((p) => (
                       <TableRow key={p.id} hover>
                         <TableCell><Typography variant="body2">{p.fullName}</Typography></TableCell>
-                        <TableCell>{p.email ? <Link href={`mailto:${p.email}`} underline="hover" color="inherit">{p.email}</Link> : ''}</TableCell>
-                        <TableCell>{p.phoneNumber ? <Link href={`tel:${p.phoneNumber}`} underline="hover" color="inherit">{p.phoneNumber}</Link> : ''}</TableCell>
-                        <TableCell>{p.gender ? p.gender.charAt(0) + p.gender.slice(1).toLowerCase() : ''}</TableCell>
-                        <TableCell>{p.dateOfBirth ? new Date(p.dateOfBirth).toLocaleDateString() : ''}</TableCell>
-                        <TableCell>{formatAge(p.dateOfBirth)}</TableCell>
-                        <TableCell><StatusChip status={(p.status as any) ?? 'INACTIVE'} /></TableCell>
+                        {isColumnVisible('email') && <TableCell>{p.email ? <Link href={`mailto:${p.email}`} underline="hover" color="inherit">{p.email}</Link> : ''}</TableCell>}
+                        {isColumnVisible('phone') && <TableCell>{p.phoneNumber ? <Link href={`tel:${p.phoneNumber}`} underline="hover" color="inherit">{p.phoneNumber}</Link> : ''}</TableCell>}
+                        {isColumnVisible('gender') && <TableCell>{p.gender ? p.gender.charAt(0) + p.gender.slice(1).toLowerCase() : ''}</TableCell>}
+                        {isColumnVisible('dob') && <TableCell>{formatDob(p.dateOfBirth)}</TableCell>}
+                        {isColumnVisible('age') && <TableCell>{formatAge(p.dateOfBirth)}</TableCell>}
                         {isAdmin && (
                           <TableCell align="right">
                             <Button size="small" onClick={() => openAssignments(p)} sx={{ mr: 1 }}>Positions</Button>
@@ -344,18 +398,20 @@ const PeopleRegistryPage: React.FC = () => {
                   <TextField {...field} label="Email" type="email" size="small" />
                 )} />
 
-                <Controller name="phoneNumber" control={control} render={({ field }) => (
-                  <TextField {...field} label="Phone Number" size="small" />
+                <Controller name="phoneNumber" control={control} rules={{ required: 'Phone number is required' }} render={({ field, fieldState }) => (
+                  <TextField {...field} label="Phone Number" required size="small" error={!!fieldState.error} helperText={fieldState.error?.message} />
                 )} />
 
-                <Controller name="gender" control={control} render={({ field }) => (
-                  <FormControl size="small">
+                <Controller name="gender" control={control} rules={{ required: 'Gender is required' }} render={({ field, fieldState }) => (
+                  <FormControl size="small" error={!!fieldState.error}>
                     <InputLabel>Gender</InputLabel>
-                    <Select {...field} label="Gender">
-                      <MenuItem value="">Unknown</MenuItem>
+                    <Select {...field} label="Gender" required>
                       <MenuItem value="MALE">Male</MenuItem>
                       <MenuItem value="FEMALE">Female</MenuItem>
                     </Select>
+                    {fieldState.error?.message ? (
+                      <Typography variant="caption" color="error">{fieldState.error.message}</Typography>
+                    ) : null}
                   </FormControl>
                 )} />
 
@@ -373,6 +429,7 @@ const PeopleRegistryPage: React.FC = () => {
                     label="Date of Birth"
                     value={field.value ? dayjs(field.value) : null}
                     onChange={(date) => field.onChange(date ? date.format('YYYY-MM-DD') : '')}
+                    maxDate={dayjs().subtract(18, 'year')}
                     slotProps={{
                       textField: {
                         size: 'small',
@@ -462,6 +519,16 @@ const PeopleRegistryPage: React.FC = () => {
               assignment={editingAssignment}
               onSaved={() => { setAssignDialogOpen(false); if (currentPerson) loadPersonAssignments(currentPerson.id) }}
               onCancel={() => setAssignDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={createAssignmentOpen} onClose={() => setCreateAssignmentOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Create Person + Assign Position</DialogTitle>
+          <DialogContent>
+            <PersonAssignmentForm
+              onSaved={() => { setCreateAssignmentOpen(false); fetchPeople() }}
+              onCancel={() => setCreateAssignmentOpen(false)}
             />
           </DialogContent>
         </Dialog>

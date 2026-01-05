@@ -51,7 +51,7 @@ const ElectionsPage: React.FC = () => {
   const [total, setTotal] = useState(0)
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
-  const [sort, setSort] = useState('name,asc')
+  const [sort, setSort] = useState('termStartDate,desc')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Election | null>(null)
   const [canceling, setCanceling] = useState<Election | null>(null)

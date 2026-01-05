@@ -1,10 +1,14 @@
 package com.mukono.voting.controller.people;
 
+import com.mukono.voting.model.leadership.LeadershipAssignment;
 import com.mukono.voting.model.people.Person;
+import com.mukono.voting.payload.response.LeadershipAssignmentResponse;
 import com.mukono.voting.service.people.PersonService;
 import com.mukono.voting.payload.request.CreatePersonRequest;
+import com.mukono.voting.payload.request.CreatePersonWithAssignmentRequest;
 import com.mukono.voting.payload.request.UpdatePersonRequest;
 import com.mukono.voting.payload.response.PersonResponse;
+import com.mukono.voting.payload.response.PersonWithAssignmentResponse;
 import com.mukono.voting.service.user.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -41,6 +45,44 @@ public class PersonController {
         person.setStatus(Person.Status.ACTIVE);
         Person createdPerson = personService.createPerson(person);
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.toPersonResponse(createdPerson));
+    }
+
+    @PostMapping("/with-assignment")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_DS')")
+    public ResponseEntity<PersonWithAssignmentResponse> createPersonWithAssignment(
+            @Valid @RequestBody CreatePersonWithAssignmentRequest request) {
+        
+        // Build person entity from request
+        Person person = new Person();
+        person.setFullName(request.getFullName());
+        person.setEmail(request.getEmail());
+        person.setPhoneNumber(request.getPhoneNumber());
+        if (request.getGender() != null && !request.getGender().isBlank()) {
+            person.setGender(Person.Gender.valueOf(request.getGender().toUpperCase()));
+        }
+        person.setDateOfBirth(request.getDateOfBirth());
+        person.setStatus(Person.Status.ACTIVE);
+        
+        // Create person and assignment in one transaction
+        Object[] result = personService.createPersonWithAssignment(
+                person,
+                request.getFellowshipPositionId(),
+                request.getTermStartDate(),
+                request.getTermEndDate(),
+                request.getDioceseId(),
+                request.getArchdeaconryId(),
+                request.getChurchId(),
+                request.getNotes());
+        
+        Person createdPerson = (Person) result[0];
+        LeadershipAssignment createdAssignment = (LeadershipAssignment) result[1];
+        
+        // Build response with both person and assignment
+        PersonWithAssignmentResponse response = new PersonWithAssignmentResponse(
+                userService.toPersonResponse(createdPerson),
+                LeadershipAssignmentResponse.fromEntity(createdAssignment));
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/{id}")

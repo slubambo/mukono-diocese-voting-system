@@ -4,7 +4,6 @@ import {
   Avatar,
   Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -61,6 +60,7 @@ type DecisionState = {
   eligible?: boolean
   rule?: string
   reason?: string
+  status?: string
 }
 
 const formatDate = (value?: string) => {
@@ -190,6 +190,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, votingPerio
       const res = await eligibilityApi.check(electionId, votingPeriodId, checkPerson.id)
       setDecision(res || null)
       setDecisionDialogOpen(true)
+      searchPeople('', { fetchAll: true })
     } catch (err: any) {
       toast.error(getErrorMessage(err) || 'Failed to check eligibility')
       setDecision(null)
@@ -426,58 +427,51 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, votingPerio
       </Paper>
 
       {/* Eligibility Decision Dialog - Modern and Slick */}
-      <Dialog 
-        open={decisionDialogOpen} 
+      <Dialog
+        open={decisionDialogOpen}
         onClose={() => setDecisionDialogOpen(false)}
-        maxWidth="sm"
+        maxWidth="xs"
         fullWidth
         PaperProps={{
           sx: {
             borderRadius: 2,
-            p: 2,
-          }
+            p: 1.5,
+          },
         }}
       >
-        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+        <DialogTitle sx={{ textAlign: 'center', pb: 0.5 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
             <Avatar 
               sx={{ 
                 bgcolor: decision?.eligible ? 'success.main' : 'error.main', 
-                width: 64, 
-                height: 64 
+                width: 56,
+                height: 56,
               }}
             >
               {decision?.eligible ? (
-                <CheckCircleIcon sx={{ fontSize: 40 }} />
+                <CheckCircleIcon sx={{ fontSize: 34 }} />
               ) : (
-                <CancelIcon sx={{ fontSize: 40 }} />
+                <CancelIcon sx={{ fontSize: 34 }} />
               )}
             </Avatar>
-            <Typography variant="h5" fontWeight="600">
+            <Typography variant="h6" fontWeight="600">
               {decision?.eligible ? 'Eligible to Vote' : 'Not Eligible to Vote'}
             </Typography>
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Box sx={{ display: 'grid', gap: 3 }}>
+        <DialogContent sx={{ pt: 1.5 }}>
+          <Box sx={{ display: 'grid', gap: 2 }}>
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
                 Person
               </Typography>
-              <Typography variant="h6" fontWeight="500">{checkPerson?.fullName}</Typography>
-              {checkPerson?.id && (
-                <Chip 
-                  size="small" 
-                  label={`ID: ${checkPerson.id}`} 
-                  sx={{ mt: 0.5 }} 
-                />
-              )}
+              <Typography variant="subtitle1" fontWeight="500">{checkPerson?.fullName}</Typography>
             </Box>
             {decision?.rule && (
               <Box 
                 sx={{ 
                   bgcolor: 'background.default',
-                  p: 2,
+                  p: 1.5,
                   borderRadius: 1,
                 }}
               >
@@ -493,7 +487,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, votingPerio
               <Box 
                 sx={{ 
                   bgcolor: 'background.default',
-                  p: 2,
+                  p: 1.5,
                   borderRadius: 1,
                 }}
               >
@@ -502,6 +496,22 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, votingPerio
                 </Typography>
                 <Typography variant="body1">
                   {decision.reason}
+                </Typography>
+              </Box>
+            )}
+            {decision?.status && (
+              <Box
+                sx={{
+                  bgcolor: 'background.default',
+                  p: 1.5,
+                  borderRadius: 1,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                  Status
+                </Typography>
+                <Typography variant="body1" fontWeight="500">
+                  {String(decision.status).replace(/_/g, ' ').toUpperCase()}
                 </Typography>
               </Box>
             )}
@@ -514,7 +524,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, votingPerio
             )}
           </Box>
         </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', pb: 2, pt: 1, gap: 1 }}>
+        <DialogActions sx={{ justifyContent: 'center', pb: 1.5, pt: 0.5, gap: 1 }}>
           {!decision?.eligible && isAdmin && (
             <Button 
               onClick={() => {

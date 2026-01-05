@@ -11,27 +11,53 @@ export interface VoteLoginResponse {
   tokenType: string
   expiresIn: number
   personId: number
+  fullName: string
   electionId: number
   votingPeriodId: number
+  hasPhone: boolean
+  phoneMasked: string | null
+  positions: Array<{
+    positionName: string
+    fellowshipName: string
+    scopeName: string
+  }>
+}
+
+export interface VotePhoneVerifyRequest {
+  last3: string
+}
+
+export interface VotePhoneVerifyResponse {
+  verified: boolean
+  reason: string
 }
 
 export interface Candidate {
-  id: number
-  name: string
-  picture?: string
+  candidateId: number
+  personId: number
+  fullName: string
+  gender: 'MALE' | 'FEMALE' | string
+  originArchdeaconryId: number | null
+  originArchdeaconryName: string | null
+  churchId: number | null
+  churchName: string | null
 }
 
 export interface Position {
-  id: number
-  title: string
-  description?: string
-  maxVotes: number
+  positionId: number
+  positionName: string
+  scope: string
+  seats: number
+  maxVotesPerVoter: number
   candidates: Candidate[]
 }
 
 export interface BallotData {
   electionId: number
   votingPeriodId: number
+  personId: number
+  serverTime: string
+  ballotTitle: string
   positions: Position[]
 }
 
@@ -54,6 +80,13 @@ export const voteApi = {
    */
   login: (payload: VoteLoginRequest, config?: AxiosRequestConfig) =>
     axiosClient.post<VoteLoginResponse>(VOTE_ENDPOINTS.LOGIN, payload, config).then(res => res.data),
+
+  /**
+   * Verify voter phone suffix
+   * POST /api/v1/vote/verify-phone
+   */
+  verifyPhone: (payload: VotePhoneVerifyRequest, config?: AxiosRequestConfig) =>
+    axiosClient.post<VotePhoneVerifyResponse>(VOTE_ENDPOINTS.VERIFY_PHONE, payload, config).then(res => res.data),
 
   /**
    * Get ballot data for current voting period

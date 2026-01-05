@@ -8,6 +8,7 @@ import com.mukono.voting.repository.election.*;
 import com.mukono.voting.repository.people.PersonRepository;
 import com.mukono.voting.service.election.ElectionVoterEligibilityService;
 import com.mukono.voting.service.election.EligibilityDecision;
+import com.mukono.voting.service.election.VotingCodeService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ public class VoteSubmissionService {
     private final VoteRecordRepository voteRecordRepository;
     private final VoteSelectionRepository voteSelectionRepository;
     private final ElectionVoterEligibilityService eligibilityService;
+    private final VotingCodeService votingCodeService;
 
     public VoteSubmissionService(VotingPeriodRepository votingPeriodRepository,
                                  VotingPeriodPositionRepository votingPeriodPositionRepository,
@@ -38,7 +40,8 @@ public class VoteSubmissionService {
                                  PersonRepository personRepository,
                                  VoteRecordRepository voteRecordRepository,
                                  VoteSelectionRepository voteSelectionRepository,
-                                 ElectionVoterEligibilityService eligibilityService) {
+                                 ElectionVoterEligibilityService eligibilityService,
+                                 VotingCodeService votingCodeService) {
         this.votingPeriodRepository = votingPeriodRepository;
         this.votingPeriodPositionRepository = votingPeriodPositionRepository;
         this.electionPositionRepository = electionPositionRepository;
@@ -47,10 +50,12 @@ public class VoteSubmissionService {
         this.voteRecordRepository = voteRecordRepository;
         this.voteSelectionRepository = voteSelectionRepository;
         this.eligibilityService = eligibilityService;
+        this.votingCodeService = votingCodeService;
     }
 
     @Transactional
-    public VoteSubmitResponse submitVotes(Long personId, Long electionId, Long votingPeriodId, VoteSubmitRequest request) {
+    public VoteSubmitResponse submitVotes(Long personId, Long electionId, Long votingPeriodId, Long codeId,
+                                          VoteSubmitRequest request) {
         // 0) Validate request: duplicates in candidateIds per position
         validateRequest(request);
 
@@ -174,6 +179,11 @@ public class VoteSubmissionService {
         } catch (DataIntegrityViolationException ex) {
             // Unique constraint may have been hit due to race conditions
             throw new IllegalArgumentException("Already voted for one or more positions in this period");
+        }
+
+        // 7.5) Mark voting code as used after successful submission
+        if (codeId != null) {
+            votingCodeService.markCodeUsedSafeById(codeId);
         }
 
         // 8) Build response

@@ -175,9 +175,11 @@ const CandidatesTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       {candidates.length === 0 ? (
         <EmptyState title="No candidates" description="No candidates available." action={isAdmin ? <Button onClick={() => setShowAdd(true)}>Add Candidate</Button> : undefined} />
       ) : (
-        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', lg: 'repeat(auto-fit, minmax(420px, 1fr))' } }}>
-          {groupedCandidates.map(([fellowship, items]) => (
-            <Paper key={fellowship} sx={{ border: '1px solid rgba(88, 28, 135, 0.1)', borderRadius: 1.5, p: 1.5 }}>
+        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' } }}>
+          {groupedCandidates.map(([fellowship, items], index) => {
+            const isLastOdd = groupedCandidates.length % 2 === 1 && index === groupedCandidates.length - 1
+            return (
+            <Paper key={fellowship} sx={{ border: '1px solid rgba(88, 28, 135, 0.1)', borderRadius: 1.5, p: 1.5, gridColumn: isLastOdd ? '1 / -1' : 'auto' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Box>
                   <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{fellowship}</Typography>
@@ -221,7 +223,8 @@ const CandidatesTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                 </Table>
               </TableContainer>
             </Paper>
-          ))}
+            )
+          })}
         </Box>
       )}
 

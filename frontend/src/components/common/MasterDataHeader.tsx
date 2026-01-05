@@ -21,11 +21,12 @@ import AddIcon from '@mui/icons-material/Add'
 interface FilterOption {
   id: string
   label: string
-  value: string | number | null
+  value: any
   options?: Array<{ id: string | number; name: string }>
-  onChange: (value: string | number | null) => void
+  onChange: (value: any) => void
   disabled?: boolean
   placeholder?: string
+  multiple?: boolean
 }
 
 interface MasterDataHeaderProps {
@@ -157,10 +158,24 @@ export const MasterDataHeader: React.FC<MasterDataHeaderProps> = ({
                 <FormControl key={filter.id} size="small">
                   <InputLabel sx={{ fontSize: '0.875rem' }}>{filter.label}</InputLabel>
                   <Select
-                    value={filter.value ?? ''}
+                    multiple={Boolean(filter.multiple)}
+                    value={filter.value ?? (filter.multiple ? [] : '')}
                     label={filter.label}
-                    onChange={(e) => filter.onChange(e.target.value === '' ? null : e.target.value)}
+                    onChange={(e) => {
+                      const next = e.target.value as any
+                      filter.onChange(next === '' ? null : next)
+                    }}
                     disabled={filter.disabled}
+                    renderValue={
+                      filter.multiple
+                        ? (selected) => {
+                            const ids = Array.isArray(selected) ? selected : []
+                            return ids
+                              .map((id) => filter.options?.find((opt) => opt.id === id)?.name ?? String(id))
+                              .join(', ')
+                          }
+                        : undefined
+                    }
                     sx={{
                       borderRadius: 1,
                       fontSize: '0.875rem',

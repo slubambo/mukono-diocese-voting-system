@@ -4,11 +4,6 @@ import {
   Autocomplete,
   Box,
   Button,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Paper,
   Tab,
   Tabs,
@@ -16,7 +11,6 @@ import {
   Typography,
 } from '@mui/material'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
-import VisibilityIcon from '@mui/icons-material/Visibility'
 import AppShell from '../components/layout/AppShell'
 import PageLayout from '../components/layout/PageLayout'
 import { electionApi } from '../api/election.api'
@@ -24,8 +18,7 @@ import { useToast } from '../components/feedback/ToastProvider'
 import EligibilityTab from '../components/eligibility/EligibilityTab'
 import UnifiedEligibleVotersCodesTab from '../components/eligibility/UnifiedEligibleVotersCodesTab.tsx'
 import StatusChip from '../components/common/StatusChip'
-import LoadingState from '../components/common/LoadingState'
-import type { BallotPreviewResponse, Election, VotingPeriod } from '../types/election'
+import type { Election, VotingPeriod } from '../types/election'
 import { useAuth } from '../context/AuthContext'
 
 const EligibilityCodesPage: React.FC = () => {
@@ -43,9 +36,6 @@ const EligibilityCodesPage: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<VotingPeriod | null>(null)
   const [loadingElections, setLoadingElections] = useState(true)
   const [loadingPeriods, setLoadingPeriods] = useState(false)
-  const [previewOpen, setPreviewOpen] = useState(false)
-  const [preview, setPreview] = useState<BallotPreviewResponse | null>(null)
-  const [previewLoading, setPreviewLoading] = useState(false)
 
   const loadElections = async () => {
     setLoadingElections(true)
@@ -195,21 +185,6 @@ const EligibilityCodesPage: React.FC = () => {
     navigate(`${base}/elections/${selectedElection.id}`)
   }
 
-  const openPreview = async () => {
-    if (!selectedElection?.id) return
-    setPreviewOpen(true)
-    setPreviewLoading(true)
-    try {
-      const res = await electionApi.ballotPreview(selectedElection.id, selectedPeriod?.id ? { votingPeriodId: Number(selectedPeriod.id) } : {})
-      setPreview(res)
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to load ballot preview')
-      setPreview(null)
-    } finally {
-      setPreviewLoading(false)
-    }
-  }
-
   const selectionReady = Boolean(selectedElection)
   const votingPeriodReady = Boolean(selectedElection && selectedPeriod)
 
@@ -255,15 +230,6 @@ const EligibilityCodesPage: React.FC = () => {
               variant="outlined"
             >
               Election Detail
-            </Button>
-            <Button
-              size="small"
-              startIcon={<VisibilityIcon />}
-              onClick={openPreview}
-              disabled={!selectedElection}
-              variant="outlined"
-            >
-              Ballot Preview
             </Button>
           </Box>
         </Paper>
@@ -320,42 +286,6 @@ const EligibilityCodesPage: React.FC = () => {
         )}
       </PageLayout>
 
-      {/* Ballot Preview Dialog */}
-      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle>Ballot Preview</DialogTitle>
-        <DialogContent>
-          {previewLoading ? (
-            <LoadingState />
-          ) : !preview ? (
-            <Typography>No preview available.</Typography>
-          ) : (
-            <Box sx={{ display: 'grid', gap: 2 }}>
-              {(preview.positions || []).map((pos) => (
-                <Paper key={String(pos.electionPositionId)} sx={{ p: 2, bgcolor: 'background.default' }}>
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
-                    <Typography variant="h6">{pos.positionTitle || 'Position'}</Typography>
-                    {pos.fellowshipName && <Chip size="small" label={pos.fellowshipName} />}
-                    {pos.scope && <Chip size="small" label={pos.scope} />}
-                    {typeof pos.seats === 'number' && <Chip size="small" label={`${pos.seats} seat${pos.seats === 1 ? '' : 's'}`} />}
-                  </Box>
-                  {(pos.candidates || []).length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">No candidates.</Typography>
-                  ) : (
-                    (pos.candidates || []).map((c) => (
-                      <Typography key={String(c.candidateId)} variant="body2">
-                        • {c.fullName}
-                      </Typography>
-                    ))
-                  )}
-                </Paper>
-              ))}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPreviewOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
     </AppShell>
   )
 }

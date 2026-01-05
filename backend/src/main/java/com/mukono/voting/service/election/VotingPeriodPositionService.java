@@ -25,16 +25,19 @@ public class VotingPeriodPositionService {
     private final VotingPeriodPositionRepository votingPeriodPositionRepository;
     private final VotingPeriodRepository votingPeriodRepository;
     private final ElectionPositionRepository electionPositionRepository;
+    private final com.mukono.voting.repository.election.VoteRecordRepository voteRecordRepository;
     private final EntityManager entityManager;
 
     public VotingPeriodPositionService(
             VotingPeriodPositionRepository votingPeriodPositionRepository,
             VotingPeriodRepository votingPeriodRepository,
             ElectionPositionRepository electionPositionRepository,
+            com.mukono.voting.repository.election.VoteRecordRepository voteRecordRepository,
             EntityManager entityManager) {
         this.votingPeriodPositionRepository = votingPeriodPositionRepository;
         this.votingPeriodRepository = votingPeriodRepository;
         this.electionPositionRepository = electionPositionRepository;
+        this.voteRecordRepository = voteRecordRepository;
         this.entityManager = entityManager;
     }
 
@@ -57,11 +60,12 @@ public class VotingPeriodPositionService {
                     "Voting period does not belong to election " + electionId);
         }
 
-        // Only allow modifications when period is SCHEDULED
-        if (votingPeriod.getStatus() != VotingPeriodStatus.SCHEDULED) {
+        // Only allow modifications when period is SCHEDULED or OPEN
+        if (votingPeriod.getStatus() == VotingPeriodStatus.CLOSED ||
+            votingPeriod.getStatus() == VotingPeriodStatus.CANCELLED) {
             throw new IllegalArgumentException(
                     "Cannot modify position assignments for a voting period that is " + 
-                    votingPeriod.getStatus() + ". Only SCHEDULED periods can be modified.");
+                    votingPeriod.getStatus() + ".");
         }
 
         // Validate and deduplicate input
@@ -100,6 +104,23 @@ public class VotingPeriodPositionService {
                 throw new IllegalArgumentException(
                         "Election position " + electionPosition.getId() + 
                         " does not belong to election " + electionId);
+            }
+        }
+
+        // If period is OPEN, prevent removing positions that already have votes
+        if (votingPeriod.getStatus() == VotingPeriodStatus.OPEN) {
+            List<Long> currentPositionIds = votingPeriodPositionRepository.findElectionPositionIdsByVotingPeriod(
+                    electionId, votingPeriodId);
+            Set<Long> requested = new HashSet<>(uniquePositionIds);
+            for (Long existingId : currentPositionIds) {
+                if (!requested.contains(existingId)) {
+                    long votes = voteRecordRepository.countByElectionIdAndVotingPeriodIdAndPositionId(
+                            electionId, votingPeriodId, existingId);
+                    if (votes > 0) {
+                        throw new IllegalArgumentException(
+                                "Cannot remove position " + existingId + " because votes have already been cast.");
+                    }
+                }
             }
         }
 

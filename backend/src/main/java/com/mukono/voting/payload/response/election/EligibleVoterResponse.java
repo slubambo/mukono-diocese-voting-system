@@ -32,6 +32,10 @@ public class EligibleVoterResponse {
     private List<VotingCodeHistory> codeHistory; // full history of codes for this voter
     private String positionAndLocation; // e.g., "Chairperson (Misindye Church)"
     private List<PositionSummary> positionsSummary; // all positions/fellowships for this voter on the day
+    // Individual position attributes for quick access
+    private String position; // e.g., "Chairperson"
+    private String location; // e.g., "Misindye Church" or "Namirembe Archdeaconry"
+    private String fellowship; // e.g., "Men's Fellowship"
 
     public EligibleVoterResponse(Long personId, String fullName, String phoneNumber, String email,
                                  String fellowshipName, String scope, String scopeName, boolean voted,
@@ -39,7 +43,8 @@ public class EligibleVoterResponse {
                                  LocalDateTime lastCodeIssuedAt, LocalDateTime lastCodeUsedAt,
                                  String code, Boolean isOverride, String overrideReason,
                                  Long leadershipAssignmentId, List<VotingCodeHistory> codeHistory,
-                                 String positionAndLocation, List<PositionSummary> positionsSummary) {
+                                 String positionAndLocation, List<PositionSummary> positionsSummary,
+                                 String position, String location, String fellowship) {
         this.personId = personId;
         this.fullName = fullName;
         this.phoneNumber = phoneNumber;
@@ -59,6 +64,9 @@ public class EligibleVoterResponse {
         this.codeHistory = codeHistory;
         this.positionAndLocation = positionAndLocation;
         this.positionsSummary = positionsSummary;
+        this.position = position;
+        this.location = location;
+        this.fellowship = fellowship;
     }
 
     // Getters
@@ -81,6 +89,9 @@ public class EligibleVoterResponse {
     public List<VotingCodeHistory> getCodeHistory() { return codeHistory; }
     public String getPositionAndLocation() { return positionAndLocation; }
     public List<PositionSummary> getPositionsSummary() { return positionsSummary; }
+    public String getPosition() { return position; }
+    public String getLocation() { return location; }
+    public String getFellowship() { return fellowship; }
 
     // Lightweight history entry for voting codes
     public static class VotingCodeHistory {

@@ -6,6 +6,7 @@ import { PEOPLE_ENDPOINTS } from '../config/endpoints'
 import type {
   PersonResponse,
   CreatePersonRequest,
+  CreatePersonWithAssignmentRequest,
   UpdatePersonRequest,
   PagePersonResponse,
   PeopleListParams,
@@ -26,6 +27,11 @@ export const createPerson = async (payload: CreatePersonRequest): Promise<Person
   return data
 }
 
+export const createPersonWithAssignment = async (payload: CreatePersonWithAssignmentRequest): Promise<PersonResponse> => {
+  const { data } = await axiosInstance.post<PersonResponse>(PEOPLE_ENDPOINTS.CREATE_WITH_ASSIGNMENT, payload)
+  return data
+}
+
 export const updatePerson = async (id: number, payload: UpdatePersonRequest): Promise<PersonResponse> => {
   const { data } = await axiosInstance.put<PersonResponse>(PEOPLE_ENDPOINTS.UPDATE(id), payload)
   return data
@@ -39,6 +45,7 @@ export const peopleApi = {
   list: listPeople,
   get: getPerson,
   create: createPerson,
+  createWithAssignment: createPersonWithAssignment,
   update: updatePerson,
   delete: deletePerson,
 }

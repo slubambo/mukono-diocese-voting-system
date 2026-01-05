@@ -51,6 +51,8 @@ public class ElectionVoterEligibilityService {
     private final ChurchRepository churchRepository;
     private final ElectionPositionRepository electionPositionRepository;
     private final com.mukono.voting.repository.election.VotingPeriodRepository votingPeriodRepository;
+    private final com.mukono.voting.repository.election.VotingPeriodPositionRepository votingPeriodPositionRepository;
+    private final com.mukono.voting.repository.election.ElectionCandidateRepository electionCandidateRepository;
 
     @Autowired
     public ElectionVoterEligibilityService(
@@ -62,7 +64,9 @@ public class ElectionVoterEligibilityService {
             ArchdeaconryRepository archdeaconryRepository,
             ChurchRepository churchRepository,
             ElectionPositionRepository electionPositionRepository,
-            com.mukono.voting.repository.election.VotingPeriodRepository votingPeriodRepository) {
+            com.mukono.voting.repository.election.VotingPeriodRepository votingPeriodRepository,
+            com.mukono.voting.repository.election.VotingPeriodPositionRepository votingPeriodPositionRepository,
+            com.mukono.voting.repository.election.ElectionCandidateRepository electionCandidateRepository) {
         this.electionRepository = electionRepository;
         this.electionVoterRollRepository = electionVoterRollRepository;
         this.personRepository = personRepository;
@@ -72,6 +76,52 @@ public class ElectionVoterEligibilityService {
         this.churchRepository = churchRepository;
         this.electionPositionRepository = electionPositionRepository;
         this.votingPeriodRepository = votingPeriodRepository;
+        this.votingPeriodPositionRepository = votingPeriodPositionRepository;
+        this.electionCandidateRepository = electionCandidateRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.mukono.voting.payload.response.voting.VoterPositionSummary> getVoterPositionSummaries(
+            Long electionId, Long votingPeriodId, Long voterPersonId) {
+        Election election = electionRepository.findById(electionId)
+                .orElseThrow(() -> new IllegalArgumentException("Election not found: " + electionId));
+
+        List<Long> votingPeriodPositionIds =
+                votingPeriodPositionRepository.findElectionPositionIdsByVotingPeriod(electionId, votingPeriodId);
+        if (votingPeriodPositionIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        List<com.mukono.voting.model.election.ElectionPosition> electionPositions =
+                electionPositionRepository.findAllById(votingPeriodPositionIds);
+        if (electionPositions.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        java.util.Set<Long> fellowshipIds = electionPositions.stream()
+                .map(ep -> ep.getFellowship().getId())
+                .collect(java.util.stream.Collectors.toSet());
+
+        if (fellowshipIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        PositionScope eligibleScope = lowerScopeForElection(election.getScope());
+
+        Long dioceseId = election.getDiocese() != null ? election.getDiocese().getId() : null;
+        Long archdeaconryId = election.getArchdeaconry() != null ? election.getArchdeaconry().getId() : null;
+        Long churchId = election.getChurch() != null ? election.getChurch().getId() : null;
+
+        return leadershipAssignmentRepository.findVoterPositionSummaries(
+                voterPersonId,
+                new java.util.ArrayList<>(fellowshipIds),
+                eligibleScope,
+                RecordStatus.ACTIVE,
+                election.getScope().name(),
+                dioceseId,
+                archdeaconryId,
+                churchId
+        );
     }
 
     /**
@@ -126,12 +176,28 @@ public class ElectionVoterEligibilityService {
             }
         }
 
-        // === TIER 2: FELLOWSHIP MEMBERSHIP CHECK ===
-        // Get all fellowships from election positions (modern election structure)
-        // Election.fellowship field is deprecated; fellowships are derived from positions
-        List<com.mukono.voting.model.election.ElectionPosition> electionPositions = 
-                electionPositionRepository.findByElectionId(electionId);
-        
+        // === TIER 2: POSITIONS + CANDIDATE SHORT-CIRCUIT ===
+        // Use positions assigned to this voting period.
+        List<Long> votingPeriodPositionIds =
+                votingPeriodPositionRepository.findElectionPositionIdsByVotingPeriod(electionId, votingPeriodId);
+
+        if (votingPeriodPositionIds.isEmpty()) {
+            return new EligibilityDecision(false, "NO_POSITIONS",
+                    "Voting period has no assigned positions");
+        }
+
+        if (electionCandidateRepository.existsByElectionIdAndElectionPositionIdInAndPersonId(
+                electionId, votingPeriodPositionIds, voterPersonId)) {
+            return new EligibilityDecision(true, "CANDIDATE",
+                    "Voter is a candidate for this voting period");
+        }
+
+        // === TIER 3: FELLOWSHIP MEMBERSHIP CHECK ===
+        // Get all fellowships from positions assigned to this voting period.
+        // Election.fellowship field is deprecated; fellowships are derived from positions.
+        List<com.mukono.voting.model.election.ElectionPosition> electionPositions =
+                electionPositionRepository.findAllById(votingPeriodPositionIds);
+
         if (electionPositions.isEmpty()) {
             return new EligibilityDecision(false, "NO_POSITIONS",
                     "Election has no assigned positions");
@@ -145,12 +211,13 @@ public class ElectionVoterEligibilityService {
         // Check if voter is eligible for ANY of the fellowships
         List<LeadershipAssignment> voterFellowshipAssignments = new java.util.ArrayList<>();
         
+        PositionScope eligibleScope = lowerScopeForElection(election.getScope());
         for (Long fellowshipId : fellowshipIds) {
             List<LeadershipAssignment> assignments = leadershipAssignmentRepository
                     .findByPersonIdAndFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndStatus(
                             voterPersonId,
                             fellowshipId,
-                            election.getScope(),
+                            eligibleScope,
                             RecordStatus.ACTIVE);
             
             if (!assignments.isEmpty()) {
@@ -163,7 +230,7 @@ public class ElectionVoterEligibilityService {
                     "Not a member of any fellowship required by this election");
         }
 
-        // === TIER 3: SCOPE-TARGET MEMBERSHIP CHECK ===
+        // === TIER 4: SCOPE-TARGET MEMBERSHIP CHECK ===
         // Verify voter is eligible within the election's scope
         // PERSON-SPECIFIC: Check this voter's assignment matches the scope target
         return checkScopeEligibility(election, voter, voterFellowshipAssignments, voterPersonId);
@@ -189,7 +256,7 @@ public class ElectionVoterEligibilityService {
         // Find an assignment that matches the election's scope target
         // Since voterFellowshipAssignments are PERSON-SPECIFIC, we just check if any match the target
         boolean scopeEligible = voterFellowshipAssignments.stream()
-                .anyMatch(la -> matchesScopeTarget(la, election, scope));
+                .anyMatch(la -> matchesLowerScopeTarget(la, election, scope));
 
         if (!scopeEligible) {
             return buildScopeFailureDecision(election, scope);
@@ -206,25 +273,40 @@ public class ElectionVoterEligibilityService {
      * @param scope the election scope
      * @return true if assignment targets the same scope as election
      */
-    private boolean matchesScopeTarget(LeadershipAssignment assignment, Election election, PositionScope scope) {
+    private boolean matchesLowerScopeTarget(LeadershipAssignment assignment, Election election, PositionScope scope) {
         switch (scope) {
             case DIOCESE:
-                return election.getDiocese() != null &&
-                       assignment.getDiocese() != null &&
-                       assignment.getDiocese().getId().equals(election.getDiocese().getId());
+                return election.getDiocese() != null
+                        && assignment.getArchdeaconry() != null
+                        && assignment.getArchdeaconry().getDiocese() != null
+                        && assignment.getArchdeaconry().getDiocese().getId().equals(election.getDiocese().getId());
 
             case ARCHDEACONRY:
-                return election.getArchdeaconry() != null &&
-                       assignment.getArchdeaconry() != null &&
-                       assignment.getArchdeaconry().getId().equals(election.getArchdeaconry().getId());
+                return election.getArchdeaconry() != null
+                        && assignment.getChurch() != null
+                        && assignment.getChurch().getArchdeaconry() != null
+                        && assignment.getChurch().getArchdeaconry().getId().equals(election.getArchdeaconry().getId());
 
             case CHURCH:
-                return election.getChurch() != null &&
-                       assignment.getChurch() != null &&
-                       assignment.getChurch().getId().equals(election.getChurch().getId());
+                return election.getChurch() != null
+                        && assignment.getChurch() != null
+                        && assignment.getChurch().getId().equals(election.getChurch().getId());
 
             default:
                 return false;
+        }
+    }
+
+    private PositionScope lowerScopeForElection(PositionScope scope) {
+        switch (scope) {
+            case DIOCESE:
+                return PositionScope.ARCHDEACONRY;
+            case ARCHDEACONRY:
+                return PositionScope.CHURCH;
+            case CHURCH:
+                return PositionScope.CHURCH;
+            default:
+                return scope;
         }
     }
 

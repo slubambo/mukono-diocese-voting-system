@@ -4,6 +4,8 @@ import { Box, Container, Typography, useTheme, AppBar, Toolbar } from '@mui/mate
 interface VoterLayoutProps {
   children: React.ReactNode
   showHeader?: boolean
+  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  contentAlign?: 'center' | 'start'
 }
 
 /**
@@ -12,7 +14,12 @@ interface VoterLayoutProps {
  * - Centered card on desktop, full-width on mobile
  * - Simple header and footer
  */
-const VoterLayout: React.FC<VoterLayoutProps> = ({ children, showHeader = true }) => {
+const VoterLayout: React.FC<VoterLayoutProps> = ({
+  children,
+  showHeader = true,
+  maxWidth = 'sm',
+  contentAlign = 'center',
+}) => {
   const theme = useTheme()
 
   return (
@@ -90,7 +97,7 @@ const VoterLayout: React.FC<VoterLayoutProps> = ({ children, showHeader = true }
         sx={{
           flex: 1,
           display: 'flex',
-          alignItems: 'center',
+          alignItems: contentAlign === 'center' ? 'center' : 'flex-start',
           justifyContent: 'center',
           minHeight: '100vh',
           p: { xs: 2, sm: 3, md: 4 },
@@ -100,7 +107,7 @@ const VoterLayout: React.FC<VoterLayoutProps> = ({ children, showHeader = true }
         }}
       >
         <Container
-          maxWidth="sm"
+          maxWidth={maxWidth}
           sx={{
             display: 'flex',
             flexDirection: 'column',

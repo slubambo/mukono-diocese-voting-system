@@ -25,6 +25,7 @@ import {
   Typography,
   Box,
   Autocomplete,
+  Chip,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
@@ -37,7 +38,6 @@ import { positionTitleApi } from '../../api/positionTitle.api'
 import type { FellowshipPosition, CreateFellowshipPositionRequest, PositionScope, EntityStatus } from '../../types/leadership'
 import type { Fellowship } from '../../types/organization'
 import type { PositionTitle } from '../../types/leadership'
-import StatusChip from '../../components/common/StatusChip'
 import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
@@ -62,19 +62,22 @@ export const PositionPage: React.FC = () => {
   const [availableScopes, setAvailableScopes] = useState<PositionScope[]>([])
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 })
   const [sort, setSort] = useState('title.name,asc')
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['fellowship', 'title', 'scope', 'seats', 'assigned', 'available'])
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selected, setSelected] = useState<FellowshipPosition | null>(null)
-  const [formData, setFormData] = useState<CreateFellowshipPositionRequest & { status?: EntityStatus }>({
+  const [formData, setFormData] = useState<Omit<CreateFellowshipPositionRequest, 'scope'> & { scope: PositionScope | PositionScope[]; status?: EntityStatus }>({
     fellowshipId: 0,
     titleId: 0,
     seats: 1,
-    scope: 'DIOCESE',
+    scope: ['DIOCESE'],
   })
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [toDelete, setToDelete] = useState<FellowshipPosition | null>(null)
   
   const isAdmin = user?.roles.includes('ROLE_ADMIN') || false
+  const isColumnVisible = (key: string) => visibleColumns.includes(key)
 
   const fetchPositions = async () => {
     if (!selectedFellowshipId) {
@@ -90,7 +93,8 @@ export const PositionPage: React.FC = () => {
         scope: selectedScope || undefined,
         page, 
         size: rowsPerPage, 
-        sort: 'id,desc' 
+        sort: 'id,desc',
+        status: statusFilter === 'ALL' ? undefined : (statusFilter as any),
       })
       setPositions(response.content)
       setTotalElements(response.totalElements)
@@ -115,7 +119,7 @@ export const PositionPage: React.FC = () => {
   const loadFellowships = async () => {
     try {
       const response = await fellowshipApi.list({ page: 0, size: 1000 })
-      const activeFellowships = response.content.filter(f => f.status === 'ACTIVE')
+      const activeFellowships = response.content.filter(f => f.status === 'ACTIVE').sort((a, b) => (a.name || '').localeCompare(b.name || ''))
       setFellowships(activeFellowships)
       // Select first fellowship by default
       if (activeFellowships.length > 0 && !selectedFellowshipId) {
@@ -129,7 +133,10 @@ export const PositionPage: React.FC = () => {
   const loadTitles = async () => {
     try {
       const response = await positionTitleApi.list({ page: 0, size: 1000 })
-      setTitles(response.content.filter(t => t.status === 'ACTIVE'))
+      const sorted = response.content
+        .filter(t => t.status === 'ACTIVE')
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+      setTitles(sorted)
     } catch (error) {
       console.error('Failed to load position titles')
     }
@@ -137,7 +144,7 @@ export const PositionPage: React.FC = () => {
 
   useEffect(() => {
     fetchPositions()
-  }, [page, rowsPerPage, selectedFellowshipId, selectedScope])
+  }, [page, rowsPerPage, selectedFellowshipId, selectedScope, statusFilter])
 
   useEffect(() => {
     setAvailableScopes([])
@@ -150,31 +157,50 @@ export const PositionPage: React.FC = () => {
   }, [])
 
   const handleSave = async () => {
-    if (!formData.fellowshipId || !formData.titleId || !formData.seats || formData.seats < 1) {
+    const scopeList = Array.isArray(formData.scope) ? formData.scope : [formData.scope]
+    if (!formData.fellowshipId || !formData.titleId || !formData.seats || formData.seats < 1 || scopeList.length === 0) {
       showToast('All fields are required', 'error')
       return
     }
 
     try {
       if (dialogMode === 'create') {
-        await fellowshipPositionApi.create({
-          fellowshipId: formData.fellowshipId,
-          titleId: formData.titleId,
-          seats: formData.seats,
-          scope: formData.scope,
-        })
-        showToast('Position created', 'success')
+        const errors: string[] = []
+        let successCount = 0
+        for (const scope of scopeList) {
+          try {
+            await fellowshipPositionApi.create({
+              fellowshipId: formData.fellowshipId,
+              titleId: formData.titleId,
+              seats: formData.seats,
+              scope,
+            })
+            successCount += 1
+          } catch (error: any) {
+            errors.push(`${scope}: ${error?.response?.data?.message || 'Failed to create'}`)
+          }
+        }
+        if (successCount > 0) {
+          showToast(`Created ${successCount} position${successCount === 1 ? '' : 's'}`, 'success')
+          setDialogMode(null)
+          fetchPositions()
+        }
+        if (errors.length > 0) {
+          showToast(`Some positions failed: ${errors.join(' · ')}`, 'error')
+        }
+        return
       } else if (selected) {
         await fellowshipPositionApi.update(selected.id, {
           titleId: formData.titleId,
           seats: formData.seats,
-          scope: formData.scope,
+          scope: Array.isArray(formData.scope) ? formData.scope[0] : formData.scope,
           status: formData.status,
         })
         showToast('Position updated', 'success')
+        setDialogMode(null)
+        fetchPositions()
+        return
       }
-      setDialogMode(null)
-      fetchPositions()
     } catch (error: any) {
       showToast(error.response?.data?.message || 'Failed to save', 'error')
     }
@@ -212,7 +238,8 @@ export const PositionPage: React.FC = () => {
 
   const displayPositions = useMemo(() => {
     const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
-    return [...positions].sort((a, b) => {
+    const filtered = statusFilter === 'ALL' ? positions : positions.filter((p) => p.status === statusFilter)
+    return [...filtered].sort((a, b) => {
       const statusCompare = byStatus(a.status) - byStatus(b.status)
       if (statusCompare !== 0) return statusCompare
 
@@ -233,7 +260,7 @@ export const PositionPage: React.FC = () => {
           return 0
       }
     })
-  }, [positions, sort])
+  }, [positions, sort, statusFilter])
 
   // FellowshipPosition has nested fellowship and title objects
   const getFellowshipName = (position: FellowshipPosition) => position.fellowship.name
@@ -246,7 +273,7 @@ export const PositionPage: React.FC = () => {
         <MasterDataHeader
           title="Positions"
           subtitle="Manage fellowship positions"
-          onAddClick={isAdmin && selectedFellowshipId ? () => { setFormData({ fellowshipId: selectedFellowshipId || 0, titleId: 0, seats: 1, scope: 'DIOCESE' }); setDialogMode('create'); } : undefined}
+          onAddClick={isAdmin && selectedFellowshipId ? () => { setFormData({ fellowshipId: selectedFellowshipId || 0, titleId: 0, seats: 1, scope: ['DIOCESE'] }); setDialogMode('create'); } : undefined}
           addButtonLabel="Add Position"
           isAdmin={isAdmin}
           stats={[
@@ -289,7 +316,34 @@ export const PositionPage: React.FC = () => {
                 setPage(0)
               },
               placeholder: 'Sort by',
-            }
+            },
+            {
+              id: 'columns',
+              label: 'Columns',
+              value: visibleColumns,
+              options: [
+                { id: 'fellowship', name: 'Fellowship' },
+                { id: 'title', name: 'Position Title' },
+                { id: 'scope', name: 'Scope' },
+                { id: 'seats', name: 'Seats' },
+                { id: 'assigned', name: 'Assigned' },
+                { id: 'available', name: 'Available' },
+              ],
+              onChange: (value) => setVisibleColumns(Array.isArray(value) ? value : []),
+              multiple: true,
+            },
+            {
+              id: 'status',
+              label: 'Status',
+              value: statusFilter,
+              options: [
+                { id: 'ACTIVE', name: 'Active' },
+                { id: 'INACTIVE', name: 'Inactive' },
+                { id: 'ALL', name: 'All' },
+              ],
+              onChange: (value) => { setStatusFilter((value as any) || 'ALL'); setPage(0) },
+              placeholder: 'Status',
+            },
           ]}
         />
 
@@ -299,7 +353,7 @@ export const PositionPage: React.FC = () => {
         ) : !selectedFellowshipId ? (
           <EmptyState title="Select a Fellowship" description="Choose a fellowship to view its positions." />
         ) : displayPositions.length === 0 ? (
-          <EmptyState title="No positions" description={isAdmin ? 'Create your first position for this fellowship.' : 'No positions exist for this fellowship.'} action={isAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormData({ fellowshipId: selectedFellowshipId || 0, titleId: 0, seats: 1, scope: 'DIOCESE' }); setDialogMode('create'); }}>Add Position</Button>} />
+          <EmptyState title="No positions" description={isAdmin ? 'Create your first position for this fellowship.' : 'No positions exist for this fellowship.'} action={isAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormData({ fellowshipId: selectedFellowshipId || 0, titleId: 0, seats: 1, scope: ['DIOCESE'] }); setDialogMode('create'); }}>Add Position</Button>} />
         ) : (
           <>
             <TableContainer>
@@ -323,26 +377,24 @@ export const PositionPage: React.FC = () => {
               >
                 <TableHead>
                   <TableRow>
-                    <TableCell>Fellowship</TableCell>
-                    <TableCell>Position Title</TableCell>
-                    <TableCell>Scope</TableCell>
-                    <TableCell>Seats</TableCell>
-                    <TableCell align="right">Assigned</TableCell>
-                    <TableCell align="right">Available</TableCell>
-                    <TableCell>Status</TableCell>
+                    {isColumnVisible('fellowship') && <TableCell>Fellowship</TableCell>}
+                    {isColumnVisible('title') && <TableCell>Position Title</TableCell>}
+                    {isColumnVisible('scope') && <TableCell>Scope</TableCell>}
+                    {isColumnVisible('seats') && <TableCell>Seats</TableCell>}
+                    {isColumnVisible('assigned') && <TableCell align="right">Assigned</TableCell>}
+                    {isColumnVisible('available') && <TableCell align="right">Available</TableCell>}
                     {isAdmin && <TableCell align="right">Actions</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {displayPositions.map((p) => (
                     <TableRow key={p.id} hover>
-                      <TableCell><Typography variant="body2">{getFellowshipName(p)}</Typography></TableCell>
-                      <TableCell><Typography variant="body2" fontWeight={500}>{getTitleName(p)}</Typography></TableCell>
-                      <TableCell><Typography variant="caption" color="text.secondary">{p.scope}</Typography></TableCell>
-                      <TableCell>{p.seats}</TableCell>
-                      <TableCell align="right">{renderCount(p.currentAssignmentsCount)}</TableCell>
-                      <TableCell align="right">{renderCount(p.availableSeats)}</TableCell>
-                      <TableCell><StatusChip status={p.status} /></TableCell>
+                      {isColumnVisible('fellowship') && <TableCell><Typography variant="body2">{getFellowshipName(p)}</Typography></TableCell>}
+                      {isColumnVisible('title') && <TableCell><Typography variant="body2" fontWeight={500}>{getTitleName(p)}</Typography></TableCell>}
+                      {isColumnVisible('scope') && <TableCell><Typography variant="caption" color="text.secondary">{p.scope}</Typography></TableCell>}
+                      {isColumnVisible('seats') && <TableCell>{p.seats}</TableCell>}
+                      {isColumnVisible('assigned') && <TableCell align="right">{renderCount(p.currentAssignmentsCount)}</TableCell>}
+                      {isColumnVisible('available') && <TableCell align="right">{renderCount(p.availableSeats)}</TableCell>}
                       {isAdmin && (
                         <TableCell align="right">
                           <IconButton size="small" onClick={() => { setFormData({ fellowshipId: p.fellowship.id, titleId: p.title.id, seats: p.seats, scope: p.scope, status: p.status }); setSelected(p); setDialogMode('edit'); }} color="primary"><EditIcon fontSize="small" /></IconButton>
@@ -377,14 +429,50 @@ export const PositionPage: React.FC = () => {
               onChange={(_, t) => setFormData({ ...formData, titleId: t?.id || 0 })}
               renderInput={(params) => <TextField {...params} label="Position Title" required />}
             />
-            <FormControl fullWidth required>
-              <InputLabel>Scope</InputLabel>
-              <Select value={formData.scope} label="Scope" onChange={(e) => setFormData({ ...formData, scope: e.target.value as PositionScope })}>
-                <MenuItem value="DIOCESE">Diocese</MenuItem>
-                <MenuItem value="ARCHDEACONRY">Archdeaconry</MenuItem>
-                <MenuItem value="CHURCH">Church</MenuItem>
-              </Select>
-            </FormControl>
+            {dialogMode === 'create' ? (
+              <FormControl fullWidth required>
+                <InputLabel>Scope</InputLabel>
+                <Select
+                  multiple
+                  value={Array.isArray(formData.scope) ? formData.scope : [formData.scope]}
+                  label="Scope"
+                  onChange={(e) => setFormData({ ...formData, scope: e.target.value as PositionScope[] })}
+                  renderValue={(selected) => {
+                    const values = selected as PositionScope[]
+                    const shown = values.slice(0, 2)
+                    const extra = values.length - shown.length
+                    return (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {shown.map((value) => (
+                          <Chip
+                            key={value}
+                            label={value}
+                            onDelete={() => {
+                              const next = values.filter((v) => v !== value)
+                              setFormData({ ...formData, scope: next })
+                            }}
+                          />
+                        ))}
+                        {extra > 0 && <Chip label={`+${extra} more`} />}
+                      </Box>
+                    )
+                  }}
+                >
+                  <MenuItem value="DIOCESE">DIOCESE</MenuItem>
+                  <MenuItem value="ARCHDEACONRY">ARCHDEACONRY</MenuItem>
+                  <MenuItem value="CHURCH">CHURCH</MenuItem>
+                </Select>
+              </FormControl>
+            ) : (
+              <FormControl fullWidth required>
+                <InputLabel>Scope</InputLabel>
+                <Select value={Array.isArray(formData.scope) ? formData.scope[0] : formData.scope} label="Scope" onChange={(e) => setFormData({ ...formData, scope: e.target.value as PositionScope })}>
+                  <MenuItem value="DIOCESE">DIOCESE</MenuItem>
+                  <MenuItem value="ARCHDEACONRY">ARCHDEACONRY</MenuItem>
+                  <MenuItem value="CHURCH">CHURCH</MenuItem>
+                </Select>
+              </FormControl>
+            )}
             <TextField label="Seats" type="number" value={formData.seats} onChange={(e) => setFormData({ ...formData, seats: parseInt(e.target.value) || 1 })} inputProps={{ min: 1 }} required fullWidth />
             {dialogMode === 'edit' && (
               <FormControl fullWidth>

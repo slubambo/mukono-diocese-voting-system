@@ -29,7 +29,7 @@ public class VoteSubmissionController {
 			Authentication authentication) {
 		VoterPrincipal voter = (VoterPrincipal) authentication.getPrincipal();
 		VoteSubmitResponse resp = voteSubmissionService.submitVotes(voter.getPersonId(), voter.getElectionId(),
-				voter.getVotingPeriodId(), request);
+				voter.getVotingPeriodId(), voter.getCodeId(), request);
 		return ResponseEntity.status(201).body(resp);
 	}
 }

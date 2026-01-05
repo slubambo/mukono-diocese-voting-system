@@ -114,10 +114,9 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
 
   const formatLocalDateTime = (value?: string | null) => {
     if (!value) return ''
-    const dt = new Date(value)
-    if (Number.isNaN(dt.getTime())) return ''
-    const pad = (num: number) => String(num).padStart(2, '0')
-    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+    const dt = dayjs(value)
+    if (!dt.isValid()) return ''
+    return dt.format('YYYY-MM-DDTHH:mm')
   }
 
   useEffect(() => {
@@ -192,23 +191,23 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
       setFieldErrors(nextErrors)
       return
     }
-    const toIsoOrUndefined = (value?: string) => {
+    const toLocalDateTime = (value?: string) => {
       if (!value?.trim()) return undefined
-      const dt = new Date(value)
-      if (Number.isNaN(dt.getTime())) return undefined
-      return dt.toISOString()
+      const dt = dayjs(value)
+      if (!dt.isValid()) return undefined
+      return dt.format('YYYY-MM-DDTHH:mm:ss')
     }
-    const startIso = toIsoOrUndefined(startTime)
-    const endIso = toIsoOrUndefined(endTime)
-    if (startIso && endIso && new Date(endIso) <= new Date(startIso)) {
+    const startLocal = toLocalDateTime(startTime)
+    const endLocal = toLocalDateTime(endTime)
+    if (startLocal && endLocal && (dayjs(endLocal).isBefore(dayjs(startLocal)) || dayjs(endLocal).isSame(dayjs(startLocal)))) {
       toast.error('Voting period end time must be after start time')
       return
     }
-    if (electionWindow.start && startIso && new Date(startIso) < new Date(electionWindow.start)) {
+    if (electionWindow.start && startLocal && dayjs(startLocal).isBefore(dayjs(electionWindow.start))) {
       toast.error('Voting period start must be within the election window')
       return
     }
-    if (electionWindow.end && endIso && new Date(endIso) > new Date(electionWindow.end)) {
+    if (electionWindow.end && endLocal && dayjs(endLocal).isAfter(dayjs(electionWindow.end))) {
       toast.error('Voting period end must be within the election window')
       return
     }
@@ -216,8 +215,8 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
       setSaving(true)
       const payload = {
         name,
-        startTime: startIso,
-        endTime: endIso,
+        startTime: startLocal,
+        endTime: endLocal,
       }
       let targetId = editing?.id
       if (editing?.id) {
@@ -408,7 +407,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
                 label="Start Time"
                 value={startTime ? dayjs(startTime) : null}
                 onChange={(v) => {
-                  setStartTime(v ? v.toISOString() : '')
+                  setStartTime(v ? v.format('YYYY-MM-DDTHH:mm') : '')
                   setFieldErrors((prev) => ({ ...prev, startTime: undefined }))
                 }}
                 minDateTime={electionStart ? dayjs(electionStart) : undefined}
@@ -419,7 +418,7 @@ const VotingPeriodsTab: React.FC<{ electionId: string; electionStart?: string | 
                 label="End Time"
                 value={endTime ? dayjs(endTime) : null}
                 onChange={(v) => {
-                  setEndTime(v ? v.toISOString() : '')
+                  setEndTime(v ? v.format('YYYY-MM-DDTHH:mm') : '')
                   setFieldErrors((prev) => ({ ...prev, endTime: undefined }))
                 }}
                 minDateTime={startTime ? dayjs(startTime).add(3, 'hours') : (electionStart ? dayjs(electionStart) : undefined)}

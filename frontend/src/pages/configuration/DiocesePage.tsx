@@ -38,7 +38,6 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/feedback/ToastProvider'
 import { dioceseApi } from '../../api/diocese.api'
 import type { Diocese, CreateDioceseRequest, EntityStatus } from '../../types/organization'
-import StatusChip from '../../components/common/StatusChip'
 import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
@@ -59,6 +58,8 @@ export const DiocesePage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
   const [sort, setSort] = useState('name,asc')
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['code', 'archdeaconries', 'churches', 'created'])
   
   // Dialog state
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
@@ -74,6 +75,7 @@ export const DiocesePage: React.FC = () => {
   // Check if user is admin
   const isAdmin = user?.roles.includes('ROLE_ADMIN') || false
   const isReadOnly = !isAdmin
+  const isColumnVisible = (key: string) => visibleColumns.includes(key)
 
   // Fetch dioceses
   const fetchDioceses = async () => {
@@ -83,6 +85,7 @@ export const DiocesePage: React.FC = () => {
         page,
         size: rowsPerPage,
         sort: 'id,desc',
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
       })
       setDioceses(response.content)
       setTotalElements(response.totalElements)
@@ -96,22 +99,23 @@ export const DiocesePage: React.FC = () => {
 
   useEffect(() => {
     fetchDioceses()
-  }, [page, rowsPerPage])
+  }, [page, rowsPerPage, statusFilter])
 
   // Filter dioceses based on search query
   useEffect(() => {
+    const statusFiltered = statusFilter === 'ALL' ? dioceses : dioceses.filter((d) => d.status === statusFilter)
     if (!searchQuery.trim()) {
-      setFilteredDioceses(dioceses)
+      setFilteredDioceses(statusFiltered)
     } else {
       const query = searchQuery.toLowerCase()
-      const filtered = dioceses.filter(
+      const filtered = statusFiltered.filter(
         (d) =>
           d.name.toLowerCase().includes(query) ||
           d.code?.toLowerCase().includes(query)
       )
       setFilteredDioceses(filtered)
     }
-  }, [searchQuery, dioceses])
+  }, [searchQuery, dioceses, statusFilter])
 
   // Calculate stats
   const stats = {
@@ -282,6 +286,31 @@ export const DiocesePage: React.FC = () => {
               },
               placeholder: 'Sort by',
             },
+            {
+              id: 'columns',
+              label: 'Columns',
+              value: visibleColumns,
+              options: [
+                { id: 'code', name: 'Code' },
+                { id: 'archdeaconries', name: 'Archdeaconries' },
+                { id: 'churches', name: 'Churches' },
+                { id: 'created', name: 'Created' },
+              ],
+              onChange: (value) => setVisibleColumns(Array.isArray(value) ? value : []),
+              multiple: true,
+            },
+            {
+              id: 'status',
+              label: 'Status',
+              value: statusFilter,
+              options: [
+                { id: 'ACTIVE', name: 'Active' },
+                { id: 'INACTIVE', name: 'Inactive' },
+                { id: 'ALL', name: 'All' },
+              ],
+              onChange: (value) => { setStatusFilter((value as any) || 'ALL'); setPage(0) },
+              placeholder: 'Status',
+            },
           ]}
         />
 
@@ -363,11 +392,10 @@ export const DiocesePage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
-                    <TableCell>Code</TableCell>
-                    <TableCell align="right">Archdeaconries</TableCell>
-                    <TableCell align="right">Churches</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Created Date</TableCell>
+                    {isColumnVisible('code') && <TableCell>Code</TableCell>}
+                    {isColumnVisible('archdeaconries') && <TableCell align="right">Archdeaconries</TableCell>}
+                    {isColumnVisible('churches') && <TableCell align="right">Churches</TableCell>}
+                    {isColumnVisible('created') && <TableCell>Created Date</TableCell>}
                     {!isReadOnly && <TableCell align="right">Actions</TableCell>}
                   </TableRow>
                 </TableHead>
@@ -379,13 +407,10 @@ export const DiocesePage: React.FC = () => {
                           {diocese.name}
                         </Typography>
                       </TableCell>
-                      <TableCell>{diocese.code || '—'}</TableCell>
-                      <TableCell align="right">{renderCount(diocese.archdeaconryCount)}</TableCell>
-                      <TableCell align="right">{renderCount(diocese.churchCount)}</TableCell>
-                      <TableCell>
-                        <StatusChip status={diocese.status} />
-                      </TableCell>
-                      <TableCell>{formatDate(diocese.createdAt)}</TableCell>
+                      {isColumnVisible('code') && <TableCell>{diocese.code || '—'}</TableCell>}
+                      {isColumnVisible('archdeaconries') && <TableCell align="right">{renderCount(diocese.archdeaconryCount)}</TableCell>}
+                      {isColumnVisible('churches') && <TableCell align="right">{renderCount(diocese.churchCount)}</TableCell>}
+                      {isColumnVisible('created') && <TableCell>{formatDate(diocese.createdAt)}</TableCell>}
                       {!isReadOnly && (
                         <TableCell align="right">
                           <Tooltip title="Edit">

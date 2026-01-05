@@ -40,7 +40,7 @@ import java.util.Optional;
 public class VotingCodeService {
 
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Exclude ambiguous chars
-    private static final int CODE_LENGTH = 10;
+    private static final int CODE_LENGTH = 8;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final VotingCodeRepository votingCodeRepository;
@@ -330,7 +330,7 @@ public class VotingCodeService {
     /**
      * Generate a unique, secure, short voting code.
      * 
-     * Format: 10 uppercase alphanumeric characters (excludes ambiguous characters like 0, O, I, 1)
+     * Format: 8 uppercase alphanumeric characters (excludes ambiguous characters like 0, O, I, 1)
      * Example: A3K7P2QW9R
      * 
      * @return a unique voting code
@@ -493,6 +493,29 @@ public class VotingCodeService {
         VotingPeriod period = votingCode.getVotingPeriod();
         validatePeriodForVoting(period);
         
+        votingCode.setStatus(VotingCodeStatus.USED);
+        votingCode.setUsedAt(LocalDateTime.now());
+        votingCodeRepository.save(votingCode);
+    }
+
+    /**
+     * Mark a voting code as USED by ID with enhanced validation and idempotency.
+     * Period must be OPEN and within time window.
+     * Idempotent: if already USED, returns success (no-op).
+     */
+    public void markCodeUsedSafeById(Long codeId) {
+        VotingCode votingCode = votingCodeRepository.findById(codeId)
+                .orElseThrow(() -> new IllegalArgumentException("Voting code not found"));
+
+        if (votingCode.getStatus() == VotingCodeStatus.USED) {
+            return;
+        }
+
+        validateTransition(votingCode.getStatus(), VotingCodeStatus.USED);
+
+        VotingPeriod period = votingCode.getVotingPeriod();
+        validatePeriodForVoting(period);
+
         votingCode.setStatus(VotingCodeStatus.USED);
         votingCode.setUsedAt(LocalDateTime.now());
         votingCodeRepository.save(votingCode);

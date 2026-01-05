@@ -177,6 +177,7 @@ export interface PageFellowshipResponse {
 // Common pagination params
 export interface OrganizationListParams {
   q?: string
+  status?: EntityStatus
   page?: number
   size?: number
   sort?: string

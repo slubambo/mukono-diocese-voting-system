@@ -1,12 +1,15 @@
 package com.mukono.voting.service.people;
 
+import com.mukono.voting.model.leadership.LeadershipAssignment;
 import com.mukono.voting.model.people.Person;
 import com.mukono.voting.repository.people.PersonRepository;
+import com.mukono.voting.service.leadership.LeadershipAssignmentService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 @Service
@@ -14,9 +17,11 @@ import java.util.Optional;
 public class PersonService {
 
     private final PersonRepository personRepository;
+    private final LeadershipAssignmentService leadershipAssignmentService;
 
-    public PersonService(PersonRepository personRepository) {
+    public PersonService(PersonRepository personRepository, LeadershipAssignmentService leadershipAssignmentService) {
         this.personRepository = personRepository;
+        this.leadershipAssignmentService = leadershipAssignmentService;
     }
 
     public Person createPerson(Person person) {
@@ -100,5 +105,46 @@ public class PersonService {
             throw new IllegalArgumentException("Person not found");
         }
         personRepository.deleteById(id);
+    }
+
+    /**
+     * Create a person and a leadership assignment in a single transaction.
+     * First creates the person, then creates the assignment for that person.
+     * 
+     * @param person the person to create
+     * @param fellowshipPositionId the fellowship position ID (required)
+     * @param termStartDate the term start date (required)
+     * @param termEndDate the term end date (optional)
+     * @param dioceseId the diocese ID (required if scope is DIOCESE)
+     * @param archdeaconryId the archdeaconry ID (required if scope is ARCHDEACONRY)
+     * @param churchId the church ID (required if scope is CHURCH)
+     * @param notes optional notes for the assignment
+     * @return an array containing the created Person and LeadershipAssignment
+     */
+    public Object[] createPersonWithAssignment(
+            Person person,
+            Long fellowshipPositionId,
+            LocalDate termStartDate,
+            LocalDate termEndDate,
+            Long dioceseId,
+            Long archdeaconryId,
+            Long churchId,
+            String notes) {
+        
+        // First create the person
+        Person createdPerson = createPerson(person);
+        
+        // Then create the leadership assignment for that person
+        LeadershipAssignment assignment = leadershipAssignmentService.create(
+                createdPerson.getId(),
+                fellowshipPositionId,
+                dioceseId,
+                archdeaconryId,
+                churchId,
+                termStartDate,
+                termEndDate,
+                notes);
+        
+        return new Object[] { createdPerson, assignment };
     }
 }
