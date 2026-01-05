@@ -37,7 +37,6 @@ import { useToast } from '../../components/feedback/ToastProvider'
 import { archdeaconryApi } from '../../api/archdeaconry.api'
 import { dioceseApi } from '../../api/diocese.api'
 import type { Archdeaconry, CreateArchdeaconryRequest, EntityStatus, Diocese } from '../../types/organization'
-import StatusChip from '../../components/common/StatusChip'
 import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
@@ -58,6 +57,8 @@ export const ArchdeaconryPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(20)
   const [totalElements, setTotalElements] = useState(0)
   const [sort, setSort] = useState('name,asc')
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['code', 'diocese', 'churches', 'leaders', 'created'])
   
   // Dialog state
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
@@ -73,6 +74,7 @@ export const ArchdeaconryPage: React.FC = () => {
   
   const isAdmin = user?.roles.includes('ROLE_ADMIN') || false
   const isReadOnly = !isAdmin
+  const isColumnVisible = (key: string) => visibleColumns.includes(key)
 
   // Fetch dioceses for selection
   const fetchDioceses = async () => {
@@ -98,6 +100,7 @@ export const ArchdeaconryPage: React.FC = () => {
         page,
         size: rowsPerPage,
         sort: 'id,desc',
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
       })
       setArchdeaconries(response.content)
       setTotalElements(response.totalElements)
@@ -117,7 +120,7 @@ export const ArchdeaconryPage: React.FC = () => {
     if (selectedDioceseId) {
       fetchArchdeaconries()
     }
-  }, [page, rowsPerPage, selectedDioceseId])
+  }, [page, rowsPerPage, selectedDioceseId, statusFilter])
 
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage)
@@ -246,7 +249,8 @@ export const ArchdeaconryPage: React.FC = () => {
 
   const displayArchdeaconries = useMemo(() => {
     const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
-    return [...archdeaconries].sort((a, b) => {
+    const filtered = statusFilter === 'ALL' ? archdeaconries : archdeaconries.filter((a) => a.status === statusFilter)
+    return [...filtered].sort((a, b) => {
       const statusCompare = byStatus(a.status) - byStatus(b.status)
       if (statusCompare !== 0) return statusCompare
 
@@ -263,7 +267,7 @@ export const ArchdeaconryPage: React.FC = () => {
           return 0
       }
     })
-  }, [archdeaconries, sort])
+  }, [archdeaconries, sort, statusFilter])
 
   return (
     <AppShell>
@@ -302,6 +306,32 @@ export const ArchdeaconryPage: React.FC = () => {
                 setPage(0)
               },
               placeholder: 'Sort by',
+            },
+            {
+              id: 'columns',
+              label: 'Columns',
+              value: visibleColumns,
+              options: [
+                { id: 'code', name: 'Code' },
+                { id: 'diocese', name: 'Diocese' },
+                { id: 'churches', name: 'Churches' },
+                { id: 'leaders', name: 'Leaders' },
+                { id: 'created', name: 'Created' },
+              ],
+              onChange: (value) => setVisibleColumns(Array.isArray(value) ? value : []),
+              multiple: true,
+            },
+            {
+              id: 'status',
+              label: 'Status',
+              value: statusFilter,
+              options: [
+                { id: 'ACTIVE', name: 'Active' },
+                { id: 'INACTIVE', name: 'Inactive' },
+                { id: 'ALL', name: 'All' },
+              ],
+              onChange: (value) => { setStatusFilter((value as any) || 'ALL'); setPage(0) },
+              placeholder: 'Status',
             },
           ]}
         />
@@ -354,12 +384,11 @@ export const ArchdeaconryPage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
-                    <TableCell>Code</TableCell>
-                    <TableCell>Diocese</TableCell>
-                    <TableCell align="right">Churches</TableCell>
-                    <TableCell align="right">Leaders</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Created Date</TableCell>
+                    {isColumnVisible('code') && <TableCell>Code</TableCell>}
+                    {isColumnVisible('diocese') && <TableCell>Diocese</TableCell>}
+                    {isColumnVisible('churches') && <TableCell align="right">Churches</TableCell>}
+                    {isColumnVisible('leaders') && <TableCell align="right">Leaders</TableCell>}
+                    {isColumnVisible('created') && <TableCell>Created Date</TableCell>}
                     {!isReadOnly && <TableCell align="right">Actions</TableCell>}
                   </TableRow>
                 </TableHead>
@@ -371,14 +400,11 @@ export const ArchdeaconryPage: React.FC = () => {
                           {archdeaconry.name}
                         </Typography>
                       </TableCell>
-                      <TableCell>{archdeaconry.code || '—'}</TableCell>
-                      <TableCell>{archdeaconry.diocese.name}</TableCell>
-                      <TableCell align="right">{renderCount(archdeaconry.churchCount)}</TableCell>
-                      <TableCell align="right">{renderCount(archdeaconry.currentLeadersCount)}</TableCell>
-                      <TableCell>
-                        <StatusChip status={archdeaconry.status} />
-                      </TableCell>
-                      <TableCell>{formatDate(archdeaconry.createdAt)}</TableCell>
+                      {isColumnVisible('code') && <TableCell>{archdeaconry.code || '—'}</TableCell>}
+                      {isColumnVisible('diocese') && <TableCell>{archdeaconry.diocese.name}</TableCell>}
+                      {isColumnVisible('churches') && <TableCell align="right">{renderCount(archdeaconry.churchCount)}</TableCell>}
+                      {isColumnVisible('leaders') && <TableCell align="right">{renderCount(archdeaconry.currentLeadersCount)}</TableCell>}
+                      {isColumnVisible('created') && <TableCell>{formatDate(archdeaconry.createdAt)}</TableCell>}
                       {!isReadOnly && (
                         <TableCell align="right">
                           <Tooltip title="Edit">

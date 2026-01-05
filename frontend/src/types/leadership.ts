@@ -98,6 +98,7 @@ export interface PageFellowshipPositionResponse {
 // List params
 export interface PositionTitleListParams {
   q?: string
+  status?: EntityStatus
   page?: number
   size?: number
   sort?: string
@@ -106,6 +107,7 @@ export interface PositionTitleListParams {
 export interface FellowshipPositionListParams {
   fellowshipId: number
   scope?: PositionScope
+  status?: EntityStatus
   page?: number
   size?: number
   sort?: string

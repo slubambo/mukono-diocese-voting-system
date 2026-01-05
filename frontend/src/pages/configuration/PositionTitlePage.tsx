@@ -32,7 +32,6 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/feedback/ToastProvider'
 import { positionTitleApi } from '../../api/positionTitle.api'
 import type { PositionTitle, CreatePositionTitleRequest, EntityStatus } from '../../types/leadership'
-import StatusChip from '../../components/common/StatusChip'
 import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
@@ -52,6 +51,8 @@ export const PositionTitlePage: React.FC = () => {
   const [totalElements, setTotalElements] = useState(0)
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 })
   const [sort, setSort] = useState('name,asc')
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['usage', 'created'])
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selected, setSelected] = useState<PositionTitle | null>(null)
@@ -61,11 +62,17 @@ export const PositionTitlePage: React.FC = () => {
   const [toDelete, setToDelete] = useState<PositionTitle | null>(null)
   
   const isAdmin = user?.roles.includes('ROLE_ADMIN') || false
+  const isColumnVisible = (key: string) => visibleColumns.includes(key)
 
   const fetchTitles = async () => {
     try {
       setLoading(true)
-      const response = await positionTitleApi.list({ page, size: rowsPerPage, sort: 'id,desc' })
+      const response = await positionTitleApi.list({
+        page,
+        size: rowsPerPage,
+        sort: 'id,desc',
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
+      })
       setTitles(response.content)
       setTotalElements(response.totalElements)
       setStats({
@@ -82,7 +89,7 @@ export const PositionTitlePage: React.FC = () => {
 
   useEffect(() => {
     fetchTitles()
-  }, [page, rowsPerPage])
+  }, [page, rowsPerPage, statusFilter])
 
   const validateForm = () => {
     const nextErrors: { name?: string } = {}
@@ -137,7 +144,8 @@ export const PositionTitlePage: React.FC = () => {
 
   const displayTitles = useMemo(() => {
     const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
-    return [...titles].sort((a, b) => {
+    const filtered = statusFilter === 'ALL' ? titles : titles.filter((t) => t.status === statusFilter)
+    return [...filtered].sort((a, b) => {
       const statusCompare = byStatus(a.status) - byStatus(b.status)
       if (statusCompare !== 0) return statusCompare
 
@@ -154,7 +162,7 @@ export const PositionTitlePage: React.FC = () => {
           return 0
       }
     })
-  }, [titles, sort])
+  }, [titles, sort, statusFilter])
 
   return (
     <AppShell>
@@ -182,6 +190,29 @@ export const PositionTitlePage: React.FC = () => {
                 setPage(0)
               },
               placeholder: 'Sort by',
+            },
+            {
+              id: 'columns',
+              label: 'Columns',
+              value: visibleColumns,
+              options: [
+                { id: 'usage', name: 'Usage' },
+                { id: 'created', name: 'Created' },
+              ],
+              onChange: (value) => setVisibleColumns(Array.isArray(value) ? value : []),
+              multiple: true,
+            },
+            {
+              id: 'status',
+              label: 'Status',
+              value: statusFilter,
+              options: [
+                { id: 'ACTIVE', name: 'Active' },
+                { id: 'INACTIVE', name: 'Inactive' },
+                { id: 'ALL', name: 'All' },
+              ],
+              onChange: (value) => { setStatusFilter((value as any) || 'ALL'); setPage(0) },
+              placeholder: 'Status',
             },
           ]}
         />
@@ -215,9 +246,8 @@ export const PositionTitlePage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
-                    <TableCell align="right">Usage</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Created</TableCell>
+                    {isColumnVisible('usage') && <TableCell align="right">Usage</TableCell>}
+                    {isColumnVisible('created') && <TableCell>Created</TableCell>}
                     {isAdmin && <TableCell align="right">Actions</TableCell>}
                   </TableRow>
                 </TableHead>
@@ -225,9 +255,8 @@ export const PositionTitlePage: React.FC = () => {
                   {displayTitles.map((t) => (
                     <TableRow key={t.id} hover>
                       <TableCell><Typography variant="body2" fontWeight={500}>{t.name}</Typography></TableCell>
-                      <TableCell align="right">{renderCount(t.usageCount)}</TableCell>
-                      <TableCell><StatusChip status={t.status} /></TableCell>
-                      <TableCell>{new Date(t.createdAt).toLocaleDateString()}</TableCell>
+                      {isColumnVisible('usage') && <TableCell align="right">{renderCount(t.usageCount)}</TableCell>}
+                      {isColumnVisible('created') && <TableCell>{new Date(t.createdAt).toLocaleDateString()}</TableCell>}
                       {isAdmin && (
                         <TableCell align="right">
                           <IconButton size="small" onClick={() => { setFormData({ name: t.name, status: t.status }); setErrors({}); setSelected(t); setDialogMode('edit'); }} color="primary"><EditIcon fontSize="small" /></IconButton>

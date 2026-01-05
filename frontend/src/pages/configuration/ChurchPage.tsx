@@ -36,7 +36,6 @@ import { churchApi } from '../../api/church.api'
 import { archdeaconryApi } from '../../api/archdeaconry.api'
 import { dioceseApi } from '../../api/diocese.api'
 import type { Church, CreateChurchRequest, EntityStatus, Archdeaconry, Diocese } from '../../types/organization'
-import StatusChip from '../../components/common/StatusChip'
 import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
@@ -60,6 +59,8 @@ export const ChurchPage: React.FC = () => {
   const [totalElements, setTotalElements] = useState(0)
   const [, setStats] = useState({ total: 0, active: 0, inactive: 0 })
   const [sort, setSort] = useState('name,asc')
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['code', 'diocese', 'archdeaconry', 'leaders', 'created'])
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selectedChurch, setSelectedChurch] = useState<Church | null>(null)
@@ -74,6 +75,7 @@ export const ChurchPage: React.FC = () => {
   
   const isAdmin = user?.roles.includes('ROLE_ADMIN') || false
   const isReadOnly = !isAdmin
+  const isColumnVisible = (key: string) => visibleColumns.includes(key)
 
   const fetchDioceses = async () => {
     try {
@@ -109,6 +111,7 @@ export const ChurchPage: React.FC = () => {
         page,
         size: rowsPerPage,
         sort: 'id,desc',
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
       })
       setChurches(response.content)
       setTotalElements(response.totalElements)
@@ -138,7 +141,7 @@ export const ChurchPage: React.FC = () => {
 
   useEffect(() => {
     fetchChurches()
-  }, [page, rowsPerPage, selectedArchdeaconryId])
+  }, [page, rowsPerPage, selectedArchdeaconryId, statusFilter])
 
   const handleOpenCreateDialog = () => {
     setFormData({ archdeaconryId: selectedArchdeaconryId || 0, name: '', code: '' })
@@ -229,7 +232,8 @@ export const ChurchPage: React.FC = () => {
 
   const displayChurches = useMemo(() => {
     const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
-    return [...churches].sort((a, b) => {
+    const filtered = statusFilter === 'ALL' ? churches : churches.filter((c) => c.status === statusFilter)
+    return [...filtered].sort((a, b) => {
       const statusCompare = byStatus(a.status) - byStatus(b.status)
       if (statusCompare !== 0) return statusCompare
 
@@ -246,7 +250,7 @@ export const ChurchPage: React.FC = () => {
           return 0
       }
     })
-  }, [churches, sort])
+  }, [churches, sort, statusFilter])
 
   return (
     <AppShell>
@@ -287,6 +291,32 @@ export const ChurchPage: React.FC = () => {
               },
               placeholder: 'Sort by',
             },
+            {
+              id: 'columns',
+              label: 'Columns',
+              value: visibleColumns,
+              options: [
+                { id: 'code', name: 'Code' },
+                { id: 'diocese', name: 'Diocese' },
+                { id: 'archdeaconry', name: 'Archdeaconry' },
+                { id: 'leaders', name: 'Leaders' },
+                { id: 'created', name: 'Created' },
+              ],
+              onChange: (value) => setVisibleColumns(Array.isArray(value) ? value : []),
+              multiple: true,
+            },
+            {
+              id: 'status',
+              label: 'Status',
+              value: statusFilter,
+              options: [
+                { id: 'ACTIVE', name: 'Active' },
+                { id: 'INACTIVE', name: 'Inactive' },
+                { id: 'ALL', name: 'All' },
+              ],
+              onChange: (value) => { setStatusFilter((value as any) || 'ALL'); setPage(0) },
+              placeholder: 'Status',
+            },
           ]}
         />
 
@@ -325,12 +355,11 @@ export const ChurchPage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
-                    <TableCell>Code</TableCell>
-                    <TableCell>Diocese</TableCell>
-                    <TableCell>Archdeaconry</TableCell>
-                    <TableCell align="right">Leaders</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Created</TableCell>
+                    {isColumnVisible('code') && <TableCell>Code</TableCell>}
+                    {isColumnVisible('diocese') && <TableCell>Diocese</TableCell>}
+                    {isColumnVisible('archdeaconry') && <TableCell>Archdeaconry</TableCell>}
+                    {isColumnVisible('leaders') && <TableCell align="right">Leaders</TableCell>}
+                    {isColumnVisible('created') && <TableCell>Created</TableCell>}
                     {!isReadOnly && <TableCell align="right">Actions</TableCell>}
                   </TableRow>
                 </TableHead>
@@ -338,12 +367,11 @@ export const ChurchPage: React.FC = () => {
                   {displayChurches.map((church) => (
                     <TableRow key={church.id} hover>
                       <TableCell><Typography variant="body2" fontWeight={500}>{church.name}</Typography></TableCell>
-                      <TableCell>{church.code || '—'}</TableCell>
-                      <TableCell>{church.diocese?.name || '—'}</TableCell>
-                      <TableCell>{church.archdeaconry.name}</TableCell>
-                      <TableCell align="right">{renderCount(church.currentLeadersCount)}</TableCell>
-                      <TableCell><StatusChip status={church.status} /></TableCell>
-                      <TableCell>{new Date(church.createdAt).toLocaleDateString()}</TableCell>
+                      {isColumnVisible('code') && <TableCell>{church.code || '—'}</TableCell>}
+                      {isColumnVisible('diocese') && <TableCell>{church.diocese?.name || '—'}</TableCell>}
+                      {isColumnVisible('archdeaconry') && <TableCell>{church.archdeaconry.name}</TableCell>}
+                      {isColumnVisible('leaders') && <TableCell align="right">{renderCount(church.currentLeadersCount)}</TableCell>}
+                      {isColumnVisible('created') && <TableCell>{new Date(church.createdAt).toLocaleDateString()}</TableCell>}
                       {!isReadOnly && (
                         <TableCell align="right">
                           <IconButton size="small" onClick={() => handleOpenEditDialog(church)} color="primary"><EditIcon fontSize="small" /></IconButton>

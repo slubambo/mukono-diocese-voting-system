@@ -34,7 +34,6 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/feedback/ToastProvider'
 import { fellowshipApi } from '../../api/fellowship.api'
 import type { Fellowship, CreateFellowshipRequest, EntityStatus } from '../../types/organization'
-import StatusChip from '../../components/common/StatusChip'
 import LoadingState from '../../components/common/LoadingState'
 import EmptyState from '../../components/common/EmptyState'
 import PageLayout from '../../components/layout/PageLayout'
@@ -54,6 +53,8 @@ export const FellowshipPage: React.FC = () => {
   const [totalElements, setTotalElements] = useState(0)
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 })
   const [sort, setSort] = useState('name,asc')
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['code', 'positions', 'created'])
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selected, setSelected] = useState<Fellowship | null>(null)
@@ -63,11 +64,17 @@ export const FellowshipPage: React.FC = () => {
   const [toDelete, setToDelete] = useState<Fellowship | null>(null)
   
   const isAdmin = user?.roles.includes('ROLE_ADMIN') || false
+  const isColumnVisible = (key: string) => visibleColumns.includes(key)
 
   const fetchFellowships = async () => {
     try {
       setLoading(true)
-      const response = await fellowshipApi.list({ page, size: rowsPerPage, sort: 'id,desc' })
+      const response = await fellowshipApi.list({
+        page,
+        size: rowsPerPage,
+        sort: 'id,desc',
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
+      })
       setFellowships(response.content)
       setTotalElements(response.totalElements)
       setStats({
@@ -84,7 +91,7 @@ export const FellowshipPage: React.FC = () => {
 
   useEffect(() => {
     fetchFellowships()
-  }, [page, rowsPerPage])
+  }, [page, rowsPerPage, statusFilter])
 
   const handleOpenCreate = () => {
     setFormData({ name: '', code: '' })
@@ -159,7 +166,8 @@ export const FellowshipPage: React.FC = () => {
 
   const displayFellowships = useMemo(() => {
     const byStatus = (status?: EntityStatus) => (status === 'ACTIVE' ? 0 : 1)
-    return [...fellowships].sort((a, b) => {
+    const filtered = statusFilter === 'ALL' ? fellowships : fellowships.filter((f) => f.status === statusFilter)
+    return [...filtered].sort((a, b) => {
       const statusCompare = byStatus(a.status) - byStatus(b.status)
       if (statusCompare !== 0) return statusCompare
 
@@ -176,7 +184,7 @@ export const FellowshipPage: React.FC = () => {
           return 0
       }
     })
-  }, [fellowships, sort])
+  }, [fellowships, sort, statusFilter])
 
   return (
     <AppShell>
@@ -204,6 +212,30 @@ export const FellowshipPage: React.FC = () => {
                 setPage(0)
               },
               placeholder: 'Sort by',
+            },
+            {
+              id: 'columns',
+              label: 'Columns',
+              value: visibleColumns,
+              options: [
+                { id: 'code', name: 'Code' },
+                { id: 'positions', name: 'Positions' },
+                { id: 'created', name: 'Created' },
+              ],
+              onChange: (value) => setVisibleColumns(Array.isArray(value) ? value : []),
+              multiple: true,
+            },
+            {
+              id: 'status',
+              label: 'Status',
+              value: statusFilter,
+              options: [
+                { id: 'ACTIVE', name: 'Active' },
+                { id: 'INACTIVE', name: 'Inactive' },
+                { id: 'ALL', name: 'All' },
+              ],
+              onChange: (value) => { setStatusFilter((value as any) || 'ALL'); setPage(0) },
+              placeholder: 'Status',
             },
           ]}
         />
@@ -241,10 +273,9 @@ export const FellowshipPage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
-                    <TableCell>Code</TableCell>
-                    <TableCell align="right">Positions</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Created</TableCell>
+                    {isColumnVisible('code') && <TableCell>Code</TableCell>}
+                    {isColumnVisible('positions') && <TableCell align="right">Positions</TableCell>}
+                    {isColumnVisible('created') && <TableCell>Created</TableCell>}
                     {isAdmin && <TableCell align="right">Actions</TableCell>}
                   </TableRow>
                 </TableHead>
@@ -252,10 +283,9 @@ export const FellowshipPage: React.FC = () => {
                   {displayFellowships.map((f) => (
                     <TableRow key={f.id} hover>
                       <TableCell><Typography variant="body2" fontWeight={500}>{f.name}</Typography></TableCell>
-                      <TableCell>{f.code || '—'}</TableCell>
-                      <TableCell align="right">{renderCount(f.positionsCount)}</TableCell>
-                      <TableCell><StatusChip status={f.status} /></TableCell>
-                      <TableCell>{new Date(f.createdAt).toLocaleDateString()}</TableCell>
+                      {isColumnVisible('code') && <TableCell>{f.code || '—'}</TableCell>}
+                      {isColumnVisible('positions') && <TableCell align="right">{renderCount(f.positionsCount)}</TableCell>}
+                      {isColumnVisible('created') && <TableCell>{new Date(f.createdAt).toLocaleDateString()}</TableCell>}
                       {isAdmin && (
                         <TableCell align="right">
                           <Tooltip title="Edit"><IconButton size="small" onClick={() => handleOpenEdit(f)} color="primary"><EditIcon fontSize="small" /></IconButton></Tooltip>
