@@ -68,10 +68,10 @@ const PositionsTab: React.FC<{ electionId: string; isAdmin?: boolean }> = ({ ele
 
   return (
     <Box>
-          {isAdmin && <Button startIcon={<AddIcon />} sx={{ mb: 2 }} variant="contained" onClick={() => { setShowAdd(true) }}>Add Position</Button>}
+          {isAdmin && <Button startIcon={<AddIcon />} sx={{ mb: 2 }} variant="contained" onClick={() => { setShowAdd(true) }}>Add Position(s)</Button>}
 
       {positions.length === 0 ? (
-        <EmptyState title="No positions" description="No positions have been configured for this election." action={isAdmin ? <Button onClick={() => setShowAdd(true)}>Add Position</Button> : undefined} />
+        <EmptyState title="No positions" description="No positions have been configured for this election." action={isAdmin ? <Button onClick={() => setShowAdd(true)}>Add Position(s)</Button> : undefined} />
       ) : (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(auto-fit, minmax(360px, 1fr))' }, gap: 1.5 }}>
           {grouped.map(([fellowship, items]) => (
