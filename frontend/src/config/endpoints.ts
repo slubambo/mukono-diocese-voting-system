@@ -7,6 +7,7 @@ export const AUTH_ENDPOINTS = {
 
 export const VOTE_ENDPOINTS = {
   LOGIN: `${API_ENV.API_V1}/vote/login`,
+  VERIFY_PHONE: `${API_ENV.API_V1}/vote/verify-phone`,
   BALLOT: `${API_ENV.API_V1}/vote/ballot`,
   SUBMIT: `${API_ENV.API_V1}/vote/submit`,
 } as const

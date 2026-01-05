@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Card,
@@ -10,12 +10,17 @@ import {
   Alert,
   CircularProgress,
   InputAdornment,
+  Stepper,
+  Step,
+  StepLabel,
 } from '@mui/material'
 import HowToVoteIcon from '@mui/icons-material/HowToVote'
 import LockIcon from '@mui/icons-material/Lock'
 import VoterLayout from '../components/layout/VoterLayout'
 import { voteApi } from '../api/vote.api'
+import type { VoteLoginResponse } from '../api/vote.api'
 import { useVoterAuth } from '../context/VoterAuthContext'
+import axios from 'axios'
 
 /**
  * UI-F1: Voter Code Login
@@ -27,23 +32,37 @@ const VoteLoginPage: React.FC = () => {
   const navigate = useNavigate()
   const { setSession } = useVoterAuth()
 
+  const CODE_LENGTH = 10
   const [code, setCode] = useState('')
+  const [phoneLast3, setPhoneLast3] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [phoneError, setPhoneError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [step, setStep] = useState<'code' | 'phone'>('code')
+  const [loginResponse, setLoginResponse] = useState<VoteLoginResponse | null>(null)
+
+  const normalizedCode = useMemo(() => {
+    return code.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CODE_LENGTH)
+  }, [code, CODE_LENGTH])
+
+  const normalizeCodeInput = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CODE_LENGTH)
+  const normalizeLast3 = (value: string) => value.replace(/[^0-9]/g, '').slice(0, 3)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!code.trim()) {
+    if (!normalizedCode.trim()) {
       setError('Please enter your voting code.')
       return
     }
 
     setError(null)
+    setPhoneError(null)
     setIsLoading(true)
 
     try {
-      const response = await voteApi.login({ code: code.trim() })
+      const response = await voteApi.login({ code: normalizedCode.trim() })
 
       // Calculate expiry time in milliseconds
       const expiresAt = Date.now() + response.expiresIn * 1000
@@ -58,24 +77,85 @@ const VoteLoginPage: React.FC = () => {
         votingPeriodId: response.votingPeriodId,
       })
 
-      // Redirect to ballot
-      navigate('/vote/ballot')
+      setLoginResponse(response)
+
+      if (response.hasPhone) {
+        setPhoneLast3('')
+        setStep('phone')
+      } else {
+        // Redirect to ballot
+        navigate('/vote/ballot')
+      }
     } catch (err: unknown) {
       console.error('Login error:', err)
 
-      // Handle specific error messages
-      if (err instanceof Error) {
-        if (err.message.includes('401') || err.message.includes('invalid')) {
+      if (axios.isAxiosError(err)) {
+        const apiMessage = err.response?.data?.message
+        if (typeof apiMessage === 'string' && apiMessage.trim().length > 0) {
+          setError(apiMessage)
+        } else if (err.response?.status === 401 || err.response?.status === 400) {
           setError('This voting code is invalid or has already been used.')
         } else {
           setError('Failed to log in. Please try again.')
         }
+      } else if (err instanceof Error) {
+        setError('Failed to log in. Please try again.')
       } else {
         setError('This voting code is invalid or has already been used.')
       }
 
       setCode('')
+      setStep('code')
+      setLoginResponse(null)
+    } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleVerifyPhone = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    const cleaned = normalizeLast3(phoneLast3)
+    if (cleaned.length !== 3) {
+      setPhoneError('Please enter the last 3 digits of your phone number.')
+      return
+    }
+
+    if (!loginResponse?.accessToken) {
+      setPhoneError('Session missing. Please log in again.')
+      setStep('code')
+      return
+    }
+
+    setPhoneError(null)
+    setIsVerifying(true)
+
+    try {
+      const response = await voteApi.verifyPhone(
+        { last3: cleaned },
+        { headers: { Authorization: `Bearer ${loginResponse.accessToken}` } }
+      )
+
+      if (!response.verified) {
+        setPhoneError(response.reason ? `Verification failed: ${response.reason}` : 'Verification failed.')
+        return
+      }
+
+      navigate('/vote/ballot')
+    } catch (err: unknown) {
+      console.error('Phone verification error:', err)
+      if (axios.isAxiosError(err)) {
+        const apiMessage = err.response?.data?.message
+        if (typeof apiMessage === 'string' && apiMessage.trim().length > 0) {
+          setPhoneError(apiMessage)
+        } else {
+          setPhoneError('Failed to verify phone. Please try again.')
+        }
+      } else {
+        setPhoneError('Failed to verify phone. Please try again.')
+      }
+    } finally {
+      setIsVerifying(false)
     }
   }
 
@@ -145,119 +225,215 @@ const VoteLoginPage: React.FC = () => {
               lineHeight: 1.6,
             }}
           >
-            Enter your voting code to get started
+            {step === 'code' ? 'Enter your voting code to get started' : 'Verify your phone to continue'}
           </Typography>
 
+          <Stepper activeStep={step === 'code' ? 0 : 1} alternativeLabel sx={{ mb: 3 }}>
+            <Step>
+              <StepLabel>Code</StepLabel>
+            </Step>
+            <Step>
+              <StepLabel>Phone</StepLabel>
+            </Step>
+            <Step>
+              <StepLabel>Ballot</StepLabel>
+            </Step>
+          </Stepper>
+
           {/* Error Alert */}
-          {error && (
+          {error && step === 'code' && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {error}
             </Alert>
           )}
+          {phoneError && step === 'phone' && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {phoneError}
+            </Alert>
+          )}
 
-          {/* Form */}
-          <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {/* Code Input */}
-            <TextField
-              id="voting-code"
-              label={
-                <span>
-                  Voting Code <span style={{ fontSize: '0.9em' }}>(Koodi y'Okulonda)</span>
-                </span>
-              }
-              value={code}
-              onChange={e => setCode(e.target.value)}
-              disabled={isLoading}
-              autoComplete="off"
-              autoFocus
-              placeholder="Enter your code (e.g., ABC123)"
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  fontSize: { xs: '16px', sm: 'inherit' },
-                  borderRadius: 2,
-                  '&:hover': {
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'primary.main',
-                      borderWidth: '2px',
-                    },
-                  },
-                  '&.Mui-focused': {
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'primary.main',
-                      borderWidth: '2px',
-                    },
-                  },
-                },
-                '& .MuiInputBase-input': {
-                  py: 1.75,
-                  fontSize: { xs: '1rem', sm: '1.1rem' },
-                  fontWeight: 500,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                },
-              }}
-              InputProps={{
-                endAdornment: isLoading && (
-                  <InputAdornment position="end">
-                    <CircularProgress size={24} />
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            {/* Helper Text */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                bgcolor: 'rgba(0, 0, 0, 0.03)',
-                p: 1.5,
-                borderRadius: 1.5,
-                mt: 1,
-              }}
-            >
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ fontSize: { xs: '0.85rem', sm: '0.9rem' }, lineHeight: 1.5 }}
-              >
-                💡 Enter the voting code given to you by the polling officer.
+          {step === 'code' ? (
+            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>
+                Voting Code <span style={{ fontSize: '0.9em' }}>(Koodi y'Okulonda)</span>
               </Typography>
-            </Box>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              size="large"
-              disabled={isLoading || !code.trim()}
-              sx={{
-                mt: 3,
-                py: { xs: 1.75, sm: 2 },
-                fontWeight: 600,
-                fontSize: { xs: '1rem', sm: '1.1rem' },
-                borderRadius: 2,
-                textTransform: 'none',
-                boxShadow: '0 4px 12px rgba(143, 52, 147, 0.25)',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  boxShadow: '0 8px 24px rgba(143, 52, 147, 0.35)',
-                  transform: 'translateY(-3px)',
-                },
-                '&:active': {
-                  transform: 'translateY(-1px)',
-                },
-                '&:disabled': {
-                  opacity: 0.6,
-                },
-              }}
-            >
-              {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Continue to Ballot (Weyongereyo) →'}
-            </Button>
-          </Box>
+              <Box
+                sx={{
+                  position: 'relative',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  mt: 0.5,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${CODE_LENGTH}, minmax(0, 1fr))`,
+                    gap: { xs: 0.75, sm: 1 },
+                    width: '100%',
+                    maxWidth: 520,
+                  }}
+                >
+                  {Array.from({ length: CODE_LENGTH }).map((_, index) => {
+                    const char = normalizedCode[index] || ''
+                    const isActive = normalizedCode.length === index && !isLoading
+                    return (
+                      <Box
+                        key={`code-box-${index}`}
+                        sx={{
+                          height: { xs: 42, sm: 48 },
+                          borderRadius: 1.5,
+                          border: '2px solid',
+                          borderColor: isActive ? 'primary.main' : 'rgba(0, 0, 0, 0.15)',
+                          bgcolor: isActive ? 'rgba(143, 52, 147, 0.08)' : 'rgba(0, 0, 0, 0.03)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                          fontWeight: 600,
+                          color: 'text.primary',
+                          boxShadow: isActive ? '0 4px 12px rgba(143, 52, 147, 0.2)' : 'none',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        {char}
+                      </Box>
+                    )
+                  })}
+                </Box>
+
+                <Box
+                  component="input"
+                  type="text"
+                  value={normalizedCode}
+                  onChange={e => setCode(normalizeCodeInput(e.target.value))}
+                  onPaste={e => {
+                    e.preventDefault()
+                    setCode(normalizeCodeInput(e.clipboardData.getData('text')))
+                  }}
+                  disabled={isLoading}
+                  autoComplete="off"
+                  autoFocus
+                  inputMode="text"
+                  aria-label="Voting code"
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    opacity: 0,
+                    cursor: 'text',
+                  }}
+                />
+              </Box>
+
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  bgcolor: 'rgba(0, 0, 0, 0.03)',
+                  p: 1.5,
+                  borderRadius: 1.5,
+                  mt: 1,
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontSize: { xs: '0.85rem', sm: '0.9rem' }, lineHeight: 1.5 }}
+                >
+                  💡 Paste or type your code (e.g., 95LUE3GAEY). Only letters and numbers are accepted.
+                </Typography>
+              </Box>
+
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                size="large"
+                disabled={isLoading || !normalizedCode.trim()}
+                sx={{
+                  mt: 3,
+                  py: { xs: 1.75, sm: 2 },
+                  fontWeight: 600,
+                  fontSize: { xs: '1rem', sm: '1.1rem' },
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  boxShadow: '0 4px 12px rgba(143, 52, 147, 0.25)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    boxShadow: '0 8px 24px rgba(143, 52, 147, 0.35)',
+                    transform: 'translateY(-3px)',
+                  },
+                  '&:active': {
+                    transform: 'translateY(-1px)',
+                  },
+                  '&:disabled': {
+                    opacity: 0.6,
+                  },
+                }}
+              >
+                {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Continue →'}
+              </Button>
+            </Box>
+          ) : (
+            <Box component="form" onSubmit={handleVerifyPhone} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: 'rgba(14, 97, 173, 0.08)',
+                  border: '1px solid rgba(14, 97, 173, 0.2)',
+                }}
+              >
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'primary.main', mb: 0.5 }}>
+                  Phone ending in ***{loginResponse?.phoneLast3 ?? '---'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Enter the last 3 digits to confirm your identity.
+                </Typography>
+              </Box>
+
+              <TextField
+                label="Last 3 digits"
+                value={phoneLast3}
+                onChange={e => setPhoneLast3(normalizeLast3(e.target.value))}
+                disabled={isVerifying}
+                autoComplete="off"
+                inputMode="numeric"
+                inputProps={{ maxLength: 3 }}
+                fullWidth
+                InputProps={{
+                  endAdornment: isVerifying && (
+                    <InputAdornment position="end">
+                      <CircularProgress size={24} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                size="large"
+                disabled={isVerifying || phoneLast3.length !== 3}
+                sx={{
+                  mt: 2,
+                  py: { xs: 1.6, sm: 1.9 },
+                  fontWeight: 600,
+                  fontSize: { xs: '1rem', sm: '1.05rem' },
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  boxShadow: '0 4px 12px rgba(14, 97, 173, 0.25)',
+                }}
+              >
+                {isVerifying ? <CircularProgress size={24} color="inherit" /> : 'Verify and Continue →'}
+              </Button>
+            </Box>
+          )}
         </CardContent>
       </Card>
 
