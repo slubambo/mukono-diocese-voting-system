@@ -63,7 +63,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
   const [filterChurchId, setFilterChurchId] = useState<number | null>(null)
   const [filterFellowshipId, setFilterFellowshipId] = useState<number | null>(null)
   const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(['phone', 'position', 'fellowship', 'scope', 'term'])
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['phone', 'position', 'fellowship', 'scope', 'location', 'term'])
   
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
@@ -258,6 +258,13 @@ const LeadershipAssignmentsPage: React.FC = () => {
     if (endYear) return `${endYear}`
     return '—'
   }
+  const formatLocation = (a: LeadershipAssignmentResponse) => {
+    const scope = ((a.fellowshipPosition as any)?.scope ?? '').toUpperCase()
+    if (scope === 'DIOCESE') return a.diocese?.name || '—'
+    if (scope === 'ARCHDEACONRY') return a.archdeaconry?.name || '—'
+    if (scope === 'CHURCH') return a.church?.name || '—'
+    return '—'
+  }
 
   const openCreate = () => {
     setEditing(null)
@@ -339,6 +346,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
                 { id: 'position', name: 'Position' },
                 { id: 'fellowship', name: 'Fellowship' },
                 { id: 'scope', name: 'Scope' },
+                { id: 'location', name: 'Location' },
                 { id: 'term', name: 'Term' },
               ],
               onChange: (value) => setVisibleColumns(Array.isArray(value) ? value : []),
@@ -422,6 +430,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
                       {isColumnVisible('position') && <TableCell>Position</TableCell>}
                       {isColumnVisible('fellowship') && <TableCell>Fellowship</TableCell>}
                       {isColumnVisible('scope') && <TableCell>Scope</TableCell>}
+                      {isColumnVisible('location') && <TableCell>Location</TableCell>}
                       {isColumnVisible('term') && <TableCell>Term</TableCell>}
                       {isAdmin && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
@@ -435,6 +444,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
                         {isColumnVisible('position') && <TableCell>{((a.fellowshipPosition as any)?.titleName) ?? (a.fellowshipPosition as any)?.title?.name ?? '—'}</TableCell>}
                         {isColumnVisible('fellowship') && <TableCell>{((a.fellowshipPosition as any)?.fellowshipName) ?? a.fellowship?.name ?? '—'}</TableCell>}
                         {isColumnVisible('scope') && <TableCell>{(((a.fellowshipPosition as any)?.scope) ?? '').charAt(0) + (((a.fellowshipPosition as any)?.scope) ?? '').slice(1).toLowerCase()}</TableCell>}
+                        {isColumnVisible('location') && <TableCell>{formatLocation(a)}</TableCell>}
                         {isColumnVisible('term') && <TableCell>{formatTerm(a.termStartDate, a.termEndDate)}</TableCell>}
                         {isAdmin && (
                           <TableCell align="right">
