@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Box, Paper, Typography, TextField, Button, MenuItem, Chip, Card, CardContent, InputAdornment, IconButton, Collapse, Stack } from '@mui/material'
+import { Box, Paper, Typography, TextField, Button, MenuItem, Chip, Card, CardContent, InputAdornment, IconButton, Collapse, Stack, Divider, Badge, alpha } from '@mui/material'
 import HowToVoteIcon from '@mui/icons-material/HowToVote'
 import SearchIcon from '@mui/icons-material/Search'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
@@ -9,6 +9,9 @@ import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore'
 import FilterAltIcon from '@mui/icons-material/FilterAlt'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt'
+import GroupsIcon from '@mui/icons-material/Groups'
+import AccountCircleIcon from '@mui/icons-material/AccountCircle'
+import EventIcon from '@mui/icons-material/Event'
 import { electionApi } from '../../api/election.api'
 import LoadingState from '../common/LoadingState'
 import { useToast } from '../feedback/ToastProvider'
@@ -115,296 +118,529 @@ const BallotPreviewTab: React.FC<{ electionId: string }> = ({ electionId }) => {
 
   if (loading) return <LoadingState />
 
+  const totalCandidates = positionsPreview.reduce((sum, pos) => sum + (pos.candidates?.length || 0), 0)
+
   return (
     <Box>
+      {/* Compact Filter Bar */}
       <Paper
+        elevation={0}
         sx={{
           mb: 2,
-          p: 1.5,
+          p: { xs: 1.5, sm: 2 },
           borderRadius: 2,
-          border: '1px solid rgba(88, 28, 135, 0.12)',
-          background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.04) 0%, rgba(88, 28, 135, 0.02) 100%)',
+          border: '1px solid',
+          borderColor: 'divider',
+          backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.02),
         }}
       >
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          spacing={1.5}
-          alignItems={{ xs: 'stretch', md: 'center' }}
-          sx={{ flexWrap: 'wrap' }}
-        >
+        <Stack spacing={1.5}>
           <TextField
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            label="Search"
             placeholder="Search position or candidate"
             size="small"
-            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
-            sx={{ minWidth: 240, flex: 1 }}
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'background.paper',
+              },
+            }}
           />
-          <TextField
-            select
-            value={fellowshipFilter}
-            onChange={(e) => setFellowshipFilter(e.target.value)}
-            label="Fellowship"
-            size="small"
-            InputProps={{ startAdornment: <InputAdornment position="start"><PeopleAltIcon fontSize="small" /></InputAdornment> }}
-            sx={{ minWidth: 220, flex: 1 }}
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            sx={{ flexWrap: 'wrap' }}
           >
-            <MenuItem value="all">All fellowships</MenuItem>
-            {groupedBallot.map(([fellowship]) => (
-              <MenuItem key={fellowship} value={fellowship}>
-                {fellowship}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            value={selectedPeriod}
-            onChange={(e: any) => setSelectedPeriod(e.target.value)}
-            label="Voting Day"
-            size="small"
-            InputProps={{ startAdornment: <InputAdornment position="start"><FilterAltIcon fontSize="small" /></InputAdornment> }}
-            sx={{ minWidth: 200, flex: 1 }}
-          >
-            <MenuItem value="all">All days</MenuItem>
-            {votingPeriods.map((p) => (
-              <MenuItem key={p.id} value={p.id}>
-                {p.name || p.label || `Day ${p.id}`}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            value={selectedPosition}
-            onChange={(e: any) => setSelectedPosition(e.target.value)}
-            label="Position"
-            size="small"
-            InputProps={{ startAdornment: <InputAdornment position="start"><AutoAwesomeIcon fontSize="small" /></InputAdornment> }}
-            sx={{ minWidth: 240, flex: 1 }}
-          >
-            <MenuItem value="all">All positions</MenuItem>
-            {positions.map((p) => (
-              <MenuItem key={p.id} value={p.id}>
-                {p.fellowshipPosition?.titleName || p.title || p.positionId}
-                {p.fellowshipPosition?.fellowshipName ? ` — ${p.fellowshipPosition.fellowshipName}` : ''}
-              </MenuItem>
-            ))}
-          </TextField>
+            <TextField
+              select
+              value={fellowshipFilter}
+              onChange={(e) => setFellowshipFilter(e.target.value)}
+              size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <GroupsIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                flex: 1,
+                minWidth: 180,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'background.paper',
+                },
+              }}
+            >
+              <MenuItem value="all">All fellowships</MenuItem>
+              {groupedBallot.map(([fellowship]) => (
+                <MenuItem key={fellowship} value={fellowship}>
+                  {fellowship}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              value={selectedPeriod}
+              onChange={(e: any) => setSelectedPeriod(e.target.value)}
+              size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <EventIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                flex: 1,
+                minWidth: 160,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'background.paper',
+                },
+              }}
+            >
+              <MenuItem value="all">All days</MenuItem>
+              {votingPeriods.map((p) => (
+                <MenuItem key={p.id} value={p.id}>
+                  {p.name || p.label || `Day ${p.id}`}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              value={selectedPosition}
+              onChange={(e: any) => setSelectedPosition(e.target.value)}
+              size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <FilterAltIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                flex: 1,
+                minWidth: 180,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'background.paper',
+                },
+              }}
+            >
+              <MenuItem value="all">All positions</MenuItem>
+              {positions.map((p) => (
+                <MenuItem key={p.id} value={p.id}>
+                  {p.fellowshipPosition?.titleName || p.title || p.positionId}
+                  {p.fellowshipPosition?.fellowshipName ? ` — ${p.fellowshipPosition.fellowshipName}` : ''}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
         </Stack>
       </Paper>
 
-      {groupedBallot.length > 0 && groupedBallot.length > 3 && (
-        <Paper sx={{ mb: 2, p: 1, borderRadius: 2, border: '1px solid rgba(88, 28, 135, 0.08)', backgroundColor: 'rgba(88, 28, 135, 0.03)' }}>
-          <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
-            <Button
-              size="small"
-              startIcon={Object.values(collapsedGroups).every(Boolean) ? <UnfoldMoreIcon /> : <UnfoldLessIcon />}
-              onClick={() => {
-                const allCollapsed = Object.values(collapsedGroups).every(Boolean)
-                const next: Record<string, boolean> = {}
-                groupedBallot.forEach(([key]) => { next[key] = !allCollapsed })
-                setCollapsedGroups(next)
-              }}
-            >
-              {Object.values(collapsedGroups).every(Boolean) ? 'Expand all' : 'Collapse all'}
-            </Button>
-          </Box>
-        </Paper>
+      {/* Expand/Collapse All - Only show if multiple fellowships */}
+      {groupedBallot.length > 1 && (
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button
+            size="small"
+            startIcon={Object.values(collapsedGroups).every(Boolean) ? <UnfoldMoreIcon /> : <UnfoldLessIcon />}
+            onClick={() => {
+              const allCollapsed = Object.values(collapsedGroups).every(Boolean)
+              const next: Record<string, boolean> = {}
+              groupedBallot.forEach(([key]) => { next[key] = !allCollapsed })
+              setCollapsedGroups(next)
+            }}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 500,
+              px: 2,
+            }}
+          >
+            {Object.values(collapsedGroups).every(Boolean) ? 'Expand all' : 'Collapse all'}
+          </Button>
+        </Box>
       )}
 
       {!preview ? (
-        <Paper sx={{ p: 3, textAlign: 'center', border: '2px dashed rgba(88, 28, 135, 0.2)', borderRadius: 2 }}>
-          <HowToVoteIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-          <Typography variant="h6" sx={{ mb: 1 }}>Load Your Ballot</Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            textAlign: 'center',
+            border: '2px dashed',
+            borderColor: 'divider',
+            borderRadius: 2,
+            backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.02),
+          }}
+        >
+          <HowToVoteIcon sx={{ fontSize: 56, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
+          <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>Load Your Ballot</Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 400, mx: 'auto' }}>
             Select a voting day and position (optional) to preview the ballot
           </Typography>
         </Paper>
       ) : filteredPositionsCount === 0 ? (
-        <Paper sx={{ p: 3, textAlign: 'center', border: '2px dashed rgba(88, 28, 135, 0.2)', borderRadius: 2 }}>
-          <HowToVoteIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-          <Typography variant="h6" sx={{ mb: 1 }}>No Positions Found</Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            There are no positions available for the selected criteria
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            textAlign: 'center',
+            border: '2px dashed',
+            borderColor: 'divider',
+            borderRadius: 2,
+            backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.02),
+          }}
+        >
+          <SearchIcon sx={{ fontSize: 56, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
+          <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>No Positions Found</Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 400, mx: 'auto' }}>
+            There are no positions available for the selected criteria. Try adjusting your filters.
           </Typography>
         </Paper>
       ) : (
-        <Box sx={{ maxWidth: 900, mx: 'auto' }}>
+        <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
           {/* Ballot Header */}
           <Paper
+            elevation={0}
             sx={{
-              p: 2,
-              mb: 2,
-              background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.12) 0%, rgba(124, 58, 237, 0.08) 50%, rgba(88, 28, 135, 0.04) 100%)',
-              borderRadius: 2.5,
-              border: '2px solid rgba(88, 28, 135, 0.18)',
+              p: 2.5,
+              mb: 3,
+              background: (theme) => `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.primary.main, 0.03)} 100%)`,
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: (theme) => alpha(theme.palette.primary.main, 0.2),
               textAlign: 'center',
-              boxShadow: '0 10px 24px rgba(88, 28, 135, 0.12)',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.25, mb: 0.25 }}>
-              <HowToVoteIcon sx={{ color: 'primary.main', fontSize: 30 }} />
-              <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.main' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, mb: 0.5 }}>
+              <HowToVoteIcon sx={{ color: 'primary.main', fontSize: 28 }} />
+              <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.main' }}>
                 Official Ballot
               </Typography>
             </Box>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
               Select your preferred candidates below
             </Typography>
+            <Stack direction="row" spacing={2} justifyContent="center" flexWrap="wrap">
+              <Chip
+                icon={<GroupsIcon />}
+                label={`${filteredGroups.length} Fellowship${filteredGroups.length === 1 ? '' : 's'}`}
+                size="small"
+                sx={{ fontWeight: 600 }}
+              />
+              <Chip
+                icon={<AutoAwesomeIcon />}
+                label={`${filteredPositionsCount} Position${filteredPositionsCount === 1 ? '' : 's'}`}
+                size="small"
+                sx={{ fontWeight: 600 }}
+              />
+              <Chip
+                icon={<AccountCircleIcon />}
+                label={`${totalCandidates} Candidate${totalCandidates === 1 ? '' : 's'}`}
+                size="small"
+                sx={{ fontWeight: 600 }}
+              />
+            </Stack>
           </Paper>
 
           {/* Positions as Ballot Cards grouped by fellowship */}
-          {filteredGroups.map(([fellowship, items]) => (
-            <Box key={fellowship} sx={{ mb: 2 }}>
-              <Paper sx={{ p: 1.5, mb: 1.25, background: 'linear-gradient(120deg, rgba(88,28,135,0.07) 0%, rgba(168,85,247,0.05) 100%)', border: '1px solid rgba(88, 28, 135, 0.14)', borderRadius: 1.75 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                  <Box>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'primary.main' }}>{fellowship}</Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>{items.length} position{items.length === 1 ? '' : 's'}</Typography>
-                  </Box>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Chip
-                      label={`${items.reduce((sum, pos) => sum + (pos.candidates?.length || 0), 0)} candidate${items.reduce((sum, pos) => sum + (pos.candidates?.length || 0), 0) === 1 ? '' : 's'}`}
-                      size="small"
-                      sx={{ backgroundColor: 'rgba(88, 28, 135, 0.1)', color: 'primary.main', fontWeight: 600, height: 24 }}
-                    />
-                    <IconButton size="small" onClick={() => setCollapsedGroups((prev) => ({ ...prev, [fellowship]: !prev[fellowship] }))}>
-                      {collapsedGroups[fellowship] ? <ExpandMoreIcon fontSize="small" /> : <ExpandLessIcon fontSize="small" />}
-                    </IconButton>
-                  </Stack>
-                </Box>
-              </Paper>
-              <Collapse in={!collapsedGroups[fellowship]}>
-                <Box sx={{ display: 'grid', gap: 1.25 }}>
-                  {items.map((pos) => {
-                    const cardNumber = positionsPreview.indexOf(pos) + 1
-                    return (
-                      <Card
-                        key={String(pos.electionPositionId)}
+          {filteredGroups.map(([fellowship, items]) => {
+            const fellowshipCandidates = items.reduce((sum, pos) => sum + (pos.candidates?.length || 0), 0)
+            
+            return (
+              <Box key={fellowship} sx={{ mb: 2.5 }}>
+                {/* Fellowship Header */}
+                <Paper
+                  elevation={0}
+                  sx={{
+                    mb: 1.5,
+                    overflow: 'hidden',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1.5,
+                    backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.04),
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      borderColor: (theme) => alpha(theme.palette.primary.main, 0.3),
+                      backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.06),
+                    },
+                  }}
+                >
+                  <Box
+                    onClick={() => setCollapsedGroups((prev) => ({ ...prev, [fellowship]: !prev[fellowship] }))}
+                    sx={{
+                      p: 1.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                      <Box
                         sx={{
-                          borderRadius: 2,
-                          border: '1px solid rgba(88, 28, 135, 0.15)',
-                          boxShadow: '0 2px 10px rgba(88, 28, 135, 0.08)',
-                          background: 'linear-gradient(150deg, rgba(88,28,135,0.02) 0%, rgba(168,85,247,0.05) 100%)',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            boxShadow: '0 6px 18px rgba(88, 28, 135, 0.16)',
-                            borderColor: 'rgba(88, 28, 135, 0.3)',
-                            transform: 'translateY(-1px)',
-                          },
+                          width: 40,
+                          height: 40,
+                          borderRadius: 1,
+                          backgroundColor: 'primary.main',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
                         }}
                       >
-                        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                          {/* Position Header */}
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, pb: 1, borderBottom: '2px solid rgba(88, 28, 135, 0.08)' }}>
-                            <Box>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.25, color: 'primary.main' }}>
-                                {pos.positionTitle || 'Position'}
-                              </Typography>
-                              <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                                {pos.scope && (
-                                  <Chip
-                                    label={pos.scope}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{ borderColor: 'rgba(88, 28, 135, 0.2)', color: 'text.secondary', height: 24, fontWeight: 600 }}
-                                  />
-                                )}
-                                {typeof pos.seats === 'number' && (
-                                  <Chip
-                                    label={`${pos.seats} seat${pos.seats === 1 ? '' : 's'}`}
-                                    size="small"
-                                    sx={{ backgroundColor: 'success.light', color: 'success.dark', fontWeight: 600, height: 24 }}
-                                  />
-                                )}
-                              </Box>
-                            </Box>
-                            <Stack direction="column" spacing={0.5} alignItems="flex-end" sx={{ minWidth: 80 }}>
-                              <Chip
-                                icon={<PeopleAltIcon sx={{ fontSize: 16 }} />}
-                                label={`${(pos.candidates || []).length} candidate${(pos.candidates || []).length === 1 ? '' : 's'}`}
-                                size="small"
-                                sx={{ height: 26, borderRadius: 999, backgroundColor: 'rgba(88, 28, 135, 0.08)', color: 'primary.main', fontWeight: 600 }}
-                              />
-                              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                                #{cardNumber}
-                              </Typography>
-                            </Stack>
-                          </Box>
+                        <GroupsIcon sx={{ color: 'white', fontSize: 22 }} />
+                      </Box>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography
+                          variant="subtitle1"
+                          sx={{
+                            fontWeight: 700,
+                            color: 'primary.main',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {fellowship}
+                        </Typography>
+                        <Stack direction="row" spacing={1.5} sx={{ mt: 0.5 }}>
+                          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                            {items.length} position{items.length === 1 ? '' : 's'}
+                          </Typography>
+                          <Divider orientation="vertical" flexItem />
+                          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                            {fellowshipCandidates} candidate{fellowshipCandidates === 1 ? '' : 's'}
+                          </Typography>
+                        </Stack>
+                      </Box>
+                    </Box>
+                    <IconButton
+                      size="small"
+                      sx={{
+                        transition: 'transform 0.2s ease',
+                        transform: collapsedGroups[fellowship] ? 'rotate(0deg)' : 'rotate(180deg)',
+                      }}
+                    >
+                      <ExpandMoreIcon />
+                    </IconButton>
+                  </Box>
+                </Paper>
 
-                          {/* Candidates List */}
-                          {(pos.candidates || []).length === 0 ? (
-                            <Box sx={{ py: 2, textAlign: 'center', borderRadius: 1.5, border: '1px dashed rgba(88, 28, 135, 0.2)', backgroundColor: 'rgba(88, 28, 135, 0.03)' }}>
-                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                No candidates yet
-                              </Typography>
-                            </Box>
-                          ) : (
-                            <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: pos.candidates && pos.candidates.length <= 2 ? '1fr' : { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
-                              {(pos.candidates || []).map((c, candIdx) => (
-                                <Paper
-                                  key={String(c.candidateId)}
+                {/* Positions */}
+                <Collapse in={!collapsedGroups[fellowship]} timeout="auto">
+                  <Stack spacing={1.5}>
+                    {items.map((pos) => {
+                      const cardNumber = positionsPreview.indexOf(pos) + 1
+                      const candidateCount = pos.candidates?.length || 0
+                      
+                      return (
+                        <Card
+                          key={String(pos.electionPositionId)}
+                          elevation={0}
+                          sx={{
+                            borderRadius: 1.5,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              borderColor: (theme) => alpha(theme.palette.primary.main, 0.4),
+                              boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.primary.main, 0.1)}`,
+                            },
+                          }}
+                        >
+                          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                            {/* Position Header */}
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                justifyContent: 'space-between',
+                                mb: 1.5,
+                                pb: 1.5,
+                                borderBottom: '1px solid',
+                                borderColor: 'divider',
+                              }}
+                            >
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography
+                                  variant="subtitle1"
                                   sx={{
-                                    p: 1.25,
-                                    backgroundColor: 'rgba(88, 28, 135, 0.03)',
-                                    border: '1px solid rgba(88, 28, 135, 0.1)',
-                                    borderRadius: 1.25,
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    '&:hover': {
-                                      backgroundColor: 'rgba(88, 28, 135, 0.08)',
-                                      borderColor: 'rgba(88, 28, 135, 0.24)',
-                                      transform: 'translateY(-2px)',
+                                    fontWeight: 700,
+                                    mb: 0.5,
+                                    color: 'text.primary',
+                                  }}
+                                >
+                                  {pos.positionTitle || 'Position'}
+                                </Typography>
+                                <Stack direction="row" spacing={1} flexWrap="wrap">
+                                  {pos.scope && (
+                                    <Chip
+                                      label={pos.scope}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{
+                                        height: 22,
+                                        fontSize: '0.7rem',
+                                        fontWeight: 600,
+                                        borderColor: 'divider',
+                                      }}
+                                    />
+                                  )}
+                                  {typeof pos.seats === 'number' && (
+                                    <Chip
+                                      label={`${pos.seats} seat${pos.seats === 1 ? '' : 's'}`}
+                                      size="small"
+                                      sx={{
+                                        height: 22,
+                                        fontSize: '0.7rem',
+                                        fontWeight: 600,
+                                        backgroundColor: (theme) => alpha(theme.palette.success.main, 0.1),
+                                        color: 'success.dark',
+                                      }}
+                                    />
+                                  )}
+                                </Stack>
+                              </Box>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
+                                <Badge
+                                  badgeContent={candidateCount}
+                                  color="primary"
+                                  sx={{
+                                    '& .MuiBadge-badge': {
+                                      fontWeight: 700,
+                                      fontSize: '0.7rem',
                                     },
                                   }}
                                 >
-                                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                    <Box
-                                      sx={{
-                                        width: 26,
-                                        height: 26,
-                                        borderRadius: '50%',
-                                        backgroundColor: 'primary.main',
-                                        color: 'white',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontWeight: 700,
-                                        fontSize: '0.8rem',
-                                        flexShrink: 0,
-                                      }}
-                                    >
-                                      {candIdx + 1}
-                                    </Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, flex: 1 }}>
-                                      {c.fullName}
-                                    </Typography>
-                                  </Box>
-                                </Paper>
-                              ))}
+                                  <AccountCircleIcon sx={{ color: 'text.secondary', fontSize: 24 }} />
+                                </Badge>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontWeight: 700,
+                                    color: 'text.secondary',
+                                    backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                                    px: 1,
+                                    py: 0.5,
+                                    borderRadius: 1,
+                                  }}
+                                >
+                                  #{cardNumber}
+                                </Typography>
+                              </Box>
                             </Box>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </Box>
-              </Collapse>
-            </Box>
-          ))}
+
+                            {/* Candidates List */}
+                            {candidateCount === 0 ? (
+                              <Box
+                                sx={{
+                                  py: 2,
+                                  textAlign: 'center',
+                                  borderRadius: 1,
+                                  border: '1px dashed',
+                                  borderColor: 'divider',
+                                  backgroundColor: (theme) => alpha(theme.palette.grey[500], 0.05),
+                                }}
+                              >
+                                <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                                  No candidates yet
+                                </Typography>
+                              </Box>
+                            ) : (
+                              <Box
+                                sx={{
+                                  display: 'grid',
+                                  gap: 1,
+                                  gridTemplateColumns: candidateCount <= 2
+                                    ? '1fr'
+                                    : { xs: '1fr', sm: 'repeat(2, 1fr)' },
+                                }}
+                              >
+                                {(pos.candidates || []).map((c, candIdx) => (
+                                  <Paper
+                                    key={String(c.candidateId)}
+                                    elevation={0}
+                                    sx={{
+                                      p: 1.25,
+                                      backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.04),
+                                      border: '1px solid',
+                                      borderColor: 'divider',
+                                      borderRadius: 1,
+                                      transition: 'all 0.15s ease',
+                                      '&:hover': {
+                                        backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                                        borderColor: 'primary.main',
+                                        transform: 'translateX(4px)',
+                                      },
+                                    }}
+                                  >
+                                    <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'center' }}>
+                                      <Box
+                                        sx={{
+                                          width: 32,
+                                          height: 32,
+                                          borderRadius: '50%',
+                                          backgroundColor: 'primary.main',
+                                          color: 'white',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          fontWeight: 700,
+                                          fontSize: '0.875rem',
+                                          flexShrink: 0,
+                                          boxShadow: (theme) => `0 2px 8px ${alpha(theme.palette.primary.main, 0.3)}`,
+                                        }}
+                                      >
+                                        {candIdx + 1}
+                                      </Box>
+                                      <Typography
+                                        variant="body2"
+                                        sx={{
+                                          fontWeight: 600,
+                                          flex: 1,
+                                          color: 'text.primary',
+                                        }}
+                                      >
+                                        {c.fullName}
+                                      </Typography>
+                                    </Box>
+                                  </Paper>
+                                ))}
+                              </Box>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </Stack>
+                </Collapse>
+              </Box>
+            )
+          })}
 
           {/* Ballot Footer */}
           <Paper
+            elevation={0}
             sx={{
               p: 2,
               mt: 3,
-              backgroundColor: 'rgba(88, 28, 135, 0.05)',
-              border: '1px solid rgba(88, 28, 135, 0.1)',
+              backgroundColor: (theme) => alpha(theme.palette.grey[500], 0.05),
+              border: '1px solid',
+              borderColor: 'divider',
               borderRadius: 2,
               textAlign: 'center',
             }}
           >
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
               This is a preview of the ballot. Actual voting interface may vary.
             </Typography>
           </Paper>
