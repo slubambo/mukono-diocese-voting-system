@@ -361,14 +361,16 @@ const PeopleRegistryPage: React.FC = () => {
                   <TextField {...field} label="Phone Number" required size="small" error={!!fieldState.error} helperText={fieldState.error?.message} />
                 )} />
 
-                <Controller name="gender" control={control} render={({ field }) => (
-                  <FormControl size="small">
+                <Controller name="gender" control={control} rules={{ required: 'Gender is required' }} render={({ field, fieldState }) => (
+                  <FormControl size="small" error={!!fieldState.error}>
                     <InputLabel>Gender</InputLabel>
-                    <Select {...field} label="Gender">
-                      <MenuItem value="">Unknown</MenuItem>
+                    <Select {...field} label="Gender" required>
                       <MenuItem value="MALE">Male</MenuItem>
                       <MenuItem value="FEMALE">Female</MenuItem>
                     </Select>
+                    {fieldState.error?.message ? (
+                      <Typography variant="caption" color="error">{fieldState.error.message}</Typography>
+                    ) : null}
                   </FormControl>
                 )} />
 

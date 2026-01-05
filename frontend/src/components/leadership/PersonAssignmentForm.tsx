@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
-import { Box, Button, TextField, FormControl, InputLabel, Select, MenuItem, Autocomplete } from '@mui/material'
+import { Box, Button, TextField, FormControl, InputLabel, Select, MenuItem, Autocomplete, FormHelperText } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
@@ -149,14 +149,14 @@ const PersonAssignmentForm: React.FC<Props> = ({ onSaved, onCancel }) => {
           <TextField {...field} label="Phone Number" required size="small" error={!!fieldState.error} helperText={fieldState.error?.message} />
         )} />
 
-        <Controller name="gender" control={control} render={({ field }) => (
-          <FormControl size="small">
+        <Controller name="gender" control={control} rules={{ required: 'Gender is required' }} render={({ field, fieldState }) => (
+          <FormControl size="small" error={!!fieldState.error} required>
             <InputLabel>Gender</InputLabel>
             <Select {...field} label="Gender">
-              <MenuItem value="">Unknown</MenuItem>
               <MenuItem value="MALE">Male</MenuItem>
               <MenuItem value="FEMALE">Female</MenuItem>
             </Select>
+            {fieldState.error?.message ? <FormHelperText>{fieldState.error.message}</FormHelperText> : null}
           </FormControl>
         )} />
 
