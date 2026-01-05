@@ -486,6 +486,9 @@ const VoteLoginPage: React.FC = () => {
                   border: '1px solid rgba(14, 97, 173, 0.2)',
                 }}
               >
+                <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
+                  Hello{loginResponse?.fullName ? `, ${loginResponse.fullName}` : ''}. One more step.
+                </Typography>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'primary.main', mb: 0.5 }}>
                   Phone number: {loginResponse?.phoneMasked ?? '---'}
                 </Typography>
@@ -503,8 +506,11 @@ const VoteLoginPage: React.FC = () => {
                     border: '1px solid rgba(0, 0, 0, 0.08)',
                   }}
                 >
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Voting positions
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Your positions
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    These describe your current roles, not the ballot options.
                   </Typography>
                   {loginResponse.positions.map(position => (
                     <Typography
@@ -518,23 +524,78 @@ const VoteLoginPage: React.FC = () => {
                 </Box>
               ) : null}
 
-              <TextField
-                label="Last 3 digits"
-                value={phoneLast3}
-                onChange={e => setPhoneLast3(normalizeLast3(e.target.value))}
-                disabled={isVerifying}
-                autoComplete="off"
-                inputMode="numeric"
-                inputProps={{ maxLength: 3 }}
-                fullWidth
-                InputProps={{
-                  endAdornment: isVerifying && (
-                    <InputAdornment position="end">
-                      <CircularProgress size={24} />
-                    </InputAdornment>
-                  ),
+              <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>
+                Last 3 digits
+              </Typography>
+              <Box
+                sx={{
+                  position: 'relative',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  mt: 0.5,
                 }}
-              />
+              >
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(3, minmax(0, 1fr))`,
+                    gap: { xs: 0.75, sm: 1 },
+                    width: '100%',
+                    maxWidth: 220,
+                  }}
+                >
+                  {Array.from({ length: 3 }).map((_, index) => {
+                    const char = phoneLast3[index] || ''
+                    const isActive = phoneLast3.length === index && !isVerifying
+                    return (
+                      <Box
+                        key={`phone-box-${index}`}
+                        sx={{
+                          height: { xs: 42, sm: 48 },
+                          borderRadius: 1.5,
+                          border: '2px solid',
+                          borderColor: isActive ? 'primary.main' : 'rgba(0, 0, 0, 0.15)',
+                          bgcolor: isActive ? 'rgba(14, 97, 173, 0.08)' : 'rgba(0, 0, 0, 0.03)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: { xs: '1rem', sm: '1.1rem' },
+                          fontWeight: 600,
+                          color: 'text.primary',
+                          boxShadow: isActive ? '0 4px 12px rgba(14, 97, 173, 0.2)' : 'none',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        {char}
+                      </Box>
+                    )
+                  })}
+                </Box>
+
+                <Box
+                  component="input"
+                  type="tel"
+                  value={phoneLast3}
+                  onChange={e => setPhoneLast3(normalizeLast3(e.target.value))}
+                  onPaste={e => {
+                    e.preventDefault()
+                    setPhoneLast3(normalizeLast3(e.clipboardData.getData('text')))
+                  }}
+                  disabled={isVerifying}
+                  autoComplete="off"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  aria-label="Last 3 digits"
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    opacity: 0,
+                    cursor: 'text',
+                  }}
+                />
+              </Box>
 
               <Button
                 type="submit"
