@@ -82,7 +82,12 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       try {
         const res = await electionApi.listPositions(electionId)
         const data: Position[] = Array.isArray((res as any)?.content) ? (res as any).content : (res as any)
-        setPositions(data || [])
+        const sorted = [...(data || [])].sort((a, b) => {
+          const labelA = `${a.fellowshipPosition?.titleName || a.title || a.positionId || ''} ${a.fellowshipPosition?.fellowshipName || ''}`.trim()
+          const labelB = `${b.fellowshipPosition?.titleName || b.title || b.positionId || ''} ${b.fellowshipPosition?.fellowshipName || ''}`.trim()
+          return labelA.localeCompare(labelB)
+        })
+        setPositions(sorted)
       } catch (err) {
         setPositions([])
       }
@@ -96,7 +101,8 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       setPeopleLoading(true)
       try {
         const res = await peopleApi.list({ q: peopleQuery, page: 0, size: 20 })
-        setPeopleOptions(res.content || [])
+        const sorted = [...(res.content || [])].sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''))
+        setPeopleOptions(sorted)
       } catch (err) {
         setPeopleOptions([])
       } finally {
@@ -266,7 +272,7 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
         </Box>
       )}
 
-      <Dialog open={showManual} onClose={() => setShowManual(false)}>
+      <Dialog open={showManual} onClose={() => setShowManual(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Add Applicant</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1fr)', gap: 1.5, mt: 1 }}>
