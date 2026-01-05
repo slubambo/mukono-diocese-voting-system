@@ -61,8 +61,9 @@ const VoteBallotPage: React.FC = () => {
   const completedCount = useMemo(() => {
     if (!ballot) return 0
     return ballot.positions.reduce((sum, pos) => {
-      const selected = selections[pos.id]
-      if (pos.maxVotes === 1) return sum + (typeof selected === 'number' ? 1 : 0)
+      if (pos.candidates.length === 0) return sum + 1
+      const selected = selections[pos.positionId]
+      if (pos.maxVotesPerVoter === 1) return sum + (typeof selected === 'number' ? 1 : 0)
       return sum + (Array.isArray(selected) && selected.length > 0 ? 1 : 0)
     }, 0)
   }, [ballot, selections])
@@ -71,7 +72,7 @@ const VoteBallotPage: React.FC = () => {
     if (!ballot) return
     const target = ballot.positions[index]
     if (!target) return
-    const el = positionRefs.current[target.id]
+    const el = positionRefs.current[target.positionId]
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
@@ -140,8 +141,9 @@ const VoteBallotPage: React.FC = () => {
   const isValidSelection = () => {
     if (!ballot) return false
     return ballot.positions.every(pos => {
-      const selected = selections[pos.id]
-      if (pos.maxVotes === 1) {
+      if (pos.candidates.length === 0) return true
+      const selected = selections[pos.positionId]
+      if (pos.maxVotesPerVoter === 1) {
         return typeof selected === 'number'
       } else {
         return Array.isArray(selected) && selected.length > 0
@@ -267,7 +269,7 @@ const VoteBallotPage: React.FC = () => {
           </Avatar>
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              Official Ballot
+              {ballot?.ballotTitle || 'Official Ballot'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Select your preferred candidates below.
@@ -304,13 +306,19 @@ const VoteBallotPage: React.FC = () => {
         }}
       >
         {ballot?.positions.map((pos, idx) => {
-          const isComplete = selections[pos.id] !== undefined && (pos.maxVotes === 1 ? typeof selections[pos.id] === 'number' : Array.isArray(selections[pos.id]) && (selections[pos.id] as number[]).length > 0)
+          const selected = selections[pos.positionId]
+          const isComplete =
+            pos.candidates.length === 0 ||
+            (selected !== undefined &&
+              (pos.maxVotesPerVoter === 1
+                ? typeof selected === 'number'
+                : Array.isArray(selected) && selected.length > 0))
           return (
             <Chip
-              key={pos.id}
+              key={pos.positionId}
               size="small"
               icon={isComplete ? <CheckCircleIcon fontSize="small" color="success" /> : undefined}
-              label={`${idx + 1}. ${pos.title}`}
+              label={`${idx + 1}. ${pos.positionName}`}
               variant={isComplete ? 'filled' : 'outlined'}
               color={isComplete ? 'success' : 'default'}
               onClick={() => scrollToPosition(idx)}
@@ -327,15 +335,21 @@ const VoteBallotPage: React.FC = () => {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         {ballot?.positions.map((position: Position, idx) => (
           <PositionCard
-            key={position.id}
-            ref={el => { positionRefs.current[position.id] = el }}
+            key={position.positionId}
+            ref={el => { positionRefs.current[position.positionId] = el }}
             position={position}
             index={idx}
             total={ballot.positions.length}
-            selected={selections[position.id]}
-            isComplete={position.maxVotes === 1 ? typeof selections[position.id] === 'number' : Array.isArray(selections[position.id]) && (selections[position.id] as number[]).length > 0}
+            selected={selections[position.positionId]}
+            isComplete={
+              position.candidates.length === 0
+                ? true
+                : position.maxVotesPerVoter === 1
+                  ? typeof selections[position.positionId] === 'number'
+                  : Array.isArray(selections[position.positionId]) && (selections[position.positionId] as number[]).length > 0
+            }
             onSelectionChange={candidateId =>
-              handleSelectionChange(position.id, candidateId, position.maxVotes > 1)
+              handleSelectionChange(position.positionId, candidateId, position.maxVotesPerVoter > 1)
             }
             onNext={() => scrollToPosition(idx + 1)}
             onPrev={() => scrollToPosition(idx - 1)}
@@ -401,15 +415,15 @@ interface PositionCardProps {
 }
 const PositionCard = React.forwardRef<HTMLDivElement, PositionCardProps>(
   ({ position, selected, onSelectionChange, index, total, onNext, onPrev, isComplete }, ref) => {
-    const isMultiple = position.maxVotes > 1
+    const isMultiple = position.maxVotesPerVoter > 1
     const candidateCount = position.candidates.length
-    const seatLabel = position.maxVotes === 1 ? '1 seat' : `${position.maxVotes} seats`
+    const seatLabel = position.seats === 1 ? '1 seat' : `${position.seats} seats`
 
     return (
       <Card
         ref={ref}
         elevation={0}
-        id={`position-${position.id}`}
+        id={`position-${position.positionId}`}
         sx={{
           borderRadius: 3,
           border: '1px solid rgba(0, 0, 0, 0.08)',
@@ -436,10 +450,10 @@ const PositionCard = React.forwardRef<HTMLDivElement, PositionCardProps>(
                 Position {index + 1} of {total}
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {position.title}
+                {position.positionName}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {isMultiple ? `Choose up to ${position.maxVotes}` : 'Choose one candidate'}
+                {isMultiple ? `Choose up to ${position.maxVotesPerVoter}` : 'Choose one candidate'}
               </Typography>
             </Stack>
             <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -465,14 +479,14 @@ const PositionCard = React.forwardRef<HTMLDivElement, PositionCardProps>(
           ) : isMultiple ? (
             <FormGroup sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
               {position.candidates.map(candidate => {
-                const checked = Array.isArray(selected) ? selected.includes(candidate.id) : false
+                const checked = Array.isArray(selected) ? selected.includes(candidate.candidateId) : false
                 return (
                   <FormControlLabel
-                    key={candidate.id}
+                    key={candidate.candidateId}
                     control={
                       <Checkbox
                         checked={checked}
-                        onChange={() => onSelectionChange(candidate.id)}
+                        onChange={() => onSelectionChange(candidate.candidateId)}
                         sx={{
                           '&.Mui-checked': {
                             color: 'success.main',
@@ -483,10 +497,10 @@ const PositionCard = React.forwardRef<HTMLDivElement, PositionCardProps>(
                     label={
                       <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1.25 }}>
                         <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-                          {(candidate.name || '?').charAt(0).toUpperCase()}
+                          {(candidate.fullName || '?').charAt(0).toUpperCase()}
                         </Avatar>
                         <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                          {candidate.name}
+                          {candidate.fullName}
                         </Typography>
                       </Box>
                     }
@@ -517,12 +531,12 @@ const PositionCard = React.forwardRef<HTMLDivElement, PositionCardProps>(
               onChange={e => onSelectionChange(Number(e.target.value))}
               sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}
             >
-              {position.candidates.map(candidate => {
-                const checked = selected === candidate.id
+            {position.candidates.map(candidate => {
+                const checked = selected === candidate.candidateId
                 return (
                   <FormControlLabel
-                    key={candidate.id}
-                    value={candidate.id}
+                    key={candidate.candidateId}
+                    value={candidate.candidateId}
                     control={
                       <Radio
                         sx={{
@@ -535,10 +549,10 @@ const PositionCard = React.forwardRef<HTMLDivElement, PositionCardProps>(
                     label={
                       <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1.25 }}>
                         <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-                          {(candidate.name || '?').charAt(0).toUpperCase()}
+                          {(candidate.fullName || '?').charAt(0).toUpperCase()}
                         </Avatar>
                         <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                          {candidate.name}
+                          {candidate.fullName}
                         </Typography>
                       </Box>
                     }

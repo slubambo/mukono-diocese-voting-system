@@ -33,22 +33,31 @@ export interface VotePhoneVerifyResponse {
 }
 
 export interface Candidate {
-  id: number
-  name: string
-  picture?: string
+  candidateId: number
+  personId: number
+  fullName: string
+  gender: 'MALE' | 'FEMALE' | string
+  originArchdeaconryId: number | null
+  originArchdeaconryName: string | null
+  churchId: number | null
+  churchName: string | null
 }
 
 export interface Position {
-  id: number
-  title: string
-  description?: string
-  maxVotes: number
+  positionId: number
+  positionName: string
+  scope: string
+  seats: number
+  maxVotesPerVoter: number
   candidates: Candidate[]
 }
 
 export interface BallotData {
   electionId: number
   votingPeriodId: number
+  personId: number
+  serverTime: string
+  ballotTitle: string
   positions: Position[]
 }
 
