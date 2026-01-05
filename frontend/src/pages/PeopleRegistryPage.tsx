@@ -357,8 +357,8 @@ const PeopleRegistryPage: React.FC = () => {
                   <TextField {...field} label="Email" type="email" size="small" />
                 )} />
 
-                <Controller name="phoneNumber" control={control} render={({ field }) => (
-                  <TextField {...field} label="Phone Number" size="small" />
+                <Controller name="phoneNumber" control={control} rules={{ required: 'Phone number is required' }} render={({ field, fieldState }) => (
+                  <TextField {...field} label="Phone Number" required size="small" error={!!fieldState.error} helperText={fieldState.error?.message} />
                 )} />
 
                 <Controller name="gender" control={control} render={({ field }) => (
@@ -386,6 +386,7 @@ const PeopleRegistryPage: React.FC = () => {
                     label="Date of Birth"
                     value={field.value ? dayjs(field.value) : null}
                     onChange={(date) => field.onChange(date ? date.format('YYYY-MM-DD') : '')}
+                    maxDate={dayjs().subtract(18, 'year')}
                     slotProps={{
                       textField: {
                         size: 'small',
