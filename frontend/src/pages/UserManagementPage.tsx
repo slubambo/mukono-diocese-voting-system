@@ -59,6 +59,7 @@ const UserManagementPage: React.FC = () => {
   const [total, setTotal] = useState(0)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('username,asc')
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<User | null>(null)
@@ -87,7 +88,13 @@ const UserManagementPage: React.FC = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const resp = await userApi.list({ page, size: rowsPerPage, username: search || undefined, email: search || undefined })
+      const resp = await userApi.list({
+        page,
+        size: rowsPerPage,
+        username: search || undefined,
+        email: search || undefined,
+        active: statusFilter === 'ALL' ? undefined : statusFilter === 'ACTIVE',
+      })
       setUsers(resp.content)
       setTotal(resp.totalElements)
     } catch (e: any) {
@@ -97,7 +104,7 @@ const UserManagementPage: React.FC = () => {
     }
   }
 
-  useEffect(() => { fetchUsers() }, [page, rowsPerPage, search])
+  useEffect(() => { fetchUsers() }, [page, rowsPerPage, search, statusFilter])
 
   // debounce query -> search
   useEffect(() => {
@@ -280,6 +287,18 @@ const UserManagementPage: React.FC = () => {
               },
               placeholder: 'Sort by',
             },
+            {
+              id: 'status',
+              label: 'Status',
+              value: statusFilter,
+              options: [
+                { id: 'ACTIVE', name: 'Active' },
+                { id: 'INACTIVE', name: 'Inactive' },
+                { id: 'ALL', name: 'All' },
+              ],
+              onChange: (value) => { setStatusFilter((value as any) || 'ALL'); setPage(0) },
+              placeholder: 'Status',
+            },
           ]}
         />
 
@@ -314,7 +333,6 @@ const UserManagementPage: React.FC = () => {
                       </TableCell>
                       <TableCell>Email</TableCell>
                       <TableCell>Roles</TableCell>
-                      <TableCell>Status</TableCell>
                       {isAdmin && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
                   </TableHead>
@@ -325,7 +343,6 @@ const UserManagementPage: React.FC = () => {
                         <TableCell><Typography variant="body2">{u.displayName}</Typography></TableCell>
                         <TableCell>{u.email ? <Link href={`mailto:${u.email}`} underline="hover" color="inherit">{u.email}</Link> : ''}</TableCell>
                         <TableCell>{u.roles.map(r => <Chip key={r} label={formatRoleLabel(r)} size="small" sx={{ mr: 0.5 }} />)}</TableCell>
-                        <TableCell>{u.active ? <Chip label="Active" color="success" size="small" /> : <Chip label="Inactive" color="default" size="small" />}</TableCell>
                         {isAdmin && (
                           <TableCell align="right">
                             <Button size="small" onClick={() => openEdit(u)} sx={{ mr: 1 }}>Edit</Button>
