@@ -302,8 +302,71 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
         ) vc ON vc.person_id = p.id
         LEFT JOIN elections e ON e.id = :electionId
         LEFT JOIN leadership_assignments la ON la.id = positionOnly.la_id
-        WHERE (positionOnly.person_id IS NOT NULL OR evr.person_id IS NOT NULL)
-              AND (:fellowshipId IS NULL OR positionOnly.f_id = :fellowshipId)
+        WHERE (
+                  EXISTS (
+                      SELECT 1
+                      FROM leadership_assignments la2
+                      JOIN fellowship_positions fp3 ON fp3.id = la2.fellowship_position_id
+                      JOIN fellowships f3 ON f3.id = fp3.fellowship_id
+                      LEFT JOIN archdeaconries ad2 ON la2.archdeaconry_id = ad2.id
+                      LEFT JOIN churches ch2 ON la2.church_id = ch2.id
+                      WHERE la2.person_id = p.id
+                        AND la2.status = 'ACTIVE'
+                        AND (
+                            (e.scope = 'DIOCESE' AND la2.archdeaconry_id IS NOT NULL AND ad2.diocese_id = e.diocese_id)
+                         OR (e.scope = 'ARCHDEACONRY' AND la2.church_id IS NOT NULL AND ch2.archdeaconry_id = e.archdeaconry_id)
+                         OR (e.scope = 'CHURCH' AND la2.church_id = e.church_id)
+                        )
+                        AND EXISTS (
+                            SELECT 1 FROM voting_period_positions vpp
+                            JOIN election_positions ep2 ON ep2.id = vpp.election_position_id
+                            JOIN fellowship_positions fp2 ON fp2.id = ep2.fellowship_position_id
+                            WHERE vpp.voting_period_id = :votingPeriodId
+                              AND fp2.fellowship_id = f3.id
+                              AND fp2.scope = (
+                                  CASE 
+                                      WHEN e.scope = 'DIOCESE' THEN 'DIOCESE'
+                                      WHEN e.scope = 'ARCHDEACONRY' THEN 'ARCHDEACONRY'
+                                      WHEN e.scope = 'CHURCH' THEN 'CHURCH'
+                                  END
+                              )
+                        )
+                  )
+               OR evr.person_id IS NOT NULL
+              )
+              AND (
+                  :fellowshipId IS NULL
+                  OR EXISTS (
+                      SELECT 1
+                      FROM leadership_assignments la2
+                      JOIN fellowship_positions fp3 ON fp3.id = la2.fellowship_position_id
+                      JOIN fellowships f3 ON f3.id = fp3.fellowship_id
+                      LEFT JOIN archdeaconries ad2 ON la2.archdeaconry_id = ad2.id
+                      LEFT JOIN churches ch2 ON la2.church_id = ch2.id
+                      WHERE la2.person_id = p.id
+                        AND la2.status = 'ACTIVE'
+                        AND f3.id = :fellowshipId
+                        AND (
+                            (e.scope = 'DIOCESE' AND la2.archdeaconry_id IS NOT NULL AND ad2.diocese_id = e.diocese_id)
+                         OR (e.scope = 'ARCHDEACONRY' AND la2.church_id IS NOT NULL AND ch2.archdeaconry_id = e.archdeaconry_id)
+                         OR (e.scope = 'CHURCH' AND la2.church_id = e.church_id)
+                        )
+                        AND EXISTS (
+                            SELECT 1 FROM voting_period_positions vpp
+                            JOIN election_positions ep2 ON ep2.id = vpp.election_position_id
+                            JOIN fellowship_positions fp2 ON fp2.id = ep2.fellowship_position_id
+                            WHERE vpp.voting_period_id = :votingPeriodId
+                              AND fp2.fellowship_id = f3.id
+                              AND fp2.scope = (
+                                  CASE 
+                                      WHEN e.scope = 'DIOCESE' THEN 'DIOCESE'
+                                      WHEN e.scope = 'ARCHDEACONRY' THEN 'ARCHDEACONRY'
+                                      WHEN e.scope = 'CHURCH' THEN 'CHURCH'
+                                  END
+                              )
+                        )
+                  )
+              )
               AND (:status = 'ALL'
                    OR (:status = 'VOTED' AND vr_vote.person_id IS NOT NULL)
                    OR (:status = 'NOT_VOTED' AND vr_vote.person_id IS NULL))
@@ -315,41 +378,6 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
         countQuery = """
         SELECT COUNT(DISTINCT p.id)
         FROM people p
-        LEFT JOIN (
-            SELECT person_id, f_id
-            FROM (
-                SELECT la.person_id,
-                       f.id AS f_id,
-                       ROW_NUMBER() OVER (PARTITION BY la.person_id ORDER BY la.id ASC) AS rn
-                FROM leadership_assignments la
-                JOIN fellowship_positions fp ON fp.id = la.fellowship_position_id
-                JOIN fellowships f ON f.id = fp.fellowship_id
-                JOIN elections e ON e.id = :electionId
-                LEFT JOIN archdeaconries ad ON la.archdeaconry_id = ad.id
-                LEFT JOIN churches ch ON la.church_id = ch.id
-                WHERE la.status = 'ACTIVE'
-                  AND (
-                      (e.scope = 'DIOCESE' AND la.archdeaconry_id IS NOT NULL AND ad.diocese_id = e.diocese_id)
-                   OR (e.scope = 'ARCHDEACONRY' AND la.church_id IS NOT NULL AND ch.archdeaconry_id = e.archdeaconry_id)
-                   OR (e.scope = 'CHURCH' AND la.church_id = e.church_id)
-                  )
-                  AND EXISTS (
-                      SELECT 1 FROM voting_period_positions vpp
-                      JOIN election_positions ep2 ON ep2.id = vpp.election_position_id
-                      JOIN fellowship_positions fp2 ON fp2.id = ep2.fellowship_position_id
-                      WHERE vpp.voting_period_id = :votingPeriodId
-                        AND fp2.fellowship_id = f.id
-                        AND fp2.scope = (
-                            CASE 
-                                WHEN e.scope = 'DIOCESE' THEN 'DIOCESE'
-                                WHEN e.scope = 'ARCHDEACONRY' THEN 'ARCHDEACONRY'
-                                WHEN e.scope = 'CHURCH' THEN 'CHURCH'
-                            END
-                        )
-                  )
-            ) ranked
-            WHERE rn = 1
-        ) pos ON pos.person_id = p.id
         LEFT JOIN (
             SELECT evr.person_id
             FROM election_voter_roll evr
@@ -364,8 +392,73 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
               AND (:votingPeriodId IS NULL OR vr.voting_period_id = :votingPeriodId)
             GROUP BY vr.person_id
         ) vr_vote ON vr_vote.person_id = p.id
-        WHERE (pos.person_id IS NOT NULL OR evr.person_id IS NOT NULL)
-              AND (:fellowshipId IS NULL OR pos.f_id = :fellowshipId)
+        WHERE (
+                  EXISTS (
+                      SELECT 1
+                      FROM leadership_assignments la2
+                      JOIN fellowship_positions fp3 ON fp3.id = la2.fellowship_position_id
+                      JOIN fellowships f3 ON f3.id = fp3.fellowship_id
+                      JOIN elections e ON e.id = :electionId
+                      LEFT JOIN archdeaconries ad2 ON la2.archdeaconry_id = ad2.id
+                      LEFT JOIN churches ch2 ON la2.church_id = ch2.id
+                      WHERE la2.person_id = p.id
+                        AND la2.status = 'ACTIVE'
+                        AND (
+                            (e.scope = 'DIOCESE' AND la2.archdeaconry_id IS NOT NULL AND ad2.diocese_id = e.diocese_id)
+                         OR (e.scope = 'ARCHDEACONRY' AND la2.church_id IS NOT NULL AND ch2.archdeaconry_id = e.archdeaconry_id)
+                         OR (e.scope = 'CHURCH' AND la2.church_id = e.church_id)
+                        )
+                        AND EXISTS (
+                            SELECT 1 FROM voting_period_positions vpp
+                            JOIN election_positions ep2 ON ep2.id = vpp.election_position_id
+                            JOIN fellowship_positions fp2 ON fp2.id = ep2.fellowship_position_id
+                            WHERE vpp.voting_period_id = :votingPeriodId
+                              AND fp2.fellowship_id = f3.id
+                              AND fp2.scope = (
+                                  CASE 
+                                      WHEN e.scope = 'DIOCESE' THEN 'DIOCESE'
+                                      WHEN e.scope = 'ARCHDEACONRY' THEN 'ARCHDEACONRY'
+                                      WHEN e.scope = 'CHURCH' THEN 'CHURCH'
+                                  END
+                              )
+                        )
+                  )
+               OR evr.person_id IS NOT NULL
+              )
+              AND (
+                  :fellowshipId IS NULL
+                  OR EXISTS (
+                      SELECT 1
+                      FROM leadership_assignments la2
+                      JOIN fellowship_positions fp3 ON fp3.id = la2.fellowship_position_id
+                      JOIN fellowships f3 ON f3.id = fp3.fellowship_id
+                      JOIN elections e ON e.id = :electionId
+                      LEFT JOIN archdeaconries ad2 ON la2.archdeaconry_id = ad2.id
+                      LEFT JOIN churches ch2 ON la2.church_id = ch2.id
+                      WHERE la2.person_id = p.id
+                        AND la2.status = 'ACTIVE'
+                        AND f3.id = :fellowshipId
+                        AND (
+                            (e.scope = 'DIOCESE' AND la2.archdeaconry_id IS NOT NULL AND ad2.diocese_id = e.diocese_id)
+                         OR (e.scope = 'ARCHDEACONRY' AND la2.church_id IS NOT NULL AND ch2.archdeaconry_id = e.archdeaconry_id)
+                         OR (e.scope = 'CHURCH' AND la2.church_id = e.church_id)
+                        )
+                        AND EXISTS (
+                            SELECT 1 FROM voting_period_positions vpp
+                            JOIN election_positions ep2 ON ep2.id = vpp.election_position_id
+                            JOIN fellowship_positions fp2 ON fp2.id = ep2.fellowship_position_id
+                            WHERE vpp.voting_period_id = :votingPeriodId
+                              AND fp2.fellowship_id = f3.id
+                              AND fp2.scope = (
+                                  CASE 
+                                      WHEN e.scope = 'DIOCESE' THEN 'DIOCESE'
+                                      WHEN e.scope = 'ARCHDEACONRY' THEN 'ARCHDEACONRY'
+                                      WHEN e.scope = 'CHURCH' THEN 'CHURCH'
+                                  END
+                              )
+                        )
+                  )
+              )
               AND (:status = 'ALL'
                    OR (:status = 'VOTED' AND vr_vote.person_id IS NOT NULL)
                    OR (:status = 'NOT_VOTED' AND vr_vote.person_id IS NULL))
