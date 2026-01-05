@@ -25,6 +25,7 @@ import {
   Typography,
   Box,
   Autocomplete,
+  Chip,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
@@ -436,20 +437,39 @@ export const PositionPage: React.FC = () => {
                   value={Array.isArray(formData.scope) ? formData.scope : [formData.scope]}
                   label="Scope"
                   onChange={(e) => setFormData({ ...formData, scope: e.target.value as PositionScope[] })}
-                  renderValue={(selected) => (selected as PositionScope[]).join(', ')}
+                  renderValue={(selected) => {
+                    const values = selected as PositionScope[]
+                    const shown = values.slice(0, 2)
+                    const extra = values.length - shown.length
+                    return (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {shown.map((value) => (
+                          <Chip
+                            key={value}
+                            label={value}
+                            onDelete={() => {
+                              const next = values.filter((v) => v !== value)
+                              setFormData({ ...formData, scope: next })
+                            }}
+                          />
+                        ))}
+                        {extra > 0 && <Chip label={`+${extra} more`} />}
+                      </Box>
+                    )
+                  }}
                 >
-                  <MenuItem value="DIOCESE">Diocese</MenuItem>
-                  <MenuItem value="ARCHDEACONRY">Archdeaconry</MenuItem>
-                  <MenuItem value="CHURCH">Church</MenuItem>
+                  <MenuItem value="DIOCESE">DIOCESE</MenuItem>
+                  <MenuItem value="ARCHDEACONRY">ARCHDEACONRY</MenuItem>
+                  <MenuItem value="CHURCH">CHURCH</MenuItem>
                 </Select>
               </FormControl>
             ) : (
               <FormControl fullWidth required>
                 <InputLabel>Scope</InputLabel>
                 <Select value={Array.isArray(formData.scope) ? formData.scope[0] : formData.scope} label="Scope" onChange={(e) => setFormData({ ...formData, scope: e.target.value as PositionScope })}>
-                  <MenuItem value="DIOCESE">Diocese</MenuItem>
-                  <MenuItem value="ARCHDEACONRY">Archdeaconry</MenuItem>
-                  <MenuItem value="CHURCH">Church</MenuItem>
+                  <MenuItem value="DIOCESE">DIOCESE</MenuItem>
+                  <MenuItem value="ARCHDEACONRY">ARCHDEACONRY</MenuItem>
+                  <MenuItem value="CHURCH">CHURCH</MenuItem>
                 </Select>
               </FormControl>
             )}
