@@ -215,9 +215,11 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
       {applicants.length === 0 ? (
         <EmptyState title="No applicants" description="There are no applicants to display." action={isAdmin ? <Button onClick={() => { setSelectedPerson(null); setManualPersonId(''); setManualPositionId(''); setManualNotes(''); setSelectedFellowshipId(''); setShowManual(true) }}>Add Applicant</Button> : undefined} />
       ) : (
-        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', lg: 'repeat(auto-fit, minmax(420px, 1fr))' } }}>
-          {groupedApplicants.map(([fellowship, items]) => (
-            <Paper key={fellowship} sx={{ border: '1px solid rgba(88, 28, 135, 0.1)', borderRadius: 1.5, p: 1.5 }}>
+        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' } }}>
+          {groupedApplicants.map(([fellowship, items], index) => {
+            const isLastOdd = groupedApplicants.length % 2 === 1 && index === groupedApplicants.length - 1
+            return (
+            <Paper key={fellowship} sx={{ border: '1px solid rgba(88, 28, 135, 0.1)', borderRadius: 1.5, p: 1.5, gridColumn: isLastOdd ? '1 / -1' : 'auto' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Box>
                   <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{fellowship}</Typography>
@@ -291,7 +293,8 @@ const ApplicantsTab: React.FC<{ electionId: string }> = ({ electionId }) => {
                 </Table>
               </TableContainer>
             </Paper>
-          ))}
+            )
+          })}
         </Box>
       )}
 
