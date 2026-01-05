@@ -1,26 +1,35 @@
 package com.mukono.voting.payload.response;
 
+import com.mukono.voting.payload.response.voting.VoterPositionSummary;
+
+import java.util.List;
+
 public class VoteLoginResponse {
     private String accessToken;
     private String tokenType = "Bearer";
     private long expiresIn;
     private Long personId;
+    private String fullName;
     private Long electionId;
     private Long votingPeriodId;
     private boolean hasPhone;
-    private String phoneLast3;
+    private String phoneMasked;
+    private List<VoterPositionSummary> positions;
 
     public VoteLoginResponse() {}
 
-    public VoteLoginResponse(String accessToken, long expiresIn, Long personId, Long electionId, Long votingPeriodId,
-                             boolean hasPhone, String phoneLast3) {
+    public VoteLoginResponse(String accessToken, long expiresIn, Long personId, String fullName,
+                             Long electionId, Long votingPeriodId, boolean hasPhone, String phoneMasked,
+                             List<VoterPositionSummary> positions) {
         this.accessToken = accessToken;
         this.expiresIn = expiresIn;
         this.personId = personId;
+        this.fullName = fullName;
         this.electionId = electionId;
         this.votingPeriodId = votingPeriodId;
         this.hasPhone = hasPhone;
-        this.phoneLast3 = phoneLast3;
+        this.phoneMasked = phoneMasked;
+        this.positions = positions;
     }
 
     public String getAccessToken() { return accessToken; }
@@ -35,6 +44,9 @@ public class VoteLoginResponse {
     public Long getPersonId() { return personId; }
     public void setPersonId(Long personId) { this.personId = personId; }
 
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
+
     public Long getElectionId() { return electionId; }
     public void setElectionId(Long electionId) { this.electionId = electionId; }
 
@@ -44,6 +56,9 @@ public class VoteLoginResponse {
     public boolean isHasPhone() { return hasPhone; }
     public void setHasPhone(boolean hasPhone) { this.hasPhone = hasPhone; }
 
-    public String getPhoneLast3() { return phoneLast3; }
-    public void setPhoneLast3(String phoneLast3) { this.phoneLast3 = phoneLast3; }
+    public String getPhoneMasked() { return phoneMasked; }
+    public void setPhoneMasked(String phoneMasked) { this.phoneMasked = phoneMasked; }
+
+    public List<VoterPositionSummary> getPositions() { return positions; }
+    public void setPositions(List<VoterPositionSummary> positions) { this.positions = positions; }
 }

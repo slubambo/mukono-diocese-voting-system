@@ -4,6 +4,8 @@ package com.mukono.voting.repository.leadership;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.mukono.voting.model.common.RecordStatus;
@@ -429,6 +431,44 @@ public interface LeadershipAssignmentRepository extends JpaRepository<Leadership
         Long churchId,
         RecordStatus status,
         Pageable pageable
+    );
+
+    /**
+     * Fetch active assignment summaries for a voter within a voting period's fellowships and scope target.
+     */
+    @Query("""
+        SELECT new com.mukono.voting.payload.response.voting.VoterPositionSummary(
+            pt.name,
+            f.name,
+            COALESCE(d.name, ad.name, ch.name)
+        )
+        FROM LeadershipAssignment la
+        JOIN la.fellowshipPosition fp
+        JOIN fp.title pt
+        JOIN fp.fellowship f
+        LEFT JOIN la.diocese d
+        LEFT JOIN la.archdeaconry ad
+        LEFT JOIN la.church ch
+        WHERE la.person.id = :personId
+          AND la.status = :status
+          AND fp.scope = :scope
+          AND f.id IN :fellowshipIds
+          AND (
+              (:electionScope = 'DIOCESE' AND la.archdeaconry IS NOT NULL AND ad.diocese.id = :dioceseId)
+           OR (:electionScope = 'ARCHDEACONRY' AND la.church IS NOT NULL AND ch.archdeaconry.id = :archdeaconryId)
+           OR (:electionScope = 'CHURCH' AND la.church IS NOT NULL AND ch.id = :churchId)
+          )
+        ORDER BY pt.name ASC
+    """)
+    List<com.mukono.voting.payload.response.voting.VoterPositionSummary> findVoterPositionSummaries(
+        @Param("personId") Long personId,
+        @Param("fellowshipIds") List<Long> fellowshipIds,
+        @Param("scope") PositionScope scope,
+        @Param("status") RecordStatus status,
+        @Param("electionScope") String electionScope,
+        @Param("dioceseId") Long dioceseId,
+        @Param("archdeaconryId") Long archdeaconryId,
+        @Param("churchId") Long churchId
     );
 
     /**

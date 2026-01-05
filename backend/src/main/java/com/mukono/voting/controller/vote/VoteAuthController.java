@@ -4,6 +4,7 @@ import com.mukono.voting.model.election.VotingCode;
 import com.mukono.voting.payload.request.VoteLoginRequest;
 import com.mukono.voting.payload.response.VoteLoginResponse;
 import com.mukono.voting.security.VoterJwtService;
+import com.mukono.voting.service.election.ElectionVoterEligibilityService;
 import com.mukono.voting.service.election.VotingCodeService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +23,14 @@ public class VoteAuthController {
 
     private final VotingCodeService votingCodeService;
     private final VoterJwtService voterJwtService;
+    private final ElectionVoterEligibilityService eligibilityService;
 
-    public VoteAuthController(VotingCodeService votingCodeService, VoterJwtService voterJwtService) {
+    public VoteAuthController(VotingCodeService votingCodeService,
+                              VoterJwtService voterJwtService,
+                              ElectionVoterEligibilityService eligibilityService) {
         this.votingCodeService = votingCodeService;
         this.voterJwtService = voterJwtService;
+        this.eligibilityService = eligibilityService;
     }
 
     @PostMapping("/login")
@@ -36,20 +41,32 @@ public class VoteAuthController {
         VotingCode vc = votingCodeService.validateCodeSafe(code);
 
         Long personId = vc.getPerson().getId();
+        String fullName = vc.getPerson().getFullName();
         Long electionId = vc.getElection().getId();
         Long votingPeriodId = vc.getVotingPeriod().getId();
 
         // 2.2 Issue voter JWT with short TTL (15 minutes)
         String token = voterJwtService.generateVoterToken(personId, electionId, votingPeriodId, Duration.ofMinutes(15), vc.getId());
 
-        String phoneLast3 = extractPhoneLast3(vc.getPerson().getPhoneNumber());
-        boolean hasPhone = phoneLast3 != null;
+        String phoneMasked = maskPhone(vc.getPerson().getPhoneNumber());
+        boolean hasPhone = phoneMasked != null;
+        var positions = eligibilityService.getVoterPositionSummaries(electionId, votingPeriodId, personId);
 
-        VoteLoginResponse response = new VoteLoginResponse(token, 900L, personId, electionId, votingPeriodId, hasPhone, phoneLast3);
+        VoteLoginResponse response = new VoteLoginResponse(
+                token,
+                900L,
+                personId,
+                fullName,
+                electionId,
+                votingPeriodId,
+                hasPhone,
+                phoneMasked,
+                positions
+        );
         return ResponseEntity.ok(response);
     }
 
-    private String extractPhoneLast3(String phoneNumber) {
+    private String maskPhone(String phoneNumber) {
         if (phoneNumber == null || phoneNumber.isBlank()) {
             return null;
         }
@@ -57,6 +74,10 @@ public class VoteAuthController {
         if (digits.length() < 3) {
             return null;
         }
-        return digits.substring(digits.length() - 3);
+        if (digits.length() == 3) {
+            return "***";
+        }
+        String prefix = digits.substring(0, digits.length() - 3);
+        return prefix + "***";
     }
 }

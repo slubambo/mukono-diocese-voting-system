@@ -80,6 +80,50 @@ public class ElectionVoterEligibilityService {
         this.electionCandidateRepository = electionCandidateRepository;
     }
 
+    @Transactional(readOnly = true)
+    public List<com.mukono.voting.payload.response.voting.VoterPositionSummary> getVoterPositionSummaries(
+            Long electionId, Long votingPeriodId, Long voterPersonId) {
+        Election election = electionRepository.findById(electionId)
+                .orElseThrow(() -> new IllegalArgumentException("Election not found: " + electionId));
+
+        List<Long> votingPeriodPositionIds =
+                votingPeriodPositionRepository.findElectionPositionIdsByVotingPeriod(electionId, votingPeriodId);
+        if (votingPeriodPositionIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        List<com.mukono.voting.model.election.ElectionPosition> electionPositions =
+                electionPositionRepository.findAllById(votingPeriodPositionIds);
+        if (electionPositions.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        java.util.Set<Long> fellowshipIds = electionPositions.stream()
+                .map(ep -> ep.getFellowship().getId())
+                .collect(java.util.stream.Collectors.toSet());
+
+        if (fellowshipIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        PositionScope eligibleScope = lowerScopeForElection(election.getScope());
+
+        Long dioceseId = election.getDiocese() != null ? election.getDiocese().getId() : null;
+        Long archdeaconryId = election.getArchdeaconry() != null ? election.getArchdeaconry().getId() : null;
+        Long churchId = election.getChurch() != null ? election.getChurch().getId() : null;
+
+        return leadershipAssignmentRepository.findVoterPositionSummaries(
+                voterPersonId,
+                new java.util.ArrayList<>(fellowshipIds),
+                eligibleScope,
+                RecordStatus.ACTIVE,
+                election.getScope().name(),
+                dioceseId,
+                archdeaconryId,
+                churchId
+        );
+    }
+
     /**
      * Simple boolean check for voter eligibility for a specific voting period.
      * 
