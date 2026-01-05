@@ -81,6 +81,17 @@ public interface ElectionCandidateRepository extends JpaRepository<ElectionCandi
     boolean existsByElectionIdAndElectionPositionIdAndPersonId(
             Long electionId, Long electionPositionId, Long personId);
 
+    /**
+     * Check if a person is a candidate for any of the given positions in an election.
+     *
+     * @param electionId the election ID
+     * @param electionPositionIds election position IDs
+     * @param personId the person ID
+     * @return true if candidate exists for any position, false otherwise
+     */
+    boolean existsByElectionIdAndElectionPositionIdInAndPersonId(
+            Long electionId, List<Long> electionPositionIds, Long personId);
+
     // =========================================================================
     // C) CANDIDATE LISTS FOR BALLOT
     // =========================================================================

@@ -52,6 +52,7 @@ public class ElectionVoterEligibilityService {
     private final ElectionPositionRepository electionPositionRepository;
     private final com.mukono.voting.repository.election.VotingPeriodRepository votingPeriodRepository;
     private final com.mukono.voting.repository.election.VotingPeriodPositionRepository votingPeriodPositionRepository;
+    private final com.mukono.voting.repository.election.ElectionCandidateRepository electionCandidateRepository;
 
     @Autowired
     public ElectionVoterEligibilityService(
@@ -64,7 +65,8 @@ public class ElectionVoterEligibilityService {
             ChurchRepository churchRepository,
             ElectionPositionRepository electionPositionRepository,
             com.mukono.voting.repository.election.VotingPeriodRepository votingPeriodRepository,
-            com.mukono.voting.repository.election.VotingPeriodPositionRepository votingPeriodPositionRepository) {
+            com.mukono.voting.repository.election.VotingPeriodPositionRepository votingPeriodPositionRepository,
+            com.mukono.voting.repository.election.ElectionCandidateRepository electionCandidateRepository) {
         this.electionRepository = electionRepository;
         this.electionVoterRollRepository = electionVoterRollRepository;
         this.personRepository = personRepository;
@@ -75,6 +77,7 @@ public class ElectionVoterEligibilityService {
         this.electionPositionRepository = electionPositionRepository;
         this.votingPeriodRepository = votingPeriodRepository;
         this.votingPeriodPositionRepository = votingPeriodPositionRepository;
+        this.electionCandidateRepository = electionCandidateRepository;
     }
 
     /**
@@ -129,14 +132,28 @@ public class ElectionVoterEligibilityService {
             }
         }
 
-        // === TIER 2: FELLOWSHIP MEMBERSHIP CHECK ===
-        // Get all fellowships from positions assigned to this voting period.
-        // Election.fellowship field is deprecated; fellowships are derived from positions.
+        // === TIER 2: POSITIONS + CANDIDATE SHORT-CIRCUIT ===
+        // Use positions assigned to this voting period.
         List<Long> votingPeriodPositionIds =
                 votingPeriodPositionRepository.findElectionPositionIdsByVotingPeriod(electionId, votingPeriodId);
+
+        if (votingPeriodPositionIds.isEmpty()) {
+            return new EligibilityDecision(false, "NO_POSITIONS",
+                    "Voting period has no assigned positions");
+        }
+
+        if (electionCandidateRepository.existsByElectionIdAndElectionPositionIdInAndPersonId(
+                electionId, votingPeriodPositionIds, voterPersonId)) {
+            return new EligibilityDecision(true, "CANDIDATE",
+                    "Voter is a candidate for this voting period");
+        }
+
+        // === TIER 3: FELLOWSHIP MEMBERSHIP CHECK ===
+        // Get all fellowships from positions assigned to this voting period.
+        // Election.fellowship field is deprecated; fellowships are derived from positions.
         List<com.mukono.voting.model.election.ElectionPosition> electionPositions =
                 electionPositionRepository.findAllById(votingPeriodPositionIds);
-        
+
         if (electionPositions.isEmpty()) {
             return new EligibilityDecision(false, "NO_POSITIONS",
                     "Election has no assigned positions");
@@ -169,7 +186,7 @@ public class ElectionVoterEligibilityService {
                     "Not a member of any fellowship required by this election");
         }
 
-        // === TIER 3: SCOPE-TARGET MEMBERSHIP CHECK ===
+        // === TIER 4: SCOPE-TARGET MEMBERSHIP CHECK ===
         // Verify voter is eligible within the election's scope
         // PERSON-SPECIFIC: Check this voter's assignment matches the scope target
         return checkScopeEligibility(election, voter, voterFellowshipAssignments, voterPersonId);
