@@ -40,7 +40,7 @@ import java.util.Optional;
 public class VotingCodeService {
 
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Exclude ambiguous chars
-    private static final int CODE_LENGTH = 10;
+    private static final int CODE_LENGTH = 8;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final VotingCodeRepository votingCodeRepository;
@@ -330,7 +330,7 @@ public class VotingCodeService {
     /**
      * Generate a unique, secure, short voting code.
      * 
-     * Format: 10 uppercase alphanumeric characters (excludes ambiguous characters like 0, O, I, 1)
+     * Format: 8 uppercase alphanumeric characters (excludes ambiguous characters like 0, O, I, 1)
      * Example: A3K7P2QW9R
      * 
      * @return a unique voting code

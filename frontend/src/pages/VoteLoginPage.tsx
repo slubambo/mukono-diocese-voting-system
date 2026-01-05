@@ -32,7 +32,7 @@ const VoteLoginPage: React.FC = () => {
   const navigate = useNavigate()
   const { setSession } = useVoterAuth()
 
-  const CODE_LENGTH = 10
+  const CODE_LENGTH = 8
   const [code, setCode] = useState('')
   const [phoneLast3, setPhoneLast3] = useState('')
   const [error, setError] = useState<string | null>(null)
