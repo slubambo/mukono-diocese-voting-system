@@ -224,7 +224,7 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                ) AS codeHistoryJson
         FROM people p
         LEFT JOIN (
-            SELECT person_id, la_id, fellowship_name, scope, scope_name, position_name, f_id, ep_id
+            SELECT person_id, la_id, fellowship_name, scope, scope_name, position_name, f_id
             FROM (
                 SELECT la.person_id,
                        la.id AS la_id,
@@ -238,14 +238,12 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                        COALESCE(d.name, ad.name, ch.name) AS scope_name,
                        pt.name AS position_name,
                        f.id AS f_id,
-                       ep.id AS ep_id,
                        ROW_NUMBER() OVER (PARTITION BY la.person_id ORDER BY la.id ASC) AS rn
                 FROM leadership_assignments la
                 JOIN fellowship_positions fp ON fp.id = la.fellowship_position_id
                 JOIN position_titles pt ON pt.id = fp.title_id
                 JOIN fellowships f ON f.id = fp.fellowship_id
-                JOIN election_positions ep ON ep.fellowship_position_id = fp.id AND ep.election_id = :electionId
-                JOIN elections e ON e.id = ep.election_id
+                JOIN elections e ON e.id = :electionId
                 LEFT JOIN dioceses d ON la.diocese_id = d.id
                 LEFT JOIN archdeaconries ad ON la.archdeaconry_id = ad.id
                 LEFT JOIN churches ch ON la.church_id = ch.id
@@ -254,6 +252,20 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                       (e.scope = 'DIOCESE' AND la.archdeaconry_id IS NOT NULL AND ad.diocese_id = e.diocese_id)
                    OR (e.scope = 'ARCHDEACONRY' AND la.church_id IS NOT NULL AND ch.archdeaconry_id = e.archdeaconry_id)
                    OR (e.scope = 'CHURCH' AND la.church_id = e.church_id)
+                  )
+                  AND EXISTS (
+                      SELECT 1 FROM voting_period_positions vpp
+                      JOIN election_positions ep2 ON ep2.id = vpp.election_position_id
+                      JOIN fellowship_positions fp2 ON fp2.id = ep2.fellowship_position_id
+                      WHERE vpp.voting_period_id = :votingPeriodId
+                        AND fp2.fellowship_id = f.id
+                        AND fp2.scope = (
+                            CASE 
+                                WHEN e.scope = 'DIOCESE' THEN 'DIOCESE'
+                                WHEN e.scope = 'ARCHDEACONRY' THEN 'ARCHDEACONRY'
+                                WHEN e.scope = 'CHURCH' THEN 'CHURCH'
+                            END
+                        )
                   )
             ) ranked
             WHERE rn = 1
@@ -292,7 +304,6 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
         LEFT JOIN leadership_assignments la ON la.id = positionOnly.la_id
         WHERE (positionOnly.person_id IS NOT NULL OR evr.person_id IS NOT NULL)
               AND (:fellowshipId IS NULL OR positionOnly.f_id = :fellowshipId)
-              AND (:electionPositionId IS NULL OR positionOnly.ep_id = :electionPositionId)
               AND (:status = 'ALL'
                    OR (:status = 'VOTED' AND vr_vote.person_id IS NOT NULL)
                    OR (:status = 'NOT_VOTED' AND vr_vote.person_id IS NULL))
@@ -305,17 +316,15 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
         SELECT COUNT(DISTINCT p.id)
         FROM people p
         LEFT JOIN (
-            SELECT person_id, f_id, ep_id
+            SELECT person_id, f_id
             FROM (
                 SELECT la.person_id,
                        f.id AS f_id,
-                       ep.id AS ep_id,
                        ROW_NUMBER() OVER (PARTITION BY la.person_id ORDER BY la.id ASC) AS rn
                 FROM leadership_assignments la
                 JOIN fellowship_positions fp ON fp.id = la.fellowship_position_id
                 JOIN fellowships f ON f.id = fp.fellowship_id
-                JOIN election_positions ep ON ep.fellowship_position_id = fp.id AND ep.election_id = :electionId
-                JOIN elections e ON e.id = ep.election_id
+                JOIN elections e ON e.id = :electionId
                 LEFT JOIN archdeaconries ad ON la.archdeaconry_id = ad.id
                 LEFT JOIN churches ch ON la.church_id = ch.id
                 WHERE la.status = 'ACTIVE'
@@ -323,6 +332,20 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                       (e.scope = 'DIOCESE' AND la.archdeaconry_id IS NOT NULL AND ad.diocese_id = e.diocese_id)
                    OR (e.scope = 'ARCHDEACONRY' AND la.church_id IS NOT NULL AND ch.archdeaconry_id = e.archdeaconry_id)
                    OR (e.scope = 'CHURCH' AND la.church_id = e.church_id)
+                  )
+                  AND EXISTS (
+                      SELECT 1 FROM voting_period_positions vpp
+                      JOIN election_positions ep2 ON ep2.id = vpp.election_position_id
+                      JOIN fellowship_positions fp2 ON fp2.id = ep2.fellowship_position_id
+                      WHERE vpp.voting_period_id = :votingPeriodId
+                        AND fp2.fellowship_id = f.id
+                        AND fp2.scope = (
+                            CASE 
+                                WHEN e.scope = 'DIOCESE' THEN 'DIOCESE'
+                                WHEN e.scope = 'ARCHDEACONRY' THEN 'ARCHDEACONRY'
+                                WHEN e.scope = 'CHURCH' THEN 'CHURCH'
+                            END
+                        )
                   )
             ) ranked
             WHERE rn = 1
@@ -343,7 +366,6 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
         ) vr_vote ON vr_vote.person_id = p.id
         WHERE (pos.person_id IS NOT NULL OR evr.person_id IS NOT NULL)
               AND (:fellowshipId IS NULL OR pos.f_id = :fellowshipId)
-              AND (:electionPositionId IS NULL OR pos.ep_id = :electionPositionId)
               AND (:status = 'ALL'
                    OR (:status = 'VOTED' AND vr_vote.person_id IS NOT NULL)
                    OR (:status = 'NOT_VOTED' AND vr_vote.person_id IS NULL))
