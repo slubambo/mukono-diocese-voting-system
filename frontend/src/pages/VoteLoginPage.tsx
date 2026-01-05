@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Card,
@@ -33,6 +33,8 @@ const VoteLoginPage: React.FC = () => {
   const { setSession } = useVoterAuth()
 
   const CODE_LENGTH = 8
+  const MAX_ATTEMPTS = 5
+  const LOCKOUT_MS = 5 * 60 * 1000
   const [code, setCode] = useState('')
   const [phoneLast3, setPhoneLast3] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -41,6 +43,11 @@ const VoteLoginPage: React.FC = () => {
   const [isVerifying, setIsVerifying] = useState(false)
   const [step, setStep] = useState<'code' | 'phone'>('code')
   const [loginResponse, setLoginResponse] = useState<VoteLoginResponse | null>(null)
+  const [codeAttempts, setCodeAttempts] = useState(0)
+  const [phoneAttempts, setPhoneAttempts] = useState(0)
+  const [codeLockedUntil, setCodeLockedUntil] = useState<number | null>(null)
+  const [phoneLockedUntil, setPhoneLockedUntil] = useState<number | null>(null)
+  const [now, setNow] = useState(Date.now())
 
   const normalizedCode = useMemo(() => {
     return code.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CODE_LENGTH)
@@ -48,9 +55,29 @@ const VoteLoginPage: React.FC = () => {
 
   const normalizeCodeInput = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CODE_LENGTH)
   const normalizeLast3 = (value: string) => value.replace(/[^0-9]/g, '').slice(0, 3)
+  const formatRemaining = (remainingMs: number) => {
+    const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000))
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  const isCodeLocked = codeLockedUntil !== null && codeLockedUntil > now
+  const isPhoneLocked = phoneLockedUntil !== null && phoneLockedUntil > now
+
+  useEffect(() => {
+    if (!isCodeLocked && !isPhoneLocked) return
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [isCodeLocked, isPhoneLocked])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isCodeLocked) {
+      setError(`Too many attempts. Try again in ${formatRemaining(codeLockedUntil - now)}.`)
+      return
+    }
 
     if (!normalizedCode.trim()) {
       setError('Please enter your voting code.')
@@ -79,8 +106,13 @@ const VoteLoginPage: React.FC = () => {
 
       setLoginResponse(response)
 
+      setCodeAttempts(0)
+      setCodeLockedUntil(null)
+
       if (response.hasPhone) {
         setPhoneLast3('')
+        setPhoneAttempts(0)
+        setPhoneLockedUntil(null)
         setStep('phone')
       } else {
         // Redirect to ballot
@@ -88,6 +120,15 @@ const VoteLoginPage: React.FC = () => {
       }
     } catch (err: unknown) {
       console.error('Login error:', err)
+
+      setCodeAttempts(prev => {
+        const next = prev + 1
+        if (next >= MAX_ATTEMPTS) {
+          setCodeLockedUntil(Date.now() + LOCKOUT_MS)
+          return MAX_ATTEMPTS
+        }
+        return next
+      })
 
       if (axios.isAxiosError(err)) {
         const apiMessage = err.response?.data?.message
@@ -115,6 +156,11 @@ const VoteLoginPage: React.FC = () => {
   const handleVerifyPhone = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (isPhoneLocked) {
+      setPhoneError(`Too many attempts. Try again in ${formatRemaining(phoneLockedUntil - now)}.`)
+      return
+    }
+
     const cleaned = normalizeLast3(phoneLast3)
     if (cleaned.length !== 3) {
       setPhoneError('Please enter the last 3 digits of your phone number.')
@@ -137,13 +183,31 @@ const VoteLoginPage: React.FC = () => {
       )
 
       if (!response.verified) {
+        setPhoneAttempts(prev => {
+          const next = prev + 1
+          if (next >= MAX_ATTEMPTS) {
+            setPhoneLockedUntil(Date.now() + LOCKOUT_MS)
+            return MAX_ATTEMPTS
+          }
+          return next
+        })
         setPhoneError(response.reason ? `Verification failed: ${response.reason}` : 'Verification failed.')
         return
       }
 
+      setPhoneAttempts(0)
+      setPhoneLockedUntil(null)
       navigate('/vote/ballot')
     } catch (err: unknown) {
       console.error('Phone verification error:', err)
+      setPhoneAttempts(prev => {
+        const next = prev + 1
+        if (next >= MAX_ATTEMPTS) {
+          setPhoneLockedUntil(Date.now() + LOCKOUT_MS)
+          return MAX_ATTEMPTS
+        }
+        return next
+      })
       if (axios.isAxiosError(err)) {
         const apiMessage = err.response?.data?.message
         if (typeof apiMessage === 'string' && apiMessage.trim().length > 0) {
@@ -225,7 +289,7 @@ const VoteLoginPage: React.FC = () => {
               lineHeight: 1.6,
             }}
           >
-            {step === 'code' ? 'Enter your voting code to get started' : 'Verify your phone to continue'}
+          {step === 'code' ? 'Enter your voting code to get started' : 'Verify your phone to continue'}
           </Typography>
 
           <Stepper activeStep={step === 'code' ? 0 : 1} alternativeLabel sx={{ mb: 3 }}>
@@ -257,6 +321,12 @@ const VoteLoginPage: React.FC = () => {
               <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>
                 Voting Code <span style={{ fontSize: '0.9em' }}>(Koodi y'Okulonda)</span>
               </Typography>
+
+              {loginResponse?.fullName && (
+                <Typography variant="body2" color="text.secondary">
+                  Welcome, {loginResponse.fullName}
+                </Typography>
+              )}
 
               <Box
                 sx={{
@@ -344,16 +414,23 @@ const VoteLoginPage: React.FC = () => {
                   color="text.secondary"
                   sx={{ fontSize: { xs: '0.85rem', sm: '0.9rem' }, lineHeight: 1.5 }}
                 >
-                  💡 Paste or type your code (e.g., 95LUE3GAEY). Only letters and numbers are accepted.
+                  💡 Paste or type your code (e.g., 95LUE3GA). Only letters and numbers are accepted.
                 </Typography>
               </Box>
+
+              <Typography variant="caption" color="text.secondary">
+                Attempts: {codeAttempts}/{MAX_ATTEMPTS}
+                {isCodeLocked && codeLockedUntil
+                  ? ` • Try again in ${formatRemaining(codeLockedUntil - now)}`
+                  : ''}
+              </Typography>
 
               <Button
                 type="submit"
                 variant="contained"
                 color="primary"
                 size="large"
-                disabled={isLoading || !normalizedCode.trim()}
+                disabled={isLoading || !normalizedCode.trim() || isCodeLocked}
                 sx={{
                   mt: 3,
                   py: { xs: 1.75, sm: 2 },
@@ -389,12 +466,36 @@ const VoteLoginPage: React.FC = () => {
                 }}
               >
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'primary.main', mb: 0.5 }}>
-                  Phone ending in ***{loginResponse?.phoneLast3 ?? '---'}
+                  Phone number: {loginResponse?.phoneMasked ?? '---'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Enter the last 3 digits to confirm your identity.
                 </Typography>
               </Box>
+
+              {loginResponse?.positions?.length ? (
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: 'rgba(0, 0, 0, 0.03)',
+                    border: '1px solid rgba(0, 0, 0, 0.08)',
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Voting positions
+                  </Typography>
+                  {loginResponse.positions.map(position => (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      key={`${position.positionName}-${position.fellowshipName}-${position.scopeName}`}
+                    >
+                      {position.positionName} • {position.fellowshipName} • {position.scopeName}
+                    </Typography>
+                  ))}
+                </Box>
+              ) : null}
 
               <TextField
                 label="Last 3 digits"
@@ -419,7 +520,7 @@ const VoteLoginPage: React.FC = () => {
                 variant="contained"
                 color="primary"
                 size="large"
-                disabled={isVerifying || phoneLast3.length !== 3}
+                disabled={isVerifying || phoneLast3.length !== 3 || isPhoneLocked}
                 sx={{
                   mt: 2,
                   py: { xs: 1.6, sm: 1.9 },
@@ -432,6 +533,13 @@ const VoteLoginPage: React.FC = () => {
               >
                 {isVerifying ? <CircularProgress size={24} color="inherit" /> : 'Verify and Continue →'}
               </Button>
+
+              <Typography variant="caption" color="text.secondary">
+                Attempts: {phoneAttempts}/{MAX_ATTEMPTS}
+                {isPhoneLocked && phoneLockedUntil
+                  ? ` • Try again in ${formatRemaining(phoneLockedUntil - now)}`
+                  : ''}
+              </Typography>
             </Box>
           )}
         </CardContent>

@@ -11,10 +11,16 @@ export interface VoteLoginResponse {
   tokenType: string
   expiresIn: number
   personId: number
+  fullName: string
   electionId: number
   votingPeriodId: number
   hasPhone: boolean
-  phoneLast3: string | null
+  phoneMasked: string | null
+  positions: Array<{
+    positionName: string
+    fellowshipName: string
+    scopeName: string
+  }>
 }
 
 export interface VotePhoneVerifyRequest {
