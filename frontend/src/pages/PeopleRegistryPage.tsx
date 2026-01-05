@@ -40,7 +40,6 @@ import { leadershipApi } from '../api/leadership.api'
 
 import type { PersonResponse, CreatePersonRequest, UpdatePersonRequest } from '../types/leadership'
 import type { LeadershipAssignmentResponse } from '../types/leadership'
-import StatusChip from '../components/common/StatusChip'
 import AssignmentForm from '../components/leadership/AssignmentForm'
 import PersonAssignmentForm from '../components/leadership/PersonAssignmentForm'
 import LoadingState from '../components/common/LoadingState'
@@ -64,6 +63,8 @@ const PeopleRegistryPage: React.FC = () => {
   const [query, setQuery] = useState<string>('')
   const [debouncedQuery, setDebouncedQuery] = useState<string>('')
   const [sort, setSort] = useState('fullName,asc')
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['phone', 'gender', 'dob', 'age'])
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<PersonResponse | null>(null)
@@ -79,11 +80,18 @@ const PeopleRegistryPage: React.FC = () => {
   
 
   const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues: { fullName: '', email: '', phoneNumber: '', gender: '', dateOfBirth: '' } })
+  const isColumnVisible = (key: string) => visibleColumns.includes(key)
 
   const fetchPeople = async () => {
     try {
       setLoading(true)
-      const resp = await peopleApi.list({ q: debouncedQuery || undefined, page, size: rowsPerPage, sort: 'id,desc' })
+      const resp = await peopleApi.list({
+        q: debouncedQuery || undefined,
+        page,
+        size: rowsPerPage,
+        sort: 'id,desc',
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
+      })
       setPeople(resp.content)
       setTotal(resp.totalElements)
     } catch (error: any) {
@@ -142,7 +150,7 @@ const PeopleRegistryPage: React.FC = () => {
     return () => clearTimeout(timer)
   }, [query])
 
-  useEffect(() => { fetchPeople() }, [page, rowsPerPage, debouncedQuery])
+  useEffect(() => { fetchPeople() }, [page, rowsPerPage, debouncedQuery, statusFilter])
 
   const sortOptions = [
     { id: 'fullName,asc', name: 'Name (A-Z)' },
@@ -276,6 +284,32 @@ const PeopleRegistryPage: React.FC = () => {
               },
               placeholder: 'Sort by',
             },
+            {
+              id: 'columns',
+              label: 'Columns',
+              value: visibleColumns,
+              options: [
+                { id: 'email', name: 'Email' },
+                { id: 'phone', name: 'Phone' },
+                { id: 'gender', name: 'Gender' },
+                { id: 'dob', name: 'Date of Birth' },
+                { id: 'age', name: 'Age' },
+              ],
+              onChange: (value) => setVisibleColumns(Array.isArray(value) ? value : []),
+              multiple: true,
+            },
+            {
+              id: 'status',
+              label: 'Status',
+              value: statusFilter,
+              options: [
+                { id: 'ACTIVE', name: 'Active' },
+                { id: 'INACTIVE', name: 'Inactive' },
+                { id: 'ALL', name: 'All' },
+              ],
+              onChange: (value) => { setStatusFilter((value as any) || 'ALL'); setPage(0) },
+              placeholder: 'Status',
+            },
           ]}
         />
 
@@ -304,16 +338,17 @@ const PeopleRegistryPage: React.FC = () => {
                           Full Name
                         </TableSortLabel>
                       </TableCell>
-                      <TableCell>Email</TableCell>
-                      <TableCell>Phone</TableCell>
-                      <TableCell>Gender</TableCell>
-                      <TableCell sortDirection={getSortDirection('dateOfBirth') || false}>
-                        <TableSortLabel active={Boolean(getSortDirection('dateOfBirth'))} direction={(getSortDirection('dateOfBirth') as any) || 'asc'} onClick={() => toggleSort('dateOfBirth')}>
-                          Date of Birth
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell>Age</TableCell>
-                      <TableCell>Status</TableCell>
+                      {isColumnVisible('email') && <TableCell>Email</TableCell>}
+                      {isColumnVisible('phone') && <TableCell>Phone</TableCell>}
+                      {isColumnVisible('gender') && <TableCell>Gender</TableCell>}
+                      {isColumnVisible('dob') && (
+                        <TableCell sortDirection={getSortDirection('dateOfBirth') || false}>
+                          <TableSortLabel active={Boolean(getSortDirection('dateOfBirth'))} direction={(getSortDirection('dateOfBirth') as any) || 'asc'} onClick={() => toggleSort('dateOfBirth')}>
+                            Date of Birth
+                          </TableSortLabel>
+                        </TableCell>
+                      )}
+                      {isColumnVisible('age') && <TableCell>Age</TableCell>}
                       {isAdmin && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
                   </TableHead>
@@ -321,12 +356,11 @@ const PeopleRegistryPage: React.FC = () => {
                     {displayPeople.map((p) => (
                       <TableRow key={p.id} hover>
                         <TableCell><Typography variant="body2">{p.fullName}</Typography></TableCell>
-                        <TableCell>{p.email ? <Link href={`mailto:${p.email}`} underline="hover" color="inherit">{p.email}</Link> : ''}</TableCell>
-                        <TableCell>{p.phoneNumber ? <Link href={`tel:${p.phoneNumber}`} underline="hover" color="inherit">{p.phoneNumber}</Link> : ''}</TableCell>
-                        <TableCell>{p.gender ? p.gender.charAt(0) + p.gender.slice(1).toLowerCase() : ''}</TableCell>
-                        <TableCell>{p.dateOfBirth ? new Date(p.dateOfBirth).toLocaleDateString() : ''}</TableCell>
-                        <TableCell>{formatAge(p.dateOfBirth)}</TableCell>
-                        <TableCell><StatusChip status={(p.status as any) ?? 'INACTIVE'} /></TableCell>
+                        {isColumnVisible('email') && <TableCell>{p.email ? <Link href={`mailto:${p.email}`} underline="hover" color="inherit">{p.email}</Link> : ''}</TableCell>}
+                        {isColumnVisible('phone') && <TableCell>{p.phoneNumber ? <Link href={`tel:${p.phoneNumber}`} underline="hover" color="inherit">{p.phoneNumber}</Link> : ''}</TableCell>}
+                        {isColumnVisible('gender') && <TableCell>{p.gender ? p.gender.charAt(0) + p.gender.slice(1).toLowerCase() : ''}</TableCell>}
+                        {isColumnVisible('dob') && <TableCell>{p.dateOfBirth ? new Date(p.dateOfBirth).toLocaleDateString() : ''}</TableCell>}
+                        {isColumnVisible('age') && <TableCell>{formatAge(p.dateOfBirth)}</TableCell>}
                         {isAdmin && (
                           <TableCell align="right">
                             <Button size="small" onClick={() => openAssignments(p)} sx={{ mr: 1 }}>Positions</Button>

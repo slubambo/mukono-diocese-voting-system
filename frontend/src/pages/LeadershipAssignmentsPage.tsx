@@ -31,7 +31,6 @@ import { dioceseApi } from '../api/diocese.api'
 import { archdeaconryApi } from '../api/archdeaconry.api'
 import { churchApi } from '../api/church.api'
 import type { LeadershipAssignmentResponse, LeadershipAssignmentListParams } from '../types/leadership'
-import StatusChip from '../components/common/StatusChip'
 import LoadingState from '../components/common/LoadingState'
 import EmptyState from '../components/common/EmptyState'
 import PageLayout from '../components/layout/PageLayout'
@@ -61,6 +60,8 @@ const LeadershipAssignmentsPage: React.FC = () => {
   const [filterArchdeaconryId, setFilterArchdeaconryId] = useState<number | null>(null)
   const [filterChurchId, setFilterChurchId] = useState<number | null>(null)
   const [filterFellowshipId, setFilterFellowshipId] = useState<number | null>(null)
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['phone', 'position', 'fellowship', 'scope', 'termStart', 'termEnd'])
   
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
@@ -80,6 +81,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
 
   const [selectedLevelForm, setSelectedLevelForm] = useState<string | null>(null)
   
+  const isColumnVisible = (key: string) => visibleColumns.includes(key)
 
   const fetchAssignments = async () => {
     try {
@@ -93,6 +95,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
         churchId: filterChurchId ?? undefined,
         fellowshipId: filterFellowshipId ?? undefined,
         scope: (filterLevel as any) ?? undefined,
+        status: statusFilter === 'ALL' ? undefined : (statusFilter as any),
       })
       setAssignments(resp.content)
       setTotal(resp.totalElements)
@@ -203,7 +206,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
   }, [filterLevel, levelAllowsArchdeaconry, levelAllowsChurch])
 
   // Re-fetch when filters change
-  useEffect(() => { setPage(0); fetchAssignments() }, [filterDioceseId, filterLevel, filterArchdeaconryId, filterChurchId, filterFellowshipId])
+  useEffect(() => { setPage(0); fetchAssignments() }, [filterDioceseId, filterLevel, filterArchdeaconryId, filterChurchId, filterFellowshipId, statusFilter])
 
   const filteredAssignments = useMemo(() => {
     const termToTime = (v?: string | null) => (v ? new Date(v).getTime() : null)
@@ -292,7 +295,7 @@ const LeadershipAssignmentsPage: React.FC = () => {
           onAddClick={isAdmin ? openCreate : undefined}
           addButtonLabel="Create Assignment"
           isAdmin={isAdmin}
-          actions={[{ id: 'clear', label: 'Clear Filters', onClick: () => { setFilterDioceseId(dioceseFixed ? filterDioceseId : null); setFilterLevel(null); setFilterArchdeaconryId(null); setFilterChurchId(null); setFilterFellowshipId(null); setPage(0); fetchAssignments() } } ]}
+          actions={[{ id: 'clear', label: 'Clear Filters', onClick: () => { setFilterDioceseId(dioceseFixed ? filterDioceseId : null); setFilterLevel(null); setFilterArchdeaconryId(null); setFilterChurchId(null); setFilterFellowshipId(null); setStatusFilter('ACTIVE'); setPage(0); fetchAssignments() } } ]}
           filters={[
             {
               id: 'search',
@@ -315,6 +318,34 @@ const LeadershipAssignmentsPage: React.FC = () => {
               ],
               onChange: (v: any) => setSort(v as any),
               placeholder: 'Sort by',
+            },
+            {
+              id: 'columns',
+              label: 'Columns',
+              value: visibleColumns,
+              options: [
+                { id: 'email', name: 'Email' },
+                { id: 'phone', name: 'Phone' },
+                { id: 'position', name: 'Position' },
+                { id: 'fellowship', name: 'Fellowship' },
+                { id: 'scope', name: 'Scope' },
+                { id: 'termStart', name: 'Term Start' },
+                { id: 'termEnd', name: 'Term End' },
+              ],
+              onChange: (value) => setVisibleColumns(Array.isArray(value) ? value : []),
+              multiple: true,
+            },
+            {
+              id: 'status',
+              label: 'Status',
+              value: statusFilter,
+              options: [
+                { id: 'ACTIVE', name: 'Active' },
+                { id: 'INACTIVE', name: 'Inactive' },
+                { id: 'ALL', name: 'All' },
+              ],
+              onChange: (v: any) => { setStatusFilter((v as any) || 'ALL'); setPage(0) },
+              placeholder: 'Status',
             },
             {
               id: 'fellowship',
@@ -377,22 +408,25 @@ const LeadershipAssignmentsPage: React.FC = () => {
                           Full Name
                         </TableSortLabel>
                       </TableCell>
-                      <TableCell>Email</TableCell>
-                      <TableCell>Phone</TableCell>
-                      <TableCell>Position</TableCell>
-                      <TableCell>Fellowship</TableCell>
-                      <TableCell>Scope</TableCell>
-                      <TableCell sortDirection={getSortDirection('start') || false}>
-                        <TableSortLabel active={Boolean(getSortDirection('start'))} direction={(getSortDirection('start') as any) || 'asc'} onClick={() => toggleSort('start')}>
-                          Term Start
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell sortDirection={getSortDirection('end') || false}>
-                        <TableSortLabel active={Boolean(getSortDirection('end'))} direction={(getSortDirection('end') as any) || 'asc'} onClick={() => toggleSort('end')}>
-                          Term End
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell>Status</TableCell>
+                      {isColumnVisible('email') && <TableCell>Email</TableCell>}
+                      {isColumnVisible('phone') && <TableCell>Phone</TableCell>}
+                      {isColumnVisible('position') && <TableCell>Position</TableCell>}
+                      {isColumnVisible('fellowship') && <TableCell>Fellowship</TableCell>}
+                      {isColumnVisible('scope') && <TableCell>Scope</TableCell>}
+                      {isColumnVisible('termStart') && (
+                        <TableCell sortDirection={getSortDirection('start') || false}>
+                          <TableSortLabel active={Boolean(getSortDirection('start'))} direction={(getSortDirection('start') as any) || 'asc'} onClick={() => toggleSort('start')}>
+                            Term Start
+                          </TableSortLabel>
+                        </TableCell>
+                      )}
+                      {isColumnVisible('termEnd') && (
+                        <TableCell sortDirection={getSortDirection('end') || false}>
+                          <TableSortLabel active={Boolean(getSortDirection('end'))} direction={(getSortDirection('end') as any) || 'asc'} onClick={() => toggleSort('end')}>
+                            Term End
+                          </TableSortLabel>
+                        </TableCell>
+                      )}
                       {isAdmin && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
                   </TableHead>
@@ -400,14 +434,13 @@ const LeadershipAssignmentsPage: React.FC = () => {
                     {filteredAssignments.map((a) => (
                       <TableRow key={a.id} hover>
                         <TableCell><Typography variant="body2">{a.person.fullName}</Typography></TableCell>
-                        <TableCell>{a.person.email ? <Link href={`mailto:${a.person.email}`} underline="hover" color="inherit">{a.person.email}</Link> : ''}</TableCell>
-                        <TableCell>{a.person.phoneNumber ? <Link href={`tel:${a.person.phoneNumber}`} underline="hover" color="inherit">{a.person.phoneNumber}</Link> : ''}</TableCell>
-                        <TableCell>{((a.fellowshipPosition as any)?.titleName) ?? (a.fellowshipPosition as any)?.title?.name ?? '—'}</TableCell>
-                        <TableCell>{((a.fellowshipPosition as any)?.fellowshipName) ?? a.fellowship?.name ?? '—'}</TableCell>
-                        <TableCell>{(((a.fellowshipPosition as any)?.scope) ?? '').charAt(0) + (((a.fellowshipPosition as any)?.scope) ?? '').slice(1).toLowerCase()}</TableCell>
-                        <TableCell>{formatDate(a.termStartDate)}</TableCell>
-                        <TableCell>{formatDate(a.termEndDate)}</TableCell>
-                        <TableCell><StatusChip status={(a.status as any) ?? 'INACTIVE'} /></TableCell>
+                        {isColumnVisible('email') && <TableCell>{a.person.email ? <Link href={`mailto:${a.person.email}`} underline="hover" color="inherit">{a.person.email}</Link> : ''}</TableCell>}
+                        {isColumnVisible('phone') && <TableCell>{a.person.phoneNumber ? <Link href={`tel:${a.person.phoneNumber}`} underline="hover" color="inherit">{a.person.phoneNumber}</Link> : ''}</TableCell>}
+                        {isColumnVisible('position') && <TableCell>{((a.fellowshipPosition as any)?.titleName) ?? (a.fellowshipPosition as any)?.title?.name ?? '—'}</TableCell>}
+                        {isColumnVisible('fellowship') && <TableCell>{((a.fellowshipPosition as any)?.fellowshipName) ?? a.fellowship?.name ?? '—'}</TableCell>}
+                        {isColumnVisible('scope') && <TableCell>{(((a.fellowshipPosition as any)?.scope) ?? '').charAt(0) + (((a.fellowshipPosition as any)?.scope) ?? '').slice(1).toLowerCase()}</TableCell>}
+                        {isColumnVisible('termStart') && <TableCell>{formatDate(a.termStartDate)}</TableCell>}
+                        {isColumnVisible('termEnd') && <TableCell>{formatDate(a.termEndDate)}</TableCell>}
                         {isAdmin && (
                           <TableCell align="right">
                             <IconButton size="small" onClick={() => openEdit(a)} color="primary"><EditIcon fontSize="small"/></IconButton>
