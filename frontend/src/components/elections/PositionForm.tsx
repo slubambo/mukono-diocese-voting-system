@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Autocomplete, Typography } from '@mui/material'
+import React, { useEffect, useRef, useState } from 'react'
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Autocomplete, Typography, MenuItem } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
 import { electionApi } from '../../api/election.api'
 import { fellowshipPositionApi } from '../../api/fellowshipPosition.api'
@@ -18,47 +18,85 @@ interface Props {
 }
 
 const PositionForm: React.FC<Props> = ({ open, onClose, electionId, onSaved, position }) => {
-  const { control, handleSubmit, reset, setValue } = useForm<{ fellowshipPositionId?: number; seats?: number }>({ defaultValues: {} })
+  const { control, handleSubmit, setValue, watch } = useForm<{ fellowshipId?: number; fellowshipPositionId?: number; seats?: number }>({ defaultValues: {} })
   const toast = useToast()
+  const [fellowships, setFellowships] = useState<any[]>([])
   const [options, setOptions] = useState<any[]>([])
   const [loadingOptions, setLoadingOptions] = useState(false)
+  const [electionScope, setElectionScope] = useState<PositionScope | undefined>(undefined)
+  const [lockedFellowshipId, setLockedFellowshipId] = useState<number | null>(null)
+  const prevFellowshipId = useRef<number | undefined>(undefined)
+  const selectedFellowshipId = watch('fellowshipId')
 
   useEffect(() => {
     const load = async () => {
       if (!open) return
-      setLoadingOptions(true)
       try {
         const election = await electionApi.get(electionId)
         const scope = (election as any)?.scope as PositionScope | undefined
         const fellowshipId = (election as any)?.fellowshipId ?? (election as any)?.fellowship?.id
+        const fellowshipName = (election as any)?.fellowshipName ?? (election as any)?.fellowship?.name
+        setElectionScope(scope)
+        setLockedFellowshipId(fellowshipId ?? null)
         if (fellowshipId) {
-          const fp = await fellowshipPositionApi.list({ fellowshipId, scope, page: 0, size: 1000 })
-          setOptions(fp.content || [])
+          setValue('fellowshipId', fellowshipId)
+          if (fellowshipName) {
+            setFellowships([{ id: fellowshipId, name: fellowshipName }])
+          } else {
+            const single = await fellowshipApi.get(fellowshipId)
+            setFellowships(single ? [single] : [])
+          }
         } else {
-          const fellowships = await fellowshipApi.list({ page: 0, size: 200 })
-          const lists = await Promise.all(
-            (fellowships.content || []).map((f) =>
-              fellowshipPositionApi.list({ fellowshipId: f.id, scope, page: 0, size: 1000 }).then(r => r.content || [])
-            )
-          )
-          setOptions(lists.flat())
+          const list = await fellowshipApi.list({ page: 0, size: 200 })
+          setFellowships(list.content || [])
         }
+      } catch (err) {
+        setFellowships([])
+      } finally {
+        setOptions([])
+      }
+    }
+    load()
+  }, [electionId, open, setValue])
+
+  useEffect(() => {
+    if (!open) return
+    const loadOptions = async () => {
+      if (!selectedFellowshipId) {
+        setOptions([])
+        return
+      }
+      setLoadingOptions(true)
+      try {
+        const fp = await fellowshipPositionApi.list({ fellowshipId: selectedFellowshipId, scope: electionScope, page: 0, size: 1000 })
+        setOptions(fp.content || [])
       } catch (err) {
         setOptions([])
       } finally {
         setLoadingOptions(false)
       }
     }
-    load()
-  }, [electionId, open])
+    loadOptions()
+  }, [electionScope, open, selectedFellowshipId])
+
+  useEffect(() => {
+    if (prevFellowshipId.current !== undefined && prevFellowshipId.current !== selectedFellowshipId) {
+      setValue('fellowshipPositionId', undefined)
+    }
+    prevFellowshipId.current = selectedFellowshipId
+  }, [selectedFellowshipId, setValue])
 
   useEffect(() => {
     if (position) {
-      // prefill seats and fellowshipPosition if available
-      reset({ seats: position.seats })
+      const positionFellowshipId = position.fellowshipPosition?.fellowshipId ?? position.fellowshipId
+      if (positionFellowshipId) setValue('fellowshipId', positionFellowshipId)
+      setValue('seats', position.seats)
       if (position.fellowshipPosition?.id) setValue('fellowshipPositionId', position.fellowshipPosition.id)
-    } else reset({})
-  }, [position, reset, setValue])
+    } else {
+      setValue('seats', undefined)
+      setValue('fellowshipPositionId', undefined)
+    }
+  }, [position, setValue])
 
   const onSubmit = async (data: { fellowshipPositionId?: number; seats?: number }) => {
     if (!data.fellowshipPositionId) { toast.error('Select a position'); return }
@@ -79,6 +117,22 @@ const PositionForm: React.FC<Props> = ({ open, onClose, electionId, onSaved, pos
         <DialogContent>
           <Box sx={{ display: 'grid', gap: 2 }}>
             {loadingOptions && <Typography variant="body2">Loading fellowship positions...</Typography>}
+            <Controller name="fellowshipId" control={control} rules={{ required: true }} render={({ field }) => (
+              <TextField
+                {...field}
+                select
+                label="Fellowship"
+                required
+                value={field.value ?? ''}
+                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                disabled={Boolean(lockedFellowshipId)}
+              >
+                <MenuItem value="">Select fellowship</MenuItem>
+                {fellowships.map((f) => (
+                  <MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>
+                ))}
+              </TextField>
+            )} />
             <Controller name="fellowshipPositionId" control={control} rules={{ required: true }} render={({ field }) => (
               <Autocomplete
                 options={options}
@@ -86,6 +140,7 @@ const PositionForm: React.FC<Props> = ({ open, onClose, electionId, onSaved, pos
                 onChange={(_, v) => field.onChange(v?.id ?? undefined)}
                 value={options.find(o => o.id === field.value) ?? null}
                 renderInput={(params) => <TextField {...params} label="Position (title — fellowship)" required />}
+                disabled={!selectedFellowshipId}
               />
             )} />
 
