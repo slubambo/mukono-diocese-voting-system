@@ -191,13 +191,20 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                CASE WHEN MIN(evr.evr_id) IS NOT NULL THEN 1 ELSE 0 END AS isOverride,
                MAX(evr.reason)    AS overrideReason,
                MIN(la.id)         AS leadershipAssignmentId,
-               COALESCE(MAX(positionOnly.position_name), 'Manual Override') AS positionAndLocation,
-               JSON_ARRAYAGG(JSON_OBJECT(
-                   'positionName', positionOnly.position_name,
-                   'fellowshipName', positionOnly.fellowship_name,
-                   'scope', positionOnly.scope,
-                   'scopeName', positionOnly.scope_name
-               )) AS positionsSummaryJson,
+               CASE 
+                   WHEN MIN(evr.evr_id) IS NOT NULL THEN 'Manual Override'
+                   ELSE MAX(positionOnly.position_name)
+               END AS positionAndLocation,
+               CASE 
+                   WHEN MIN(evr.evr_id) IS NOT NULL THEN NULL
+                   WHEN MAX(positionOnly.position_name) IS NOT NULL THEN JSON_ARRAYAGG(JSON_OBJECT(
+                       'positionName', positionOnly.position_name,
+                       'fellowshipName', positionOnly.fellowship_name,
+                       'scope', positionOnly.scope,
+                       'scopeName', positionOnly.scope_name
+                   ))
+                   ELSE NULL
+               END AS positionsSummaryJson,
                (
                    SELECT JSON_ARRAYAGG(JSON_OBJECT(
                        'code', all_vc.code,
