@@ -65,11 +65,11 @@ export const PositionPage: React.FC = () => {
   
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [selected, setSelected] = useState<FellowshipPosition | null>(null)
-  const [formData, setFormData] = useState<CreateFellowshipPositionRequest & { status?: EntityStatus }>({
+  const [formData, setFormData] = useState<Omit<CreateFellowshipPositionRequest, 'scope'> & { scope: PositionScope | PositionScope[]; status?: EntityStatus }>({
     fellowshipId: 0,
     titleId: 0,
     seats: 1,
-    scope: 'DIOCESE',
+    scope: ['DIOCESE'],
   })
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [toDelete, setToDelete] = useState<FellowshipPosition | null>(null)
@@ -150,31 +150,50 @@ export const PositionPage: React.FC = () => {
   }, [])
 
   const handleSave = async () => {
-    if (!formData.fellowshipId || !formData.titleId || !formData.seats || formData.seats < 1) {
+    const scopeList = Array.isArray(formData.scope) ? formData.scope : [formData.scope]
+    if (!formData.fellowshipId || !formData.titleId || !formData.seats || formData.seats < 1 || scopeList.length === 0) {
       showToast('All fields are required', 'error')
       return
     }
 
     try {
       if (dialogMode === 'create') {
-        await fellowshipPositionApi.create({
-          fellowshipId: formData.fellowshipId,
-          titleId: formData.titleId,
-          seats: formData.seats,
-          scope: formData.scope,
-        })
-        showToast('Position created', 'success')
+        const errors: string[] = []
+        let successCount = 0
+        for (const scope of scopeList) {
+          try {
+            await fellowshipPositionApi.create({
+              fellowshipId: formData.fellowshipId,
+              titleId: formData.titleId,
+              seats: formData.seats,
+              scope,
+            })
+            successCount += 1
+          } catch (error: any) {
+            errors.push(`${scope}: ${error?.response?.data?.message || 'Failed to create'}`)
+          }
+        }
+        if (successCount > 0) {
+          showToast(`Created ${successCount} position${successCount === 1 ? '' : 's'}`, 'success')
+          setDialogMode(null)
+          fetchPositions()
+        }
+        if (errors.length > 0) {
+          showToast(`Some positions failed: ${errors.join(' · ')}`, 'error')
+        }
+        return
       } else if (selected) {
         await fellowshipPositionApi.update(selected.id, {
           titleId: formData.titleId,
           seats: formData.seats,
-          scope: formData.scope,
+          scope: Array.isArray(formData.scope) ? formData.scope[0] : formData.scope,
           status: formData.status,
         })
         showToast('Position updated', 'success')
+        setDialogMode(null)
+        fetchPositions()
+        return
       }
-      setDialogMode(null)
-      fetchPositions()
     } catch (error: any) {
       showToast(error.response?.data?.message || 'Failed to save', 'error')
     }
@@ -246,7 +265,7 @@ export const PositionPage: React.FC = () => {
         <MasterDataHeader
           title="Positions"
           subtitle="Manage fellowship positions"
-          onAddClick={isAdmin && selectedFellowshipId ? () => { setFormData({ fellowshipId: selectedFellowshipId || 0, titleId: 0, seats: 1, scope: 'DIOCESE' }); setDialogMode('create'); } : undefined}
+          onAddClick={isAdmin && selectedFellowshipId ? () => { setFormData({ fellowshipId: selectedFellowshipId || 0, titleId: 0, seats: 1, scope: ['DIOCESE'] }); setDialogMode('create'); } : undefined}
           addButtonLabel="Add Position"
           isAdmin={isAdmin}
           stats={[
@@ -299,7 +318,7 @@ export const PositionPage: React.FC = () => {
         ) : !selectedFellowshipId ? (
           <EmptyState title="Select a Fellowship" description="Choose a fellowship to view its positions." />
         ) : displayPositions.length === 0 ? (
-          <EmptyState title="No positions" description={isAdmin ? 'Create your first position for this fellowship.' : 'No positions exist for this fellowship.'} action={isAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormData({ fellowshipId: selectedFellowshipId || 0, titleId: 0, seats: 1, scope: 'DIOCESE' }); setDialogMode('create'); }}>Add Position</Button>} />
+          <EmptyState title="No positions" description={isAdmin ? 'Create your first position for this fellowship.' : 'No positions exist for this fellowship.'} action={isAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormData({ fellowshipId: selectedFellowshipId || 0, titleId: 0, seats: 1, scope: ['DIOCESE'] }); setDialogMode('create'); }}>Add Position</Button>} />
         ) : (
           <>
             <TableContainer>
@@ -377,14 +396,31 @@ export const PositionPage: React.FC = () => {
               onChange={(_, t) => setFormData({ ...formData, titleId: t?.id || 0 })}
               renderInput={(params) => <TextField {...params} label="Position Title" required />}
             />
-            <FormControl fullWidth required>
-              <InputLabel>Scope</InputLabel>
-              <Select value={formData.scope} label="Scope" onChange={(e) => setFormData({ ...formData, scope: e.target.value as PositionScope })}>
-                <MenuItem value="DIOCESE">Diocese</MenuItem>
-                <MenuItem value="ARCHDEACONRY">Archdeaconry</MenuItem>
-                <MenuItem value="CHURCH">Church</MenuItem>
-              </Select>
-            </FormControl>
+            {dialogMode === 'create' ? (
+              <FormControl fullWidth required>
+                <InputLabel>Scope</InputLabel>
+                <Select
+                  multiple
+                  value={Array.isArray(formData.scope) ? formData.scope : [formData.scope]}
+                  label="Scope"
+                  onChange={(e) => setFormData({ ...formData, scope: e.target.value as PositionScope[] })}
+                  renderValue={(selected) => (selected as PositionScope[]).join(', ')}
+                >
+                  <MenuItem value="DIOCESE">Diocese</MenuItem>
+                  <MenuItem value="ARCHDEACONRY">Archdeaconry</MenuItem>
+                  <MenuItem value="CHURCH">Church</MenuItem>
+                </Select>
+              </FormControl>
+            ) : (
+              <FormControl fullWidth required>
+                <InputLabel>Scope</InputLabel>
+                <Select value={Array.isArray(formData.scope) ? formData.scope[0] : formData.scope} label="Scope" onChange={(e) => setFormData({ ...formData, scope: e.target.value as PositionScope })}>
+                  <MenuItem value="DIOCESE">Diocese</MenuItem>
+                  <MenuItem value="ARCHDEACONRY">Archdeaconry</MenuItem>
+                  <MenuItem value="CHURCH">Church</MenuItem>
+                </Select>
+              </FormControl>
+            )}
             <TextField label="Seats" type="number" value={formData.seats} onChange={(e) => setFormData({ ...formData, seats: parseInt(e.target.value) || 1 })} inputProps={{ min: 1 }} required fullWidth />
             {dialogMode === 'edit' && (
               <FormControl fullWidth>
