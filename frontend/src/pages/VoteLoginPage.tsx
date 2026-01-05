@@ -14,6 +14,7 @@ import {
   Step,
   StepLabel,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import HowToVoteIcon from '@mui/icons-material/HowToVote'
 import LockIcon from '@mui/icons-material/Lock'
 import VoterLayout from '../components/layout/VoterLayout'
@@ -226,14 +227,20 @@ const VoteLoginPage: React.FC = () => {
   return (
     <VoterLayout>
       {/* Login Card */}
-      <Card 
-        elevation={10}
+      <Card
+        elevation={0}
         sx={{
-          borderRadius: 3,
+          borderRadius: 3.5,
           overflow: 'hidden',
           position: 'relative',
-          boxShadow: '0 16px 40px rgba(143, 52, 147, 0.2)',
+          background: 'linear-gradient(180deg, #ffffff 0%, #f8f7fb 100%)',
+          border: '1px solid rgba(76, 29, 149, 0.08)',
+          boxShadow: '0 18px 50px rgba(76, 29, 149, 0.14)',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            boxShadow: '0 24px 60px rgba(76, 29, 149, 0.18)',
+            transform: 'translateY(-2px)',
+          },
           '&::before': {
             content: '""',
             position: 'absolute',
@@ -241,24 +248,38 @@ const VoteLoginPage: React.FC = () => {
             left: 0,
             right: 0,
             height: '6px',
-            background: 'linear-gradient(90deg, #8F3493 0%, #0E61AD 100%)',
+            background: 'linear-gradient(90deg, #7e22ce 0%, #2563eb 100%)',
           },
         }}
       >
-        <CardContent sx={{ p: { xs: 3.5, sm: 5 }, pt: { xs: 4, sm: 5.5 } }}>
+        <CardContent sx={{ p: { xs: 3.5, sm: 5 }, pt: { xs: 4.5, sm: 6 } }}>
           {/* Icon */}
           <Box
             sx={{
               width: 80,
               height: 80,
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #8F3493 0%, #6B2670 100%)',
+              background: 'linear-gradient(135deg, #7e22ce 0%, #2563eb 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto',
               mb: 3,
-              boxShadow: '0 8px 16px rgba(143, 52, 147, 0.25)',
+              boxShadow: '0 10px 30px rgba(76, 29, 149, 0.28)',
+              position: 'relative',
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                inset: -10,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(126,34,206,0.25) 0%, rgba(37,99,235,0) 65%)',
+                filter: 'blur(8px)',
+                zIndex: 0,
+              },
+              '& > svg': {
+                position: 'relative',
+                zIndex: 1,
+              },
             }}
           >
             <HowToVoteIcon sx={{ fontSize: 48, color: 'white' }} />
@@ -292,7 +313,35 @@ const VoteLoginPage: React.FC = () => {
           {step === 'code' ? 'Enter your voting code to get started' : 'Verify your phone to continue'}
           </Typography>
 
-          <Stepper activeStep={step === 'code' ? 0 : 1} alternativeLabel sx={{ mb: 3 }}>
+          <Stepper
+            activeStep={step === 'code' ? 0 : 1}
+            alternativeLabel
+            sx={{
+              mb: 3.5,
+              px: { xs: 1, sm: 2 },
+              '& .MuiStepIcon-root': {
+                color: 'rgba(0,0,0,0.15)',
+                '&.Mui-active': {
+                  color: 'primary.main',
+                  filter: 'drop-shadow(0 6px 14px rgba(37, 99, 235, 0.28))',
+                },
+                '&.Mui-completed': {
+                  color: 'success.main',
+                },
+              },
+              '& .MuiStepConnector-line': {
+                borderColor: 'rgba(0,0,0,0.08)',
+                borderWidth: 1.5,
+              },
+              '& .MuiStepLabel-label': {
+                fontWeight: 600,
+                color: 'text.secondary',
+                '&.Mui-active': {
+                  color: 'text.primary',
+                },
+              },
+            }}
+          >
             <Step>
               <StepLabel>Code</StepLabel>
             </Step>
@@ -349,6 +398,7 @@ const VoteLoginPage: React.FC = () => {
                   {Array.from({ length: CODE_LENGTH }).map((_, index) => {
                     const char = normalizedCode[index] || ''
                     const isActive = normalizedCode.length === index && !isLoading
+                    const hasValue = Boolean(char)
                     const box = (
                       <Box
                         key={`code-box-${index}`}
@@ -356,15 +406,26 @@ const VoteLoginPage: React.FC = () => {
                           height: { xs: 42, sm: 48 },
                           borderRadius: 1.5,
                           border: '2px solid',
-                          borderColor: isActive ? 'primary.main' : 'rgba(0, 0, 0, 0.15)',
-                          bgcolor: isActive ? 'rgba(143, 52, 147, 0.08)' : 'rgba(0, 0, 0, 0.03)',
+                          borderColor: hasValue ? 'success.main' : isActive ? 'primary.main' : 'divider',
+                          bgcolor: theme =>
+                            hasValue
+                              ? alpha(theme.palette.success.main, 0.12)
+                              : isActive
+                                ? alpha(theme.palette.primary.main, 0.1)
+                                : alpha(theme.palette.grey[900], 0.04),
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontSize: { xs: '0.95rem', sm: '1.05rem' },
-                          fontWeight: 600,
+                          fontWeight: 700,
+                          letterSpacing: 0.5,
                           color: 'text.primary',
-                          boxShadow: isActive ? '0 4px 12px rgba(143, 52, 147, 0.2)' : 'none',
+                          boxShadow: theme =>
+                            hasValue
+                              ? `0 0 0 2px ${alpha(theme.palette.success.main, 0.2)}`
+                              : isActive
+                                ? `0 0 0 2px ${alpha(theme.palette.primary.main, 0.16)}`
+                                : 'none',
                           transition: 'all 0.2s ease',
                         }}
                       >
@@ -424,10 +485,11 @@ const VoteLoginPage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 1,
-                  bgcolor: 'rgba(0, 0, 0, 0.03)',
+                  bgcolor: theme => alpha(theme.palette.primary.main, 0.06),
                   p: 1.5,
                   borderRadius: 1.5,
                   mt: 1,
+                  border: theme => `1px dashed ${alpha(theme.palette.primary.main, 0.28)}`,
                 }}
               >
                 <Typography
@@ -459,17 +521,23 @@ const VoteLoginPage: React.FC = () => {
                   fontSize: { xs: '1rem', sm: '1.1rem' },
                   borderRadius: 2,
                   textTransform: 'none',
-                  boxShadow: '0 4px 12px rgba(143, 52, 147, 0.25)',
+                  backgroundImage: 'linear-gradient(120deg, #7e22ce 0%, #2563eb 100%)',
+                  backgroundSize: '200% 100%',
+                  boxShadow: '0 12px 24px rgba(55, 65, 81, 0.18)',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    boxShadow: '0 8px 24px rgba(143, 52, 147, 0.35)',
-                    transform: 'translateY(-3px)',
+                    backgroundPosition: '100% 0',
+                    boxShadow: '0 16px 30px rgba(55, 65, 81, 0.24)',
+                    transform: 'translateY(-2px)',
                   },
                   '&:active': {
                     transform: 'translateY(-1px)',
                   },
                   '&:disabled': {
-                    opacity: 0.6,
+                    backgroundImage: 'none',
+                    backgroundColor: 'grey.300',
+                    color: 'grey.600',
+                    boxShadow: 'none',
                   },
                 }}
               >
@@ -480,10 +548,11 @@ const VoteLoginPage: React.FC = () => {
             <Box component="form" onSubmit={handleVerifyPhone} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Box
                 sx={{
-                  p: 2,
+                  p: 2.5,
                   borderRadius: 2,
-                  bgcolor: 'rgba(14, 97, 173, 0.08)',
-                  border: '1px solid rgba(14, 97, 173, 0.2)',
+                  bgcolor: theme => alpha(theme.palette.primary.main, 0.06),
+                  border: theme => `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                  boxShadow: theme => `0 8px 20px ${alpha(theme.palette.primary.main, 0.12)}`,
                 }}
               >
                 <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
@@ -500,10 +569,10 @@ const VoteLoginPage: React.FC = () => {
               {loginResponse?.positions?.length ? (
                 <Box
                   sx={{
-                    p: 2,
+                    p: 2.25,
                     borderRadius: 2,
-                    bgcolor: 'rgba(0, 0, 0, 0.03)',
-                    border: '1px solid rgba(0, 0, 0, 0.08)',
+                    bgcolor: theme => alpha(theme.palette.grey[900], 0.03),
+                    border: theme => `1px solid ${alpha(theme.palette.grey[900], 0.08)}`,
                   }}
                 >
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -547,6 +616,7 @@ const VoteLoginPage: React.FC = () => {
                   {Array.from({ length: 3 }).map((_, index) => {
                     const char = phoneLast3[index] || ''
                     const isActive = phoneLast3.length === index && !isVerifying
+                    const hasValue = Boolean(char)
                     return (
                       <Box
                         key={`phone-box-${index}`}
@@ -554,15 +624,25 @@ const VoteLoginPage: React.FC = () => {
                           height: { xs: 42, sm: 48 },
                           borderRadius: 1.5,
                           border: '2px solid',
-                          borderColor: isActive ? 'primary.main' : 'rgba(0, 0, 0, 0.15)',
-                          bgcolor: isActive ? 'rgba(14, 97, 173, 0.08)' : 'rgba(0, 0, 0, 0.03)',
+                          borderColor: hasValue ? 'success.main' : isActive ? 'primary.main' : 'divider',
+                          bgcolor: theme =>
+                            hasValue
+                              ? alpha(theme.palette.success.main, 0.12)
+                              : isActive
+                                ? alpha(theme.palette.primary.main, 0.1)
+                                : alpha(theme.palette.grey[900], 0.04),
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontSize: { xs: '1rem', sm: '1.1rem' },
                           fontWeight: 600,
                           color: 'text.primary',
-                          boxShadow: isActive ? '0 4px 12px rgba(14, 97, 173, 0.2)' : 'none',
+                          boxShadow: theme =>
+                            hasValue
+                              ? `0 0 0 2px ${alpha(theme.palette.success.main, 0.2)}`
+                              : isActive
+                                ? `0 0 0 2px ${alpha(theme.palette.primary.main, 0.16)}`
+                                : 'none',
                           transition: 'all 0.2s ease',
                         }}
                       >
@@ -610,7 +690,21 @@ const VoteLoginPage: React.FC = () => {
                   fontSize: { xs: '1rem', sm: '1.05rem' },
                   borderRadius: 2,
                   textTransform: 'none',
-                  boxShadow: '0 4px 12px rgba(14, 97, 173, 0.25)',
+                  backgroundImage: 'linear-gradient(120deg, #2563eb 0%, #16a34a 100%)',
+                  backgroundSize: '200% 100%',
+                  boxShadow: '0 10px 22px rgba(55, 65, 81, 0.2)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    backgroundPosition: '100% 0',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 14px 26px rgba(55, 65, 81, 0.25)',
+                  },
+                  '&:disabled': {
+                    backgroundImage: 'none',
+                    backgroundColor: 'grey.300',
+                    color: 'grey.600',
+                    boxShadow: 'none',
+                  },
                 }}
               >
                 {isVerifying ? <CircularProgress size={24} color="inherit" /> : 'Verify and Continue →'}
@@ -628,29 +722,24 @@ const VoteLoginPage: React.FC = () => {
       </Card>
 
       {/* Info Section */}
-      <Box 
-        sx={{ 
-          textAlign: 'center', 
+      <Box
+        sx={{
+          textAlign: 'center',
           mt: 3.5,
-          p: 2.5,
-          bgcolor: 'rgba(67, 160, 71, 0.08)',
-          borderRadius: 2,
-          border: '1.5px solid',
-          borderColor: 'rgba(67, 160, 71, 0.25)',
-          transition: 'all 0.3s ease',
-          '&:hover': {
-            bgcolor: 'rgba(67, 160, 71, 0.12)',
-            borderColor: 'rgba(67, 160, 71, 0.35)',
-          },
+          p: { xs: 2.25, sm: 2.75 },
+          borderRadius: 2.5,
+          background: theme => `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.12)} 0%, ${alpha(theme.palette.primary.main, 0.07)} 100%)`,
+          border: theme => `1px solid ${alpha(theme.palette.success.main, 0.35)}`,
+          boxShadow: theme => `0 12px 30px ${alpha(theme.palette.success.main, 0.18)}`,
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 0.5 }}>
-          <LockIcon sx={{ fontSize: 18, color: 'success.main' }} />
+          <LockIcon sx={{ fontSize: 18, color: 'success.dark' }} />
           <Typography
             variant="body2"
-            sx={{ 
-              fontSize: { xs: '0.85rem', sm: '0.9rem' },
-              fontWeight: 600,
+            sx={{
+              fontSize: { xs: '0.86rem', sm: '0.95rem' },
+              fontWeight: 700,
               color: 'success.dark',
             }}
           >
@@ -660,7 +749,7 @@ const VoteLoginPage: React.FC = () => {
         <Typography
           variant="caption"
           color="text.secondary"
-          sx={{ fontSize: { xs: '0.75rem', sm: '0.8rem' } }}
+          sx={{ fontSize: { xs: '0.76rem', sm: '0.82rem' } }}
         >
           We use industry-standard encryption to protect your privacy
         </Typography>
