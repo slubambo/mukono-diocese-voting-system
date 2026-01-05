@@ -113,7 +113,8 @@ const LeadershipAssignmentsPage: React.FC = () => {
   const loadFellowships = async () => {
     try {
       const resp = await fellowshipApi.list({ page: 0, size: 1000 })
-      setFellowships(resp.content)
+      const sorted = [...(resp.content || [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+      setFellowships(sorted)
       if (resp.content.length > 0 && !selectedFellowshipId) setSelectedFellowshipId(resp.content[0].id)
     } catch (e) {
       // ignore

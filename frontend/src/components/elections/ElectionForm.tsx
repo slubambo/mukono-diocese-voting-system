@@ -108,7 +108,8 @@ const ElectionForm: React.FC<Props> = ({ open, onClose, onSaved, election }) => 
           fellowshipApi.list({ page: 0, size: 1000 }),
           dioceseApi.list({ page: 0, size: 1000 }),
         ])
-        setFellowships(fellowshipRes.content || [])
+        const fellowshipList = [...(fellowshipRes.content || [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        setFellowships(fellowshipList)
         setDioceses(dioceseRes.content || [])
         baseListsLoaded.current = true
       } catch (err: any) {

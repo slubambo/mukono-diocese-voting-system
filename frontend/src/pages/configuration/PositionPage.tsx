@@ -115,7 +115,7 @@ export const PositionPage: React.FC = () => {
   const loadFellowships = async () => {
     try {
       const response = await fellowshipApi.list({ page: 0, size: 1000 })
-      const activeFellowships = response.content.filter(f => f.status === 'ACTIVE')
+      const activeFellowships = response.content.filter(f => f.status === 'ACTIVE').sort((a, b) => (a.name || '').localeCompare(b.name || ''))
       setFellowships(activeFellowships)
       // Select first fellowship by default
       if (activeFellowships.length > 0 && !selectedFellowshipId) {
@@ -129,7 +129,10 @@ export const PositionPage: React.FC = () => {
   const loadTitles = async () => {
     try {
       const response = await positionTitleApi.list({ page: 0, size: 1000 })
-      setTitles(response.content.filter(t => t.status === 'ACTIVE'))
+      const sorted = response.content
+        .filter(t => t.status === 'ACTIVE')
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+      setTitles(sorted)
     } catch (error) {
       console.error('Failed to load position titles')
     }

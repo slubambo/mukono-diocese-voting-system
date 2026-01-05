@@ -27,6 +27,8 @@ const PositionForm: React.FC<Props> = ({ open, onClose, electionId, onSaved, pos
   const [lockedFellowshipId, setLockedFellowshipId] = useState<number | null>(null)
   const prevFellowshipId = useRef<number | undefined>(undefined)
   const selectedFellowshipId = watch('fellowshipId')
+  const getPositionLabel = (o: any) =>
+    `${(o.titleName || (o.title && o.title.name)) ?? '—'} — ${(o.fellowshipName || (o.fellowship && o.fellowship.name)) ?? ''}`
 
   useEffect(() => {
     const load = async () => {
@@ -44,14 +46,16 @@ const PositionForm: React.FC<Props> = ({ open, onClose, electionId, onSaved, pos
             setFellowships([{ id: fellowshipId, name: fellowshipName }])
           } else {
             const single = await fellowshipApi.get(fellowshipId)
-            setFellowships(single ? [single] : [])
-          }
-        } else {
-          const list = await fellowshipApi.list({ page: 0, size: 200 })
-          setFellowships(list.content || [])
+          const singleList = single ? [single] : []
+          setFellowships(singleList)
         }
-      } catch (err) {
-        setFellowships([])
+      } else {
+        const list = await fellowshipApi.list({ page: 0, size: 200 })
+        const sorted = [...(list.content || [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        setFellowships(sorted)
+      }
+    } catch (err) {
+      setFellowships([])
       } finally {
         setOptions([])
       }
@@ -69,7 +73,8 @@ const PositionForm: React.FC<Props> = ({ open, onClose, electionId, onSaved, pos
       setLoadingOptions(true)
       try {
         const fp = await fellowshipPositionApi.list({ fellowshipId: selectedFellowshipId, scope: electionScope, page: 0, size: 1000 })
-        setOptions(fp.content || [])
+        const sorted = [...(fp.content || [])].sort((a, b) => getPositionLabel(a).localeCompare(getPositionLabel(b)))
+        setOptions(sorted)
       } catch (err) {
         setOptions([])
       } finally {
@@ -136,7 +141,7 @@ const PositionForm: React.FC<Props> = ({ open, onClose, electionId, onSaved, pos
             <Controller name="fellowshipPositionId" control={control} rules={{ required: true }} render={({ field }) => (
               <Autocomplete
                 options={options}
-                getOptionLabel={(o: any) => `${(o.titleName || (o.title && o.title.name)) ?? '—'} — ${(o.fellowshipName || (o.fellowship && o.fellowship.name)) ?? ''}`}
+                getOptionLabel={getPositionLabel}
                 onChange={(_, v) => field.onChange(v?.id ?? undefined)}
                 value={options.find(o => o.id === field.value) ?? null}
                 renderInput={(params) => <TextField {...params} label="Position (title — fellowship)" required />}

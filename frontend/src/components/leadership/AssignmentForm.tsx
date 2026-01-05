@@ -37,6 +37,7 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
 
   const [people, setPeople] = useState<any[]>([])
   const showPersonSelector = !personId
+  const getPositionLabel = (p: any) => ((p.title && p.title.name) || p.titleName) + ' — ' + ((p.fellowship && p.fellowship.name) || p.fellowshipName)
 
   useEffect(() => { if (showPersonSelector) { import('../../api/people.api').then(m => m.peopleApi.list({ page: 0, size: 1000 }).then(r => setPeople(r.content)).catch(() => {})) } }, [showPersonSelector])
 
@@ -52,7 +53,10 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
   }
 
   useEffect(() => {
-    fellowshipApi.list({ page: 0, size: 1000 }).then(r => setFellowships(r.content)).catch(() => {})
+    fellowshipApi.list({ page: 0, size: 1000 }).then(r => {
+      const sorted = [...(r.content || [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+      setFellowships(sorted)
+    }).catch(() => {})
     dioceseApi.list({ page: 0, size: 100 }).then(r => setDioceses((prev) => mergeById(prev, r.content))).catch(() => {})
     leadershipApi.getLevels().then(lv => setLevels(lv)).catch(() => setLevels(['DIOCESE','ARCHDEACONRY','CHURCH']))
   }, [])
@@ -122,7 +126,10 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
 
       if (dioceseId) {
         setValue('dioceseId', dioceseId)
-        archdeaconryApi.list({ dioceseId, page: 0, size: 1000 }).then(r => setArchdeaconries(r.content)).catch(() => {})
+        archdeaconryApi.list({ dioceseId, page: 0, size: 1000 }).then(r => {
+          const sorted = [...(r.content || [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+          setArchdeaconries(sorted)
+        }).catch(() => {})
       }
       if (archId) {
         setValue('archdeaconryId', archId)
@@ -143,7 +150,10 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
     if (dioceses.length === 1) {
       const d = dioceses[0]
       setValue('dioceseId', d.id)
-      archdeaconryApi.list({ dioceseId: d.id, page: 0, size: 1000 }).then(r => setArchdeaconries(r.content)).catch(() => {})
+      archdeaconryApi.list({ dioceseId: d.id, page: 0, size: 1000 }).then(r => {
+        const sorted = [...(r.content || [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        setArchdeaconries(sorted)
+      }).catch(() => {})
     }
   }, [dioceses, setValue])
 
@@ -153,7 +163,10 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
     if (watchedFellowship) {
       const params: any = { fellowshipId: watchedFellowship, page: 0, size: 1000 }
       if (selectedLevel) params.scope = selectedLevel
-      fellowshipPositionApi.list(params).then(r => setPositions(r.content)).catch(() => setPositions([]))
+      fellowshipPositionApi.list(params).then(r => {
+        const sorted = [...(r.content || [])].sort((a, b) => getPositionLabel(a).localeCompare(getPositionLabel(b)))
+        setPositions(sorted)
+      }).catch(() => setPositions([]))
     } else {
       setPositions([])
     }
@@ -161,7 +174,10 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
 
   useEffect(() => {
     if (watchedDiocese) {
-      archdeaconryApi.list({ dioceseId: watchedDiocese, page: 0, size: 1000 }).then(r => setArchdeaconries(r.content)).catch(() => setArchdeaconries([]))
+      archdeaconryApi.list({ dioceseId: watchedDiocese, page: 0, size: 1000 }).then(r => {
+        const sorted = [...(r.content || [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        setArchdeaconries(sorted)
+      }).catch(() => setArchdeaconries([]))
     } else {
       setArchdeaconries([])
       setValue('archdeaconryId', undefined)
@@ -219,7 +235,10 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
       if (derivedChurchId) setValue('churchId', derivedChurchId)
       if (derivedFellowshipId) setValue('fellowshipId' as any, derivedFellowshipId)
       // load positions for fellowship
-      if (derivedFellowshipId) fellowshipPositionApi.list({ fellowshipId: derivedFellowshipId, page: 0, size: 1000 }).then(r => setPositions(r.content)).catch(() => {})
+      if (derivedFellowshipId) fellowshipPositionApi.list({ fellowshipId: derivedFellowshipId, page: 0, size: 1000 }).then(r => {
+        const sorted = [...(r.content || [])].sort((a, b) => getPositionLabel(a).localeCompare(getPositionLabel(b)))
+        setPositions(sorted)
+      }).catch(() => {})
     } else if (personId) {
       reset({ personId, fellowshipPositionId: 0, termStartDate: '', termEndDate: '' })
     }
@@ -336,7 +355,7 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
         <Controller name="fellowshipPositionId" control={control} render={({ field }) => (
           <Autocomplete
             options={positions}
-            getOptionLabel={(p: any) => ((p.title && p.title.name) || p.titleName) + ' — ' + ((p.fellowship && p.fellowship.name) || p.fellowshipName)}
+            getOptionLabel={getPositionLabel}
             value={positions.find((p) => p.id === field.value) || null}
             onChange={(_, v) => field.onChange(v?.id ?? 0)}
             renderInput={(params) => <TextField {...params} label="Position" required size="small" />}
