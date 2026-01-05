@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Card,
@@ -16,7 +16,13 @@ import {
   Step,
   StepLabel,
   Skeleton,
+  Chip,
+  Stack,
+  Avatar,
 } from '@mui/material'
+import HowToVoteIcon from '@mui/icons-material/HowToVote'
+import GroupIcon from '@mui/icons-material/Group'
+import BallotIcon from '@mui/icons-material/Ballot'
 import VoterLayout from '../components/layout/VoterLayout'
 import { voteApi } from '../api/vote.api'
 import type { BallotData, Position } from '../api/vote.api'
@@ -38,6 +44,12 @@ const VoteBallotPage: React.FC = () => {
 
   // Selection state: { [positionId]: [candidateIds] or candidateId }
   const [selections, setSelections] = useState<Record<number, number | number[]>>({})
+
+  const ballotStats = useMemo(() => {
+    if (!ballot) return { positions: 0, candidates: 0 }
+    const candidates = ballot.positions.reduce((sum, pos) => sum + pos.candidates.length, 0)
+    return { positions: ballot.positions.length, candidates }
+  }, [ballot])
 
   // Load ballot on mount
   useEffect(() => {
@@ -119,7 +131,7 @@ const VoteBallotPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <VoterLayout>
+      <VoterLayout maxWidth="lg" contentAlign="start">
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {[1, 2, 3].map(i => (
             <Card key={i}>
@@ -136,7 +148,7 @@ const VoteBallotPage: React.FC = () => {
 
   if (error) {
     return (
-      <VoterLayout>
+      <VoterLayout maxWidth="lg" contentAlign="start">
         <Card elevation={3}>
           <CardContent sx={{ p: 4, textAlign: 'center' }}>
             <Alert severity="error">{error}</Alert>
@@ -150,7 +162,7 @@ const VoteBallotPage: React.FC = () => {
   }
 
   return (
-    <VoterLayout>
+    <VoterLayout maxWidth="lg" contentAlign="start">
       {/* Progress Stepper */}
       <Stepper activeStep={1} sx={{ mb: 2, width: '100%' }}>
         <Step completed>
@@ -171,13 +183,52 @@ const VoteBallotPage: React.FC = () => {
         </Step>
       </Stepper>
 
-      {/* Ballot Instructions */}
-      <Card elevation={2}>
-        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-          <Typography variant="body2" color="text.secondary">
-            Select your preferred candidate for each position below.
-          </Typography>
-        </CardContent>
+      {/* Ballot Hero */}
+      <Card
+        elevation={0}
+        sx={{
+          borderRadius: 3,
+          p: { xs: 2.5, sm: 3 },
+          background: 'linear-gradient(135deg, rgba(143, 52, 147, 0.12) 0%, rgba(14, 97, 173, 0.12) 100%)',
+          border: '1px solid rgba(143, 52, 147, 0.15)',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: -40,
+            right: -40,
+            width: 140,
+            height: 140,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, transparent 70%)',
+          },
+        }}
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
+          <Avatar
+            sx={{
+              bgcolor: 'primary.main',
+              width: 56,
+              height: 56,
+              boxShadow: '0 10px 24px rgba(143, 52, 147, 0.25)',
+            }}
+          >
+            <HowToVoteIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              Official Ballot
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Select your preferred candidates below.
+            </Typography>
+          </Box>
+        </Stack>
+        <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap' }}>
+          <Chip icon={<GroupIcon />} label={`${ballotStats.positions} Positions`} />
+          <Chip icon={<BallotIcon />} label={`${ballotStats.candidates} Candidates`} />
+        </Stack>
       </Card>
 
       {/* Positions */}
@@ -235,34 +286,54 @@ interface PositionCardProps {
 
 const PositionCard: React.FC<PositionCardProps> = ({ position, selected, onSelectionChange }) => {
   const isMultiple = position.maxVotes > 1
+  const candidateCount = position.candidates.length
+  const seatLabel = position.maxVotes === 1 ? '1 seat' : `${position.maxVotes} seats`
 
   return (
     <Card
-      elevation={2}
+      elevation={0}
       sx={{
+        borderRadius: 3,
+        border: '1px solid rgba(0, 0, 0, 0.08)',
+        boxShadow: '0 14px 30px rgba(18, 33, 62, 0.08)',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         '&:hover': {
-          elevation: 3,
+          transform: 'translateY(-2px)',
+          boxShadow: '0 18px 36px rgba(18, 33, 62, 0.12)',
         },
-        transition: 'box-shadow 0.3s ease',
       }}
     >
       <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-        {/* Position Title */}
-        <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-          {position.title}
-        </Typography>
-
-        {/* Instructions */}
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
-          {isMultiple ? (
-            <>Select your preferred candidates (up to {position.maxVotes})</>
-          ) : (
-            <>Select your preferred candidate</>
-          )}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+              {position.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {isMultiple ? `Choose up to ${position.maxVotes}` : 'Choose one candidate'}
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <Chip size="small" label={seatLabel} sx={{ bgcolor: 'rgba(67, 160, 71, 0.12)' }} />
+            <Chip size="small" label={`${candidateCount} candidates`} />
+          </Stack>
+        </Box>
 
         {/* Candidates */}
-        {isMultiple ? (
+        {candidateCount === 0 ? (
+          <Box
+            sx={{
+              mt: 2.5,
+              p: 2,
+              borderRadius: 2,
+              border: '1px dashed rgba(0, 0, 0, 0.2)',
+              textAlign: 'center',
+              color: 'text.secondary',
+            }}
+          >
+            <Typography variant="body2">No candidates yet</Typography>
+          </Box>
+        ) : isMultiple ? (
           <FormGroup sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {position.candidates.map(candidate => (
               <FormControlLabel
@@ -281,8 +352,11 @@ const PositionCard: React.FC<PositionCardProps> = ({ position, selected, onSelec
                   />
                 }
                 label={
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+                      {(candidate.name || '?').charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
                       {candidate.name}
                     </Typography>
                   </Box>
@@ -290,16 +364,17 @@ const PositionCard: React.FC<PositionCardProps> = ({ position, selected, onSelec
                 sx={{
                   m: 0,
                   width: '100%',
-                  px: 1.5,
-                  py: 1,
+                  px: { xs: 1.25, sm: 1.75 },
+                  py: { xs: 1.25, sm: 1.5 },
                   border: '1px solid',
                   borderColor: Array.isArray(selected) && selected.includes(candidate.id) ? 'primary.main' : 'divider',
-                  borderRadius: 1,
-                  backgroundColor:
-                    Array.isArray(selected) && selected.includes(candidate.id) ? 'primary.light' : 'transparent',
+                  borderRadius: 2,
+                  background: Array.isArray(selected) && selected.includes(candidate.id)
+                    ? 'linear-gradient(135deg, rgba(143, 52, 147, 0.12) 0%, rgba(14, 97, 173, 0.08) 100%)'
+                    : 'rgba(255, 255, 255, 0.9)',
                   transition: 'all 0.2s ease',
                   '&:hover': {
-                    backgroundColor: 'action.hover',
+                    backgroundColor: 'rgba(143, 52, 147, 0.08)',
                     borderColor: 'primary.main',
                   },
                 }}
@@ -326,8 +401,11 @@ const PositionCard: React.FC<PositionCardProps> = ({ position, selected, onSelec
                   />
                 }
                 label={
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+                      {(candidate.name || '?').charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
                       {candidate.name}
                     </Typography>
                   </Box>
@@ -335,15 +413,17 @@ const PositionCard: React.FC<PositionCardProps> = ({ position, selected, onSelec
                 sx={{
                   m: 0,
                   width: '100%',
-                  px: 1.5,
-                  py: 1,
+                  px: { xs: 1.25, sm: 1.75 },
+                  py: { xs: 1.25, sm: 1.5 },
                   border: '1px solid',
                   borderColor: selected === candidate.id ? 'primary.main' : 'divider',
-                  borderRadius: 1,
-                  backgroundColor: selected === candidate.id ? 'primary.light' : 'transparent',
+                  borderRadius: 2,
+                  background: selected === candidate.id
+                    ? 'linear-gradient(135deg, rgba(143, 52, 147, 0.12) 0%, rgba(14, 97, 173, 0.08) 100%)'
+                    : 'rgba(255, 255, 255, 0.9)',
                   transition: 'all 0.2s ease',
                   '&:hover': {
-                    backgroundColor: 'action.hover',
+                    backgroundColor: 'rgba(143, 52, 147, 0.08)',
                     borderColor: 'primary.main',
                   },
                 }}
