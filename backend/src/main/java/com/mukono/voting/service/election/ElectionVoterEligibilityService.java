@@ -51,6 +51,7 @@ public class ElectionVoterEligibilityService {
     private final ChurchRepository churchRepository;
     private final ElectionPositionRepository electionPositionRepository;
     private final com.mukono.voting.repository.election.VotingPeriodRepository votingPeriodRepository;
+    private final com.mukono.voting.repository.election.VotingPeriodPositionRepository votingPeriodPositionRepository;
 
     @Autowired
     public ElectionVoterEligibilityService(
@@ -62,7 +63,8 @@ public class ElectionVoterEligibilityService {
             ArchdeaconryRepository archdeaconryRepository,
             ChurchRepository churchRepository,
             ElectionPositionRepository electionPositionRepository,
-            com.mukono.voting.repository.election.VotingPeriodRepository votingPeriodRepository) {
+            com.mukono.voting.repository.election.VotingPeriodRepository votingPeriodRepository,
+            com.mukono.voting.repository.election.VotingPeriodPositionRepository votingPeriodPositionRepository) {
         this.electionRepository = electionRepository;
         this.electionVoterRollRepository = electionVoterRollRepository;
         this.personRepository = personRepository;
@@ -72,6 +74,7 @@ public class ElectionVoterEligibilityService {
         this.churchRepository = churchRepository;
         this.electionPositionRepository = electionPositionRepository;
         this.votingPeriodRepository = votingPeriodRepository;
+        this.votingPeriodPositionRepository = votingPeriodPositionRepository;
     }
 
     /**
@@ -127,10 +130,12 @@ public class ElectionVoterEligibilityService {
         }
 
         // === TIER 2: FELLOWSHIP MEMBERSHIP CHECK ===
-        // Get all fellowships from election positions (modern election structure)
-        // Election.fellowship field is deprecated; fellowships are derived from positions
-        List<com.mukono.voting.model.election.ElectionPosition> electionPositions = 
-                electionPositionRepository.findByElectionId(electionId);
+        // Get all fellowships from positions assigned to this voting period.
+        // Election.fellowship field is deprecated; fellowships are derived from positions.
+        List<Long> votingPeriodPositionIds =
+                votingPeriodPositionRepository.findElectionPositionIdsByVotingPeriod(electionId, votingPeriodId);
+        List<com.mukono.voting.model.election.ElectionPosition> electionPositions =
+                electionPositionRepository.findAllById(votingPeriodPositionIds);
         
         if (electionPositions.isEmpty()) {
             return new EligibilityDecision(false, "NO_POSITIONS",
@@ -145,12 +150,13 @@ public class ElectionVoterEligibilityService {
         // Check if voter is eligible for ANY of the fellowships
         List<LeadershipAssignment> voterFellowshipAssignments = new java.util.ArrayList<>();
         
+        PositionScope eligibleScope = lowerScopeForElection(election.getScope());
         for (Long fellowshipId : fellowshipIds) {
             List<LeadershipAssignment> assignments = leadershipAssignmentRepository
                     .findByPersonIdAndFellowshipPositionFellowshipIdAndFellowshipPositionScopeAndStatus(
                             voterPersonId,
                             fellowshipId,
-                            election.getScope(),
+                            eligibleScope,
                             RecordStatus.ACTIVE);
             
             if (!assignments.isEmpty()) {
@@ -189,7 +195,7 @@ public class ElectionVoterEligibilityService {
         // Find an assignment that matches the election's scope target
         // Since voterFellowshipAssignments are PERSON-SPECIFIC, we just check if any match the target
         boolean scopeEligible = voterFellowshipAssignments.stream()
-                .anyMatch(la -> matchesScopeTarget(la, election, scope));
+                .anyMatch(la -> matchesLowerScopeTarget(la, election, scope));
 
         if (!scopeEligible) {
             return buildScopeFailureDecision(election, scope);
@@ -206,25 +212,40 @@ public class ElectionVoterEligibilityService {
      * @param scope the election scope
      * @return true if assignment targets the same scope as election
      */
-    private boolean matchesScopeTarget(LeadershipAssignment assignment, Election election, PositionScope scope) {
+    private boolean matchesLowerScopeTarget(LeadershipAssignment assignment, Election election, PositionScope scope) {
         switch (scope) {
             case DIOCESE:
-                return election.getDiocese() != null &&
-                       assignment.getDiocese() != null &&
-                       assignment.getDiocese().getId().equals(election.getDiocese().getId());
+                return election.getDiocese() != null
+                        && assignment.getArchdeaconry() != null
+                        && assignment.getArchdeaconry().getDiocese() != null
+                        && assignment.getArchdeaconry().getDiocese().getId().equals(election.getDiocese().getId());
 
             case ARCHDEACONRY:
-                return election.getArchdeaconry() != null &&
-                       assignment.getArchdeaconry() != null &&
-                       assignment.getArchdeaconry().getId().equals(election.getArchdeaconry().getId());
+                return election.getArchdeaconry() != null
+                        && assignment.getChurch() != null
+                        && assignment.getChurch().getArchdeaconry() != null
+                        && assignment.getChurch().getArchdeaconry().getId().equals(election.getArchdeaconry().getId());
 
             case CHURCH:
-                return election.getChurch() != null &&
-                       assignment.getChurch() != null &&
-                       assignment.getChurch().getId().equals(election.getChurch().getId());
+                return election.getChurch() != null
+                        && assignment.getChurch() != null
+                        && assignment.getChurch().getId().equals(election.getChurch().getId());
 
             default:
                 return false;
+        }
+    }
+
+    private PositionScope lowerScopeForElection(PositionScope scope) {
+        switch (scope) {
+            case DIOCESE:
+                return PositionScope.ARCHDEACONRY;
+            case ARCHDEACONRY:
+                return PositionScope.CHURCH;
+            case CHURCH:
+                return PositionScope.CHURCH;
+            default:
+                return scope;
         }
     }
 

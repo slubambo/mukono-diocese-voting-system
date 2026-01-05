@@ -261,8 +261,8 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                         AND fp2.fellowship_id = f.id
                         AND fp2.scope = (
                             CASE 
-                                WHEN e.scope = 'DIOCESE' THEN 'DIOCESE'
-                                WHEN e.scope = 'ARCHDEACONRY' THEN 'ARCHDEACONRY'
+                                WHEN e.scope = 'DIOCESE' THEN 'ARCHDEACONRY'
+                                WHEN e.scope = 'ARCHDEACONRY' THEN 'CHURCH'
                                 WHEN e.scope = 'CHURCH' THEN 'CHURCH'
                             END
                         )
@@ -325,14 +325,23 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                               AND fp2.fellowship_id = f3.id
                               AND fp2.scope = (
                                   CASE 
-                                      WHEN e.scope = 'DIOCESE' THEN 'DIOCESE'
-                                      WHEN e.scope = 'ARCHDEACONRY' THEN 'ARCHDEACONRY'
+                                      WHEN e.scope = 'DIOCESE' THEN 'ARCHDEACONRY'
+                                      WHEN e.scope = 'ARCHDEACONRY' THEN 'CHURCH'
                                       WHEN e.scope = 'CHURCH' THEN 'CHURCH'
                                   END
                               )
                         )
                   )
                OR evr.person_id IS NOT NULL
+               OR EXISTS (
+                      SELECT 1
+                      FROM election_candidates ec
+                      JOIN election_positions epc ON epc.id = ec.election_position_id
+                      JOIN voting_period_positions vpp ON vpp.election_position_id = epc.id
+                      WHERE ec.election_id = :electionId
+                        AND ec.person_id = p.id
+                        AND vpp.voting_period_id = :votingPeriodId
+                  )
               )
               AND (
                   :fellowshipId IS NULL
@@ -359,12 +368,22 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                               AND fp2.fellowship_id = f3.id
                               AND fp2.scope = (
                                   CASE 
-                                      WHEN e.scope = 'DIOCESE' THEN 'DIOCESE'
-                                      WHEN e.scope = 'ARCHDEACONRY' THEN 'ARCHDEACONRY'
+                                      WHEN e.scope = 'DIOCESE' THEN 'ARCHDEACONRY'
+                                      WHEN e.scope = 'ARCHDEACONRY' THEN 'CHURCH'
                                       WHEN e.scope = 'CHURCH' THEN 'CHURCH'
                                   END
                               )
                         )
+                  )
+                  OR EXISTS (
+                      SELECT 1
+                      FROM election_candidates ec
+                      JOIN election_positions epc ON epc.id = ec.election_position_id
+                      JOIN voting_period_positions vpp ON vpp.election_position_id = epc.id
+                      WHERE ec.election_id = :electionId
+                        AND ec.person_id = p.id
+                        AND epc.fellowship_id = :fellowshipId
+                        AND vpp.voting_period_id = :votingPeriodId
                   )
               )
               AND (:status = 'ALL'
@@ -416,14 +435,23 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                               AND fp2.fellowship_id = f3.id
                               AND fp2.scope = (
                                   CASE 
-                                      WHEN e.scope = 'DIOCESE' THEN 'DIOCESE'
-                                      WHEN e.scope = 'ARCHDEACONRY' THEN 'ARCHDEACONRY'
+                                      WHEN e.scope = 'DIOCESE' THEN 'ARCHDEACONRY'
+                                      WHEN e.scope = 'ARCHDEACONRY' THEN 'CHURCH'
                                       WHEN e.scope = 'CHURCH' THEN 'CHURCH'
                                   END
                               )
                         )
                   )
                OR evr.person_id IS NOT NULL
+               OR EXISTS (
+                      SELECT 1
+                      FROM election_candidates ec
+                      JOIN election_positions epc ON epc.id = ec.election_position_id
+                      JOIN voting_period_positions vpp ON vpp.election_position_id = epc.id
+                      WHERE ec.election_id = :electionId
+                        AND ec.person_id = p.id
+                        AND vpp.voting_period_id = :votingPeriodId
+                  )
               )
               AND (
                   :fellowshipId IS NULL
@@ -451,12 +479,22 @@ public interface VotingCodeRepository extends JpaRepository<VotingCode, Long> {
                               AND fp2.fellowship_id = f3.id
                               AND fp2.scope = (
                                   CASE 
-                                      WHEN e.scope = 'DIOCESE' THEN 'DIOCESE'
-                                      WHEN e.scope = 'ARCHDEACONRY' THEN 'ARCHDEACONRY'
+                                      WHEN e.scope = 'DIOCESE' THEN 'ARCHDEACONRY'
+                                      WHEN e.scope = 'ARCHDEACONRY' THEN 'CHURCH'
                                       WHEN e.scope = 'CHURCH' THEN 'CHURCH'
                                   END
                               )
                         )
+                  )
+                  OR EXISTS (
+                      SELECT 1
+                      FROM election_candidates ec
+                      JOIN election_positions epc ON epc.id = ec.election_position_id
+                      JOIN voting_period_positions vpp ON vpp.election_position_id = epc.id
+                      WHERE ec.election_id = :electionId
+                        AND ec.person_id = p.id
+                        AND epc.fellowship_id = :fellowshipId
+                        AND vpp.voting_period_id = :votingPeriodId
                   )
               )
               AND (:status = 'ALL'
