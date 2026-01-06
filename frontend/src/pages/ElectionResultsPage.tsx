@@ -1,6 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
+  AccessTime as AccessTimeIcon,
+  AssignmentTurnedIn as AssignmentTurnedInIcon,
+  ArrowBack as ArrowBackIcon,
+  HowToVote as HowToVoteIcon,
+  EventAvailable as EventAvailableIcon,
+  Insights as InsightsIcon,
+  TrendingUp as TrendingUpIcon,
+  MilitaryTech as MilitaryTechIcon,
+  Refresh,
+  SupervisorAccount as SupervisorAccountIcon,
+} from '@mui/icons-material'
+import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -11,10 +24,11 @@ import {
   Divider,
   FormControl,
   InputLabel,
+  LinearProgress,
   MenuItem,
   Paper,
-  Stack,
   Select,
+  Stack,
   Tab,
   Tabs,
   Table,
@@ -25,26 +39,17 @@ import {
   TableRow,
   TextField,
   Typography,
-  Alert,
-  LinearProgress,
 } from '@mui/material'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import HowToVoteIcon from '@mui/icons-material/HowToVote'
-import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn'
-import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount'
-import TrendingUpIcon from '@mui/icons-material/TrendingUp'
-import AccessTimeIcon from '@mui/icons-material/AccessTime'
-import MilitaryTechIcon from '@mui/icons-material/MilitaryTech'
-import EventAvailableIcon from '@mui/icons-material/EventAvailable'
-import InsightsIcon from '@mui/icons-material/Insights'
+import { alpha } from '@mui/material/styles'
 import AppShell from '../components/layout/AppShell'
 import PageLayout from '../components/layout/PageLayout'
-import LoadingState from '../components/common/LoadingState'
 import EmptyState from '../components/common/EmptyState'
+import LoadingState from '../components/common/LoadingState'
 import StatusChip from '../components/common/StatusChip'
 import { electionApi } from '../api/election.api'
-import resultsApi from '../api/results.api'
+import { resultsApi } from '../api/results.api'
 import type {
+  CandidateResultsResponse,
   ElectionResultsSummaryResponse,
   PositionResultsResponse,
   RunTallyResponse,
@@ -53,15 +58,12 @@ import type {
 import { useToast } from '../components/feedback/ToastProvider'
 import { useAuth } from '../context/AuthContext'
 import type { VotingPeriod } from '../types/election'
-import { alpha } from '@mui/material/styles'
 
-interface RankedCandidate {
-  candidateId?: number
-  personId?: number
-  fullName?: string
-  voteCount?: number
-  voteSharePercent?: number
+interface RankedCandidate extends CandidateResultsResponse {
   rank: number
+  fullName: string
+  voteCount: number
+  voteSharePercent?: number
 }
 
 interface RankedPosition extends PositionResultsResponse {
@@ -209,7 +211,7 @@ const ElectionResultsPage: React.FC = () => {
         refreshTimerRef.current = null
       }
     }
-  }, [selectedPeriodId, summary, REFRESH_MS])
+  }, [selectedPeriodId, summary])
 
   const fetchSummary = async (periodId?: string | number) => {
     if (!electionId || !periodId) return
@@ -220,6 +222,14 @@ const ElectionResultsPage: React.FC = () => {
       setSummary(null)
       toast.error(err?.message || 'Failed to load summary')
     }
+  }
+
+  const refreshNow = () => {
+    if (!selectedPeriodId) return
+    fetchSummary(selectedPeriodId)
+    fetchPositions(selectedPeriodId)
+    fetchTallyStatus(selectedPeriodId)
+    setRefreshCountdown(REFRESH_MS)
   }
 
   const fetchPositions = async (periodId?: string | number) => {
@@ -325,45 +335,53 @@ const ElectionResultsPage: React.FC = () => {
     const metricCards = [
       {
         label: 'Votes cast',
-        value: summary.totalBallotsCast ?? 0,
+        value: summary.totalBallotsCast,
         icon: <HowToVoteIcon fontSize="small" />,
+        available: summary.totalBallotsCast !== undefined && summary.totalBallotsCast !== null,
       },
       {
         label: 'Distinct voters',
-        value: summary.totalDistinctVoters ?? 0,
+        value: summary.totalDistinctVoters,
         icon: <SupervisorAccountIcon fontSize="small" />,
+        available: summary.totalDistinctVoters !== undefined && summary.totalDistinctVoters !== null,
       },
       {
         label: 'Selections cast',
-        value: summary.totalSelectionsCast ?? 0,
+        value: summary.totalSelectionsCast,
         icon: <InsightsIcon fontSize="small" />,
+        available: summary.totalSelectionsCast !== undefined && summary.totalSelectionsCast !== null,
       },
       {
         label: 'Positions',
-        value: summary.totalPositions ?? 0,
+        value: summary.totalPositions,
         icon: <EventAvailableIcon fontSize="small" />,
+        available: summary.totalPositions !== undefined && summary.totalPositions !== null,
       },
       {
         label: 'Avg selections / ballot',
-        value: avgSelectionsPerBallot !== null ? avgSelectionsPerBallot.toFixed(2) : '—',
+        value: avgSelectionsPerBallot !== null ? avgSelectionsPerBallot.toFixed(2) : null,
         icon: <TrendingUpIcon fontSize="small" />,
+        available: avgSelectionsPerBallot !== null,
       },
       {
         label: 'Ties detected',
         value: tieCount,
         icon: <MilitaryTechIcon fontSize="small" />,
+        available: positions.length > 0,
       },
       {
         label: 'Zero-vote positions',
         value: zeroVotePositions,
         icon: <AccessTimeIcon fontSize="small" />,
+        available: positions.length > 0,
       },
       {
         label: 'Period status',
-        value: summary.periodStatus || election?.status || '—',
+        value: summary.periodStatus || election?.status || null,
         icon: <EventAvailableIcon fontSize="small" />,
+        available: Boolean(summary.periodStatus || election?.status),
       },
-    ]
+    ].filter((card) => card.available)
 
     return (
       <Box sx={{ display: 'grid', gap: 2 }}>
@@ -385,8 +403,13 @@ const ElectionResultsPage: React.FC = () => {
               <Typography variant="body1" sx={{ opacity: 0.9 }}>
                 {summary.totalPositions ?? 0} positions · {summary.totalBallotsCast ?? 0} ballots · {summary.totalDistinctVoters ?? 0} voters
               </Typography>
+              {summary.serverTime && (
+                <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                  Updated at {new Date(summary.serverTime).toLocaleString()}
+                </Typography>
+              )}
             </Box>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap' }}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', md: 'center' }} sx={{ flexWrap: 'wrap' }}>
               <StatusChip status={(election.status || 'pending') as any} />
               <Chip size="small" color="default" variant="filled" label={`Period: ${summary.periodStatus || '—'}`} sx={{ bgcolor: 'rgba(255,255,255,0.14)', color: 'common.white' }} />
               <Chip size="small" color={isLive ? 'success' : 'default'} variant="filled" label={isLive ? 'Live updates' : 'Paused'} sx={{ bgcolor: isLive ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.14)', color: 'common.white' }} />
@@ -398,6 +421,15 @@ const ElectionResultsPage: React.FC = () => {
                 icon={<AccessTimeIcon fontSize="small" />}
                 sx={{ bgcolor: 'rgba(0,0,0,0.25)' }}
               />
+              <Button
+                variant="outlined"
+                color="inherit"
+                onClick={refreshNow}
+                startIcon={<Refresh fontSize="small" />}
+                sx={{ color: 'common.white', borderColor: 'rgba(255,255,255,0.4)' }}
+              >
+                Refresh now
+              </Button>
             </Stack>
           </Box>
 
@@ -484,8 +516,18 @@ const ElectionResultsPage: React.FC = () => {
                 <LinearProgress
                   variant={tallyStatus?.status ? 'determinate' : 'indeterminate'}
                   value={tallyStatus?.status ? Math.min(100, ((tallyStatus?.totalPositionsCertified ?? 0) / Math.max(summary.totalPositions ?? 1, 1)) * 100) : undefined}
+                  sx={{
+                    height: 8,
+                    borderRadius: 99,
+                    '& .MuiLinearProgress-bar': { transition: 'width 0.6s ease' },
+                  }}
                 />
               </Box>
+              {lastTallyCompletedAt && (
+                <Typography variant="caption" color="text.secondary">
+                  Last tally run: {new Date(lastTallyCompletedAt).toLocaleString()}
+                </Typography>
+              )}
             </Box>
           </Paper>
         </Box>
@@ -530,7 +572,7 @@ const ElectionResultsPage: React.FC = () => {
                     <LinearProgress
                       variant="determinate"
                       value={percent}
-                      sx={{ height: 8, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.06)' }}
+                      sx={{ height: 8, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.06)', '& .MuiLinearProgress-bar': { transition: 'width 0.6s ease' } }}
                     />
                     <Stack direction="row" spacing={1} sx={{ mt: 0.75 }}>
                       <Chip size="small" variant="outlined" label={pos.scope || '—'} />
@@ -561,8 +603,8 @@ const ElectionResultsPage: React.FC = () => {
       >
         {positions.map((pos) => {
           const ballots = pos.totalBallotsForPosition ?? 0
-            const totalBallots = summary?.totalBallotsCast ?? 0
-            const percent = totalBallots > 0 ? Math.min(100, (ballots / totalBallots) * 100) : 0
+          const totalBallots = summary?.totalBallotsCast ?? 0
+          const percent = totalBallots > 0 ? Math.min(100, (ballots / totalBallots) * 100) : 0
           return (
             <Paper
               key={pos.positionId}
@@ -582,7 +624,11 @@ const ElectionResultsPage: React.FC = () => {
                 <Typography variant="body2" color="text.secondary">
                   Position turnout compared to total ballots cast
                 </Typography>
-                <LinearProgress variant="determinate" value={percent} sx={{ height: 8, borderRadius: 99 }} />
+                <LinearProgress
+                  variant="determinate"
+                  value={percent}
+                  sx={{ height: 8, borderRadius: 99, '& .MuiLinearProgress-bar': { transition: 'width 0.6s ease' } }}
+                />
                 <Stack direction="row" spacing={1} flexWrap="wrap">
                   <Chip size="small" variant="outlined" label={pos.scope || '—'} />
                   <Chip size="small" variant="outlined" label={`Seats: ${pos.seats ?? '—'}`} />
