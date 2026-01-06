@@ -7,8 +7,9 @@ import {
   Paper,
   Stack,
   Typography,
+  Skeleton,
 } from '@mui/material'
-import { alpha } from '@mui/material/styles'
+import { alpha, useTheme } from '@mui/material/styles'
 import {
   AutoGraph as AutoGraphIcon,
   Ballot as BallotIcon,
@@ -49,6 +50,7 @@ const OverviewDashboard: React.FC = () => {
   const { user } = useAuth()
   const isAdmin = Boolean(user?.roles?.includes('ROLE_ADMIN'))
   const base = isAdmin ? '/admin' : '/ds'
+  const theme = useTheme()
 
   const [loading, setLoading] = useState(true)
   const [counts, setCounts] = useState<SnapshotCounts>({
@@ -148,8 +150,15 @@ const OverviewDashboard: React.FC = () => {
           color: 'common.white',
           position: 'relative',
           overflow: 'hidden',
-          background: theme => `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.95)} 0%, ${alpha(theme.palette.primary.main, 0.82)} 45%, ${alpha(theme.palette.secondary?.main || theme.palette.primary.light, 0.85)} 100%)`,
+          background: (t) => `linear-gradient(135deg, ${alpha(t.palette.primary.dark, 0.95)} 0%, ${alpha(t.palette.primary.main, 0.82)} 45%, ${alpha(t.palette.secondary?.main || t.palette.primary.light, 0.85)} 100%)`,
           boxShadow: '0 22px 60px rgba(15, 23, 42, 0.25)',
+          '&:before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            background: `radial-gradient(1200px 400px at -10% -40%, ${alpha('#ffffff', 0.15)} 0%, transparent 60%), radial-gradient(800px 300px at 120% 140%, ${alpha('#ffffff', 0.12)} 0%, transparent 60%)`,
+            pointerEvents: 'none',
+          },
         }}
       >
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems={{ xs: 'flex-start', md: 'center' }} justifyContent="space-between">
@@ -167,6 +176,28 @@ const OverviewDashboard: React.FC = () => {
             <Chip size="small" label={`${counts.people} people`} sx={{ color: 'common.white', bgcolor: 'rgba(255,255,255,0.18)' }} />
             <Chip size="small" label={`${counts.assignments} assignments`} sx={{ color: 'common.white', bgcolor: 'rgba(255,255,255,0.18)' }} />
           </Stack>
+          {/* Primary CTAs */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: { xs: 1, md: 0 } }}>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={() => navigate(`${base}/elections`)}
+              sx={{
+                bgcolor: alpha(theme.palette.common.white, 0.15),
+                color: 'common.white',
+                '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.25) },
+              }}
+            >
+              Create election
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => navigate(`${base}/results`)}
+              sx={{ borderColor: alpha('#fff', 0.4), color: 'common.white', '&:hover': { borderColor: '#fff', bgcolor: alpha('#fff', 0.08) } }}
+            >
+              View results
+            </Button>
+          </Stack>
         </Stack>
       </Paper>
 
@@ -179,12 +210,31 @@ const OverviewDashboard: React.FC = () => {
               { label: 'People registry', value: counts.people, icon: <GroupsIcon fontSize="small" />, accent: 'rgba(249, 115, 22, 0.16)' },
               { label: 'Leadership roles', value: counts.assignments, icon: <RecentActorsIcon fontSize="small" />, accent: 'rgba(168, 85, 247, 0.16)' },
             ].map((card) => (
-              <Paper key={card.label} sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'grey.100' }}>
+              <Paper
+                key={card.label}
+                tabIndex={0}
+                role="article"
+                aria-live="polite"
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'grey.100',
+                  transition: 'transform 160ms ease, box-shadow 160ms ease',
+                  cursor: 'default',
+                  '&:focus-visible': { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 2 },
+                  '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[2] },
+                }}
+              >
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary' }}>
                   {card.icon}
                   <Typography variant="caption" sx={{ textTransform: 'uppercase', letterSpacing: 0.6 }}>{card.label}</Typography>
                 </Stack>
-                <Typography variant="h4" sx={{ mt: 1, fontWeight: 700 }}>{loading ? '—' : card.value}</Typography>
+                {loading ? (
+                  <Skeleton variant="text" width={60} height={42} sx={{ mt: 0.5 }} />
+                ) : (
+                  <Typography variant="h4" sx={{ mt: 1, fontWeight: 700 }}>{card.value}</Typography>
+                )}
                 <Box sx={{ mt: 1, height: 6, borderRadius: 99, bgcolor: card.accent }} />
               </Paper>
             ))}
@@ -196,38 +246,59 @@ const OverviewDashboard: React.FC = () => {
               <Button size="small" onClick={() => navigate(`${base}/elections`)}>View all</Button>
             </Stack>
             <Box sx={{ display: 'grid', gap: 1 }}>
-              {recentElections.length === 0 && !loading ? (
-                <Typography color="text.secondary">No elections created yet.</Typography>
-              ) : (
-                recentElections.map((election) => (
-                  <Paper
-                    key={election.id}
-                    variant="outlined"
-                    sx={{
-                      p: 1.5,
-                      borderRadius: 1.5,
-                      borderColor: 'grey.100',
-                      display: 'flex',
-                      gap: 2,
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{election.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {election.scope || '—'} · {election.termStartDate ? new Date(election.termStartDate).toLocaleDateString() : '—'}
-                      </Typography>
-                    </Box>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <StatusChip status={(election.status || 'pending') as any} />
-                      <Button size="small" variant="outlined" onClick={() => navigate(`${base}/elections/${election.id}`)}>
-                        Open
-                      </Button>
-                    </Stack>
+              {loading && recentElections.length === 0 && (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <Paper key={i} variant="outlined" sx={{ p: 1.5, borderRadius: 1.5, borderColor: 'grey.100' }}>
+                    <Skeleton variant="text" width="40%" />
+                    <Skeleton variant="text" width="25%" />
                   </Paper>
                 ))
               )}
+              {!loading && recentElections.length === 0 && (
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, textAlign: 'center' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>No elections yet</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                    Start by creating your first election. You can configure positions, eligibility and more.
+                  </Typography>
+                  <Button variant="contained" startIcon={<PollIcon fontSize="small" />} onClick={() => navigate(`${base}/elections`)}>
+                    Create election
+                  </Button>
+                </Paper>
+              )}
+              {recentElections.map((election) => (
+                <Paper
+                  key={election.id}
+                  variant="outlined"
+                  role="button"
+                  onClick={() => navigate(`${base}/elections/${election.id}`)}
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 1.5,
+                    borderColor: 'grey.100',
+                    display: 'flex',
+                    gap: 2,
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    transition: 'background 120ms ease, transform 120ms ease, box-shadow 120ms ease',
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: 'action.hover', transform: 'translateY(-1px)', boxShadow: theme.shadows[1] },
+                    '&:focus-visible': { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 2 },
+                  }}
+                >
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{election.name}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {(election.scope || '—').toString()} · {election.termStartDate ? new Date(election.termStartDate).toLocaleDateString() : '—'}
+                    </Typography>
+                  </Box>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <StatusChip status={(election.status || 'pending') as any} />
+                    <Button size="small" variant="outlined" onClick={(e) => { e.stopPropagation(); navigate(`${base}/elections/${election.id}`) }}>
+                      Open
+                    </Button>
+                  </Stack>
+                </Paper>
+              ))}
             </Box>
           </Paper>
         </Box>
@@ -243,7 +314,11 @@ const OverviewDashboard: React.FC = () => {
               ].map((row) => (
                 <Box key={row.label} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography variant="body2" color="text.secondary">{row.label}</Typography>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{loading ? '—' : row.value}</Typography>
+                  {loading ? (
+                    <Skeleton variant="text" width={24} />
+                  ) : (
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{row.value}</Typography>
+                  )}
                 </Box>
               ))}
             </Stack>
@@ -255,20 +330,33 @@ const OverviewDashboard: React.FC = () => {
 
           <Paper sx={{ p: 2, borderRadius: 2 }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>Quick actions</Typography>
-            <Stack spacing={1}>
+            <Stack spacing={1} role="list" aria-label="Quick actions">
               {quickActions.map((action) => (
-                <Button
+                <Box
                   key={action.label}
-                  variant="outlined"
-                  onClick={() => navigate(action.path)}
-                  startIcon={action.icon}
-                  sx={{ justifyContent: 'flex-start' }}
+                  role="listitem"
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'grey.100',
+                    borderRadius: 2,
+                    p: 1,
+                    transition: 'background 120ms ease, transform 120ms ease, box-shadow 120ms ease',
+                    '&:hover': { bgcolor: 'action.hover', transform: 'translateY(-1px)', boxShadow: theme.shadows[1] },
+                  }}
                 >
-                  <Box sx={{ textAlign: 'left' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{action.label}</Typography>
-                    <Typography variant="caption" color="text.secondary">{action.description}</Typography>
-                  </Box>
-                </Button>
+                  <Button
+                    fullWidth
+                    variant="text"
+                    onClick={() => navigate(action.path)}
+                    startIcon={action.icon}
+                    sx={{ justifyContent: 'flex-start', color: 'text.primary', textTransform: 'none' }}
+                  >
+                    <Box sx={{ textAlign: 'left' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{action.label}</Typography>
+                      <Typography variant="caption" color="text.secondary">{action.description}</Typography>
+                    </Box>
+                  </Button>
+                </Box>
               ))}
             </Stack>
           </Paper>
