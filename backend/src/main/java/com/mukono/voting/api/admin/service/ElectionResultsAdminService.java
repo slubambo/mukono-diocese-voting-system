@@ -26,6 +26,7 @@ public class ElectionResultsAdminService {
     private final ElectionCandidateRepository candidateRepository;
     private final VoteRecordRepository voteRecordRepository;
     private final VoteSelectionRepository voteSelectionRepository;
+    private final VotingPeriodPositionRepository votingPeriodPositionRepository;
     private final EligibleVoterService eligibleVoterService;
     private final VoteTallyService voteTallyService;
 
@@ -36,6 +37,7 @@ public class ElectionResultsAdminService {
             ElectionCandidateRepository candidateRepository,
             VoteRecordRepository voteRecordRepository,
             VoteSelectionRepository voteSelectionRepository,
+            VotingPeriodPositionRepository votingPeriodPositionRepository,
             EligibleVoterService eligibleVoterService,
             VoteTallyService voteTallyService) {
         this.electionRepository = electionRepository;
@@ -44,6 +46,7 @@ public class ElectionResultsAdminService {
         this.candidateRepository = candidateRepository;
         this.voteRecordRepository = voteRecordRepository;
         this.voteSelectionRepository = voteSelectionRepository;
+        this.votingPeriodPositionRepository = votingPeriodPositionRepository;
         this.eligibleVoterService = eligibleVoterService;
         this.voteTallyService = voteTallyService;
     }
@@ -88,13 +91,19 @@ public class ElectionResultsAdminService {
      */
     public List<PositionResultsResponse> getAllPositionResults(Long electionId, Long votingPeriodId) {
         Election election = validateElectionAndPeriod(electionId, votingPeriodId);
+        VotingPeriod period = votingPeriodRepository.findById(votingPeriodId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid votingPeriodId"));
 
         long totalBallotsForPeriod = voteRecordRepository.countByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
-        List<ElectionPosition> positions = positionRepository.findByElectionIdOrderByIdAsc(electionId);
+        List<Long> positionIds = votingPeriodPositionRepository
+                .findElectionPositionIdsByVotingPeriod(electionId, votingPeriodId);
+        List<ElectionPosition> positions = positionIds.isEmpty()
+                ? Collections.emptyList()
+                : positionRepository.findByIdInOrderByIdAsc(positionIds);
         List<PositionResultsResponse> results = new ArrayList<>();
 
         for (ElectionPosition position : positions) {
-            results.add(buildPositionResults(electionId, votingPeriodId, election, position, totalBallotsForPeriod));
+            results.add(buildPositionResults(electionId, votingPeriodId, election, period, position, totalBallotsForPeriod));
         }
 
         return results;
@@ -105,13 +114,20 @@ public class ElectionResultsAdminService {
      */
     public PositionResultsResponse getPositionResults(Long electionId, Long votingPeriodId, Long positionId) {
         Election election = validateElectionAndPeriod(electionId, votingPeriodId);
+        VotingPeriod period = votingPeriodRepository.findById(votingPeriodId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid votingPeriodId"));
 
         ElectionPosition position = positionRepository.findById(positionId)
                 .filter(p -> p.getElection().getId().equals(electionId))
                 .orElseThrow(() -> new IllegalArgumentException("Position not found or does not belong to election"));
+        boolean assignedToPeriod = votingPeriodPositionRepository
+                .existsByVotingPeriodIdAndElectionPositionId(votingPeriodId, positionId);
+        if (!assignedToPeriod) {
+            throw new IllegalArgumentException("Position is not assigned to the voting period");
+        }
 
         long totalBallotsForPeriod = voteRecordRepository.countByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
-        return buildPositionResults(electionId, votingPeriodId, election, position, totalBallotsForPeriod);
+        return buildPositionResults(electionId, votingPeriodId, election, period, position, totalBallotsForPeriod);
     }
 
     /**
@@ -167,7 +183,7 @@ public class ElectionResultsAdminService {
         return election;
     }
 
-    private PositionResultsResponse buildPositionResults(Long electionId, Long votingPeriodId, Election election, ElectionPosition position, long totalBallotsForPeriod) {
+    private PositionResultsResponse buildPositionResults(Long electionId, Long votingPeriodId, Election election, VotingPeriod period, ElectionPosition position, long totalBallotsForPeriod) {
         long turnout = voteTallyService.countTurnoutForPosition(electionId, votingPeriodId, position.getId());
         long totalBallots = voteRecordRepository.countByElectionIdAndVotingPeriodIdAndPositionId(
                 electionId, votingPeriodId, position.getId());
@@ -201,6 +217,10 @@ public class ElectionResultsAdminService {
         posResponse.setPositionId(position.getId());
         posResponse.setPositionName(position.getFellowshipPosition().getTitle().getName());
         posResponse.setScope(position.getFellowshipPosition().getScope().name());
+        posResponse.setElectionId(election != null ? election.getId() : null);
+        posResponse.setElectionName(election != null ? election.getName() : null);
+        posResponse.setVotingPeriodId(period != null ? period.getId() : null);
+        posResponse.setVotingPeriodName(period != null ? period.getName() : null);
         posResponse.setFellowshipId(position.getFellowship() != null ? position.getFellowship().getId() : null);
         posResponse.setFellowshipName(position.getFellowship() != null ? position.getFellowship().getName() : null);
         if (election != null && election.getScope() != null) {

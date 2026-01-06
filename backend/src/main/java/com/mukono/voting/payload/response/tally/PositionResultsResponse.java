@@ -9,6 +9,10 @@ public class PositionResultsResponse {
 	private Long positionId;
 	private String positionName;
 	private String scope;
+	private Long electionId;
+	private String electionName;
+	private Long votingPeriodId;
+	private String votingPeriodName;
 	private Long fellowshipId;
 	private String fellowshipName;
 	private String locationScope;
@@ -47,6 +51,38 @@ public class PositionResultsResponse {
 
 	public void setScope(String scope) {
 		this.scope = scope;
+	}
+
+	public Long getElectionId() {
+		return electionId;
+	}
+
+	public void setElectionId(Long electionId) {
+		this.electionId = electionId;
+	}
+
+	public String getElectionName() {
+		return electionName;
+	}
+
+	public void setElectionName(String electionName) {
+		this.electionName = electionName;
+	}
+
+	public Long getVotingPeriodId() {
+		return votingPeriodId;
+	}
+
+	public void setVotingPeriodId(Long votingPeriodId) {
+		this.votingPeriodId = votingPeriodId;
+	}
+
+	public String getVotingPeriodName() {
+		return votingPeriodName;
+	}
+
+	public void setVotingPeriodName(String votingPeriodName) {
+		this.votingPeriodName = votingPeriodName;
 	}
 
 	public Long getFellowshipId() {

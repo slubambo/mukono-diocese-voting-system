@@ -49,6 +49,14 @@ public interface ElectionPositionRepository extends JpaRepository<ElectionPositi
      */
     List<ElectionPosition> findByElectionIdOrderByIdAsc(Long electionId);
 
+    /**
+     * Find positions by ID list ordered by ID (non-paginated).
+     *
+     * @param ids position IDs
+     * @return list of election positions ordered by ID ASC
+     */
+    List<ElectionPosition> findByIdInOrderByIdAsc(List<Long> ids);
+
     // =========================================================================
     // LOOKUP SPECIFIC POSITION ENTRY
     // =========================================================================
