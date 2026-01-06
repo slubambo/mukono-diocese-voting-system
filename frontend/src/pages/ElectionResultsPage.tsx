@@ -312,6 +312,8 @@ const ElectionResultsPage: React.FC = () => {
           ...c,
           positionId: p.positionId,
           positionName: p.positionName,
+          fellowshipName: p.fellowshipName,
+          locationName: p.locationName,
           positionTurnout: p.turnoutForPosition,
           totalBallots: p.totalBallotsForPosition,
         }))
@@ -919,6 +921,14 @@ const ElectionResultsPage: React.FC = () => {
     if (positionsLoading) return <LoadingState variant="row" />
     if (filteredCandidates.length === 0) return <EmptyState title="No candidates" description="No candidates match your filters." />
 
+    const fellowshipGroups = filteredCandidates.reduce<Record<string, typeof filteredCandidates>>((acc, candidate) => {
+      const key = candidate.fellowshipName || 'Unassigned fellowship'
+      if (!acc[key]) acc[key] = []
+      acc[key].push(candidate)
+      return acc
+    }, {})
+    const orderedFellowships = Object.keys(fellowshipGroups).sort((a, b) => a.localeCompare(b))
+
     return (
       <Paper sx={{ p: 2, borderRadius: 2 }}>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2, alignItems: 'center' }}>
@@ -946,41 +956,62 @@ const ElectionResultsPage: React.FC = () => {
             onChange={(e) => setCandidateSearch(e.target.value)}
           />
         </Box>
-        <TableContainer sx={{ borderRadius: 1.5, border: '1px solid', borderColor: 'grey.100' }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: 'rgba(15, 23, 42, 0.03)' }}>
-                <TableCell>Candidate</TableCell>
-                <TableCell>Position</TableCell>
-                <TableCell align="right">Rank</TableCell>
-                <TableCell align="right">Votes</TableCell>
-                <TableCell align="right">Vote %</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredCandidates.map((c) => (
-                <TableRow key={`${c.positionId}-${c.candidateId || c.personId || c.rank}`} hover>
-                  <TableCell>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: c.rank === 1 ? 'success.main' : 'grey.400' }} />
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{c.fullName}</Typography>
-                    </Stack>
-                  </TableCell>
-                  <TableCell>{c.positionName}</TableCell>
-                  <TableCell align="right">
-                    <Chip size="small" label={`#${c.rank}`} color={c.rank === 1 ? 'success' : 'default'} />
-                  </TableCell>
-                  <TableCell align="right">{c.voteCount ?? 0}</TableCell>
-                  <TableCell align="right">
-                    {typeof c.voteSharePercent === 'number' && (c.totalBallots ?? 0) > 0
-                      ? `${c.voteSharePercent.toFixed(2)}%`
-                      : '—'}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <Box sx={{ display: 'grid', gap: 2 }}>
+          {orderedFellowships.map((fellowshipName) => {
+            const rows = fellowshipGroups[fellowshipName]
+            const locationLabel = rows?.[0]?.locationName
+            return (
+              <Paper
+                key={fellowshipName}
+                variant="outlined"
+                sx={{ p: 1.5, borderRadius: 1.5, borderColor: 'grey.100', backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
+              >
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" sx={{ mb: 1.5 }}>
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{fellowshipName}</Typography>
+                    <Typography variant="caption" color="text.secondary">{locationLabel || '—'}</Typography>
+                  </Box>
+                  <Chip size="small" label={`${rows.length} candidates`} />
+                </Stack>
+                <TableContainer sx={{ borderRadius: 1.5, border: '1px solid', borderColor: 'grey.100' }}>
+                  <Table size="small" sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Candidate</TableCell>
+                        <TableCell>Position</TableCell>
+                        <TableCell align="right">Rank</TableCell>
+                        <TableCell align="right">Votes</TableCell>
+                        <TableCell align="right">Vote %</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {rows.map((c) => (
+                        <TableRow key={`${c.positionId}-${c.candidateId || c.personId || c.rank}`} hover>
+                          <TableCell>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: c.rank === 1 ? 'success.main' : 'grey.400' }} />
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>{c.fullName}</Typography>
+                            </Stack>
+                          </TableCell>
+                          <TableCell>{c.positionName}</TableCell>
+                          <TableCell align="right">
+                            <Chip size="small" label={`#${c.rank}`} color={c.rank === 1 ? 'success' : 'default'} />
+                          </TableCell>
+                          <TableCell align="right">{c.voteCount ?? 0}</TableCell>
+                          <TableCell align="right">
+                            {typeof c.voteSharePercent === 'number' && (c.totalBallots ?? 0) > 0
+                              ? `${c.voteSharePercent.toFixed(2)}%`
+                              : '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            )
+          })}
+        </Box>
       </Paper>
     )
   }
