@@ -8,6 +8,7 @@ import {
   EventAvailable as EventAvailableIcon,
   Insights as InsightsIcon,
   MilitaryTech as MilitaryTechIcon,
+  ExpandMore as ExpandMoreIcon,
   Refresh,
   SupervisorAccount as SupervisorAccountIcon,
 } from '@mui/icons-material'
@@ -23,6 +24,7 @@ import {
   Divider,
   FormControl,
   InputLabel,
+  IconButton,
   LinearProgress,
   MenuItem,
   Paper,
@@ -130,6 +132,7 @@ const ElectionResultsPage: React.FC = () => {
   const [tallyLoading, setTallyLoading] = useState(false)
   const [tallyConfirmOpen, setTallyConfirmOpen] = useState(false)
   const [tallyRemarks, setTallyRemarks] = useState('')
+  const [expandedFellowships, setExpandedFellowships] = useState<Record<string, boolean>>({})
   const [lastTallyRun, setLastTallyRun] = useState<RunTallyResponse | null>(null)
   const [refreshCountdown, setRefreshCountdown] = useState<number | null>(null)
   const refreshTimerRef = useRef<number | null>(null)
@@ -322,13 +325,15 @@ const ElectionResultsPage: React.FC = () => {
     const tieCount = positions.filter((p) => p.hasTie).length
     const zeroVotePositions = positions.filter((p) => p.hasZeroVotes).length
     const livePositions = [...positions].sort((a, b) => (b.totalBallotsForPosition ?? 0) - (a.totalBallotsForPosition ?? 0))
-    const positionsByScope = livePositions.reduce<Record<string, RankedPosition[]>>((acc, pos) => {
-      const key = pos.scope || 'OTHER'
-      if (!acc[key]) acc[key] = []
-      acc[key].push(pos)
+    const positionsByScope = livePositions.reduce<Record<string, Record<string, RankedPosition[]>>>((acc, pos) => {
+      const scopeKey = pos.scope || 'OTHER'
+      const fellowshipKey = `${pos.fellowshipId ?? 'unknown'}:${pos.fellowshipName ?? 'Unassigned fellowship'}`
+      if (!acc[scopeKey]) acc[scopeKey] = {}
+      if (!acc[scopeKey][fellowshipKey]) acc[scopeKey][fellowshipKey] = []
+      acc[scopeKey][fellowshipKey].push(pos)
       return acc
     }, {})
-    const orderedScopes = ['DIOCESE', 'ARCHDEACONRY', 'CHURCH', 'OTHER'].filter((scope) => positionsByScope[scope]?.length)
+    const orderedScopes = ['DIOCESE', 'ARCHDEACONRY', 'CHURCH', 'OTHER'].filter((scope) => Object.keys(positionsByScope[scope] || {}).length > 0)
     const lastTallyCompletedAt = tallyStatus?.completedAt
     const lastTallyUpdatedAt = tallyStatus?.lastUpdatedAt
     const serverTimeLabel = summary.serverTime ? new Date(summary.serverTime).toLocaleString() : '—'
@@ -573,7 +578,18 @@ const ElectionResultsPage: React.FC = () => {
             <EmptyState title="No positions yet" description="Position progress will appear once votes are cast." />
           ) : (
             <Box sx={{ display: 'grid', gap: 2 }}>
-              {orderedScopes.map((scopeKey) => (
+              {orderedScopes.map((scopeKey) => {
+                const fellowshipGroups = Object.entries(positionsByScope[scopeKey] || {})
+                  .map(([key, items]) => ({
+                    key,
+                    fellowshipName: items[0]?.fellowshipName || 'Unassigned fellowship',
+                    locationName: items[0]?.locationName || '—',
+                    items,
+                  }))
+                  .sort((a, b) => a.fellowshipName.localeCompare(b.fellowshipName))
+                const totalPositions = fellowshipGroups.reduce((count, group) => count + group.items.length, 0)
+
+                return (
                 <Box key={scopeKey} sx={{ display: 'grid', gap: 1.25 }}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Chip
@@ -583,63 +599,103 @@ const ElectionResultsPage: React.FC = () => {
                       variant="outlined"
                     />
                     <Typography variant="caption" color="text.secondary">
-                      {positionsByScope[scopeKey].length} positions
+                      {totalPositions} positions
                     </Typography>
                   </Stack>
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gap: 1,
-                      gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
-                    }}
-                  >
-                    {positionsByScope[scopeKey].map((pos) => {
-                      const ballots = pos.totalBallotsForPosition ?? 0
-                      const totalBallots = summary.totalBallotsCast ?? 0
-                      const percent = pos.positionVoteShareOfTotal ?? (totalBallots > 0 ? Math.min(100, (ballots / totalBallots) * 100) : 0)
-                      return (
-                        <Paper
-                          key={pos.positionId}
-                          variant="outlined"
-                          sx={{
-                            p: 1.5,
-                            borderRadius: 2,
-                            borderColor: alpha('#5b21b6', 0.15),
-                            background: 'linear-gradient(135deg, rgba(91, 33, 182, 0.04), rgba(59, 130, 246, 0.04))',
-                          }}
-                        >
-                          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
-                            <Box>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{pos.positionName}</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {pos.fellowshipName || '—'} · {pos.locationName || '—'}
-                              </Typography>
-                            </Box>
-                            <Chip size="small" label={`${ballots} ballots`} />
-                          </Stack>
-                          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              Share of all ballots
+                  <Box sx={{ display: 'grid', gap: 1.5 }}>
+                    {fellowshipGroups.map((group) => (
+                      (() => {
+                        const expanded = expandedFellowships[group.key] ?? true
+                        return (
+                      <Paper
+                        key={group.key}
+                        variant="outlined"
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2.5,
+                          borderColor: 'grey.100',
+                          background: 'rgba(248, 250, 252, 0.7)',
+                        }}
+                      >
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                          <Box>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                              {group.fellowshipName}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {percent.toFixed(0)}%
+                              {group.locationName}
                             </Typography>
+                          </Box>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Chip size="small" label={`${group.items.length} positions`} />
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setExpandedFellowships((prev) => ({ ...prev, [group.key]: !expanded }))
+                              }}
+                              aria-label={expanded ? 'Collapse fellowship' : 'Expand fellowship'}
+                            >
+                              <ExpandMoreIcon
+                                fontSize="small"
+                                sx={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
+                              />
+                            </IconButton>
                           </Stack>
-                          <LinearProgress
-                            variant="determinate"
-                            value={percent}
-                            sx={{ height: 8, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.06)', '& .MuiLinearProgress-bar': { transition: 'width 0.6s ease' } }}
-                          />
-                          <Stack direction="row" spacing={1} sx={{ mt: 0.75 }}>
-                            <Chip size="small" variant="outlined" label={pos.scope || '—'} />
-                            <Chip size="small" variant="outlined" label={`Seats: ${pos.seats ?? '—'}`} />
-                          </Stack>
-                        </Paper>
-                      )
-                    })}
+                        </Stack>
+                        <Box
+                          sx={{
+                            display: expanded ? 'grid' : 'none',
+                            gap: 1,
+                            gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+                          }}
+                        >
+                          {group.items.map((pos) => {
+                            const ballots = pos.totalBallotsForPosition ?? 0
+                            const totalBallots = summary.totalBallotsCast ?? 0
+                            const percent = pos.positionVoteShareOfTotal ?? (totalBallots > 0 ? Math.min(100, (ballots / totalBallots) * 100) : 0)
+                            return (
+                              <Paper
+                                key={pos.positionId}
+                                variant="outlined"
+                                sx={{
+                                  p: 1.5,
+                                  borderRadius: 2,
+                                  borderColor: alpha('#5b21b6', 0.12),
+                                  background: 'linear-gradient(135deg, rgba(91, 33, 182, 0.04), rgba(59, 130, 246, 0.04))',
+                                }}
+                              >
+                                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
+                                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{pos.positionName}</Typography>
+                                  <Chip size="small" label={`${ballots} ballots`} />
+                                </Stack>
+                                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Share of all ballots
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {percent.toFixed(0)}%
+                                  </Typography>
+                                </Stack>
+                                <LinearProgress
+                                  variant="determinate"
+                                  value={percent}
+                                  sx={{ height: 8, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.06)', '& .MuiLinearProgress-bar': { transition: 'width 0.6s ease' } }}
+                                />
+                                <Stack direction="row" spacing={1} sx={{ mt: 0.75 }}>
+                                  <Chip size="small" variant="outlined" label={pos.scope || '—'} />
+                                  <Chip size="small" variant="outlined" label={`Seats: ${pos.seats ?? '—'}`} />
+                                </Stack>
+                              </Paper>
+                            )
+                          })}
+                        </Box>
+                      </Paper>
+                        )
+                      })()
+                    ))}
                   </Box>
                 </Box>
-              ))}
+              )})}
             </Box>
           )}
         </Paper>

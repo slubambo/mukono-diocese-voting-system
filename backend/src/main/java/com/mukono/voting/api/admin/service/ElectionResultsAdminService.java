@@ -59,7 +59,7 @@ public class ElectionResultsAdminService {
         VotingPeriod period = votingPeriodRepository.findById(votingPeriodId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid votingPeriodId"));
 
-        long totalPositions = positionRepository.countByElectionId(electionId);
+        long totalPositions = votingPeriodPositionRepository.countByVotingPeriodId(votingPeriodId);
         long totalBallots = voteRecordRepository.countByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
         long totalSelections = voteSelectionRepository.countByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
         long totalDistinctVoters = voteTallyService.countElectionTurnout(electionId, votingPeriodId);
