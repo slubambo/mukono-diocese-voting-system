@@ -18,6 +18,9 @@ public class TallyStatusResponse {
 	private String remarks;
 	private Integer totalPositionsCertified;
 	private Integer totalWinnersApplied;
+	private Instant lastUpdatedAt;
+	private Integer positionsInTie;
+	private Integer positionsWithZeroVotes;
 
 	public TallyStatusResponse() {
 		super();
@@ -117,6 +120,30 @@ public class TallyStatusResponse {
 
 	public void setTotalWinnersApplied(Integer totalWinnersApplied) {
 		this.totalWinnersApplied = totalWinnersApplied;
+	}
+
+	public Instant getLastUpdatedAt() {
+		return lastUpdatedAt;
+	}
+
+	public void setLastUpdatedAt(Instant lastUpdatedAt) {
+		this.lastUpdatedAt = lastUpdatedAt;
+	}
+
+	public Integer getPositionsInTie() {
+		return positionsInTie;
+	}
+
+	public void setPositionsInTie(Integer positionsInTie) {
+		this.positionsInTie = positionsInTie;
+	}
+
+	public Integer getPositionsWithZeroVotes() {
+		return positionsWithZeroVotes;
+	}
+
+	public void setPositionsWithZeroVotes(Integer positionsWithZeroVotes) {
+		this.positionsWithZeroVotes = positionsWithZeroVotes;
 	}
 
 }

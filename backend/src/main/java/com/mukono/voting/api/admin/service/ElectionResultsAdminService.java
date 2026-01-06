@@ -3,6 +3,7 @@ package com.mukono.voting.api.admin.service;
 import com.mukono.voting.payload.response.tally.*;
 import com.mukono.voting.model.election.*;
 import com.mukono.voting.repository.election.*;
+import com.mukono.voting.service.election.EligibleVoterService;
 import com.mukono.voting.service.election.VoteTallyService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ public class ElectionResultsAdminService {
     private final ElectionCandidateRepository candidateRepository;
     private final VoteRecordRepository voteRecordRepository;
     private final VoteSelectionRepository voteSelectionRepository;
+    private final EligibleVoterService eligibleVoterService;
     private final VoteTallyService voteTallyService;
 
     public ElectionResultsAdminService(
@@ -34,6 +36,7 @@ public class ElectionResultsAdminService {
             ElectionCandidateRepository candidateRepository,
             VoteRecordRepository voteRecordRepository,
             VoteSelectionRepository voteSelectionRepository,
+            EligibleVoterService eligibleVoterService,
             VoteTallyService voteTallyService) {
         this.electionRepository = electionRepository;
         this.votingPeriodRepository = votingPeriodRepository;
@@ -41,6 +44,7 @@ public class ElectionResultsAdminService {
         this.candidateRepository = candidateRepository;
         this.voteRecordRepository = voteRecordRepository;
         this.voteSelectionRepository = voteSelectionRepository;
+        this.eligibleVoterService = eligibleVoterService;
         this.voteTallyService = voteTallyService;
     }
 
@@ -56,6 +60,9 @@ public class ElectionResultsAdminService {
         long totalBallots = voteRecordRepository.countByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
         long totalSelections = voteSelectionRepository.countByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
         long totalDistinctVoters = voteTallyService.countElectionTurnout(electionId, votingPeriodId);
+        long totalEligibleVoters = eligibleVoterService
+                .countEligibleVoters(electionId, votingPeriodId, null, null, null)
+                .getCount();
 
         Instant startTime = period.getStartTime().atZone(java.time.ZoneId.systemDefault()).toInstant();
         Instant endTime = period.getEndTime().atZone(java.time.ZoneId.systemDefault()).toInstant();
@@ -71,6 +78,7 @@ public class ElectionResultsAdminService {
         response.setTotalBallotsCast(totalBallots);
         response.setTotalSelectionsCast(totalSelections);
         response.setTotalDistinctVoters(totalDistinctVoters);
+        response.setTotalEligibleVoters(totalEligibleVoters);
         response.setServerTime(Instant.now());
         return response;
     }
@@ -81,11 +89,12 @@ public class ElectionResultsAdminService {
     public List<PositionResultsResponse> getAllPositionResults(Long electionId, Long votingPeriodId) {
         validateElectionAndPeriod(electionId, votingPeriodId);
 
+        long totalBallotsForPeriod = voteRecordRepository.countByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
         List<ElectionPosition> positions = positionRepository.findByElectionIdOrderByIdAsc(electionId);
         List<PositionResultsResponse> results = new ArrayList<>();
 
         for (ElectionPosition position : positions) {
-            results.add(buildPositionResults(electionId, votingPeriodId, position));
+            results.add(buildPositionResults(electionId, votingPeriodId, position, totalBallotsForPeriod));
         }
 
         return results;
@@ -101,7 +110,8 @@ public class ElectionResultsAdminService {
                 .filter(p -> p.getElection().getId().equals(electionId))
                 .orElseThrow(() -> new IllegalArgumentException("Position not found or does not belong to election"));
 
-        return buildPositionResults(electionId, votingPeriodId, position);
+        long totalBallotsForPeriod = voteRecordRepository.countByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
+        return buildPositionResults(electionId, votingPeriodId, position, totalBallotsForPeriod);
     }
 
     /**
@@ -157,7 +167,7 @@ public class ElectionResultsAdminService {
         return election;
     }
 
-    private PositionResultsResponse buildPositionResults(Long electionId, Long votingPeriodId, ElectionPosition position) {
+    private PositionResultsResponse buildPositionResults(Long electionId, Long votingPeriodId, ElectionPosition position, long totalBallotsForPeriod) {
         long turnout = voteTallyService.countTurnoutForPosition(electionId, votingPeriodId, position.getId());
         long totalBallots = voteRecordRepository.countByElectionIdAndVotingPeriodIdAndPositionId(
                 electionId, votingPeriodId, position.getId());
@@ -195,6 +205,7 @@ public class ElectionResultsAdminService {
         posResponse.setMaxVotesPerVoter(1);
         posResponse.setTurnoutForPosition(turnout);
         posResponse.setTotalBallotsForPosition(totalBallots);
+        posResponse.setPositionVoteShareOfTotal(totalBallotsForPeriod > 0 ? (totalBallots * 100.0) / totalBallotsForPeriod : null);
         posResponse.setCandidates(candidateResponses);
 
         return posResponse;

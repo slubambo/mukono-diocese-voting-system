@@ -18,6 +18,7 @@ public class ElectionResultsSummaryResponse {
     private Long totalBallotsCast; // VoteRecord count
     private Long totalSelectionsCast; // VoteSelection count
     private Long totalDistinctVoters; // unique personId
+    private Long totalEligibleVoters; // eligible voter count for period
     private Instant serverTime;
 	public ElectionResultsSummaryResponse() {
 		super();
@@ -76,15 +77,21 @@ public class ElectionResultsSummaryResponse {
 	public void setTotalSelectionsCast(Long totalSelectionsCast) {
 		this.totalSelectionsCast = totalSelectionsCast;
 	}
-	public Long getTotalDistinctVoters() {
-		return totalDistinctVoters;
-	}
-	public void setTotalDistinctVoters(Long totalDistinctVoters) {
-		this.totalDistinctVoters = totalDistinctVoters;
-	}
-	public Instant getServerTime() {
-		return serverTime;
-	}
+    public Long getTotalDistinctVoters() {
+        return totalDistinctVoters;
+    }
+    public void setTotalDistinctVoters(Long totalDistinctVoters) {
+        this.totalDistinctVoters = totalDistinctVoters;
+    }
+    public Long getTotalEligibleVoters() {
+        return totalEligibleVoters;
+    }
+    public void setTotalEligibleVoters(Long totalEligibleVoters) {
+        this.totalEligibleVoters = totalEligibleVoters;
+    }
+    public Instant getServerTime() {
+        return serverTime;
+    }
 	public void setServerTime(Instant serverTime) {
 		this.serverTime = serverTime;
 	}

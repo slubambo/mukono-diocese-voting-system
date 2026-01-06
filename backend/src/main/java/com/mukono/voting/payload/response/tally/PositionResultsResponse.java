@@ -13,6 +13,7 @@ public class PositionResultsResponse {
 	private Integer maxVotesPerVoter;
 	private Long turnoutForPosition; // distinct voters who voted for this position
 	private Long totalBallotsForPosition; // total VoteRecords for this position
+	private Double positionVoteShareOfTotal; // percent of total ballots in period
 	private List<CandidateResultsResponse> candidates; // sorted by voteCount DESC, then fullName ASC
 
 	public PositionResultsResponse() {
@@ -73,6 +74,14 @@ public class PositionResultsResponse {
 
 	public void setTotalBallotsForPosition(Long totalBallotsForPosition) {
 		this.totalBallotsForPosition = totalBallotsForPosition;
+	}
+
+	public Double getPositionVoteShareOfTotal() {
+		return positionVoteShareOfTotal;
+	}
+
+	public void setPositionVoteShareOfTotal(Double positionVoteShareOfTotal) {
+		this.positionVoteShareOfTotal = positionVoteShareOfTotal;
 	}
 
 	public List<CandidateResultsResponse> getCandidates() {

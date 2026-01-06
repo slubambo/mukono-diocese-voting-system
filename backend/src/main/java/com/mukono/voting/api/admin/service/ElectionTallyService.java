@@ -246,6 +246,7 @@ public class ElectionTallyService {
         Optional<ElectionTallyRun> tallyOpt = tallyRunRepository.findByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
 
         TallyStatusResponse response = new TallyStatusResponse();
+        response.setLastUpdatedAt(Instant.now());
         if (tallyOpt.isEmpty()) {
             response.setTallyExists(false);
             return response;
@@ -264,10 +265,21 @@ public class ElectionTallyService {
         response.setRemarks(tally.getRemarks());
 
         if (tally.getStatus() == TallyStatus.COMPLETED) {
-            long certifiedCount = certifiedPositionResultRepository.countByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
+            List<CertifiedPositionResult> certifiedResults = certifiedPositionResultRepository
+                    .findByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
             long winnersCount = winnerAssignmentRepository.countByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
-            response.setTotalPositionsCertified((int) certifiedCount);
+
+            int positionsInTie = (int) certifiedResults.stream()
+                    .filter(r -> r.getNotes() != null && r.getNotes().contains("Tie detected"))
+                    .count();
+            int positionsWithZeroVotes = (int) certifiedResults.stream()
+                    .filter(r -> r.getTotalBallotsForPosition() != null && r.getTotalBallotsForPosition() == 0)
+                    .count();
+
+            response.setTotalPositionsCertified(certifiedResults.size());
             response.setTotalWinnersApplied((int) winnersCount);
+            response.setPositionsInTie(positionsInTie);
+            response.setPositionsWithZeroVotes(positionsWithZeroVotes);
         }
 
         return response;
