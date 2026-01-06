@@ -1055,47 +1055,47 @@ const ElectionResultsPage: React.FC = () => {
 
     return (
       <Box sx={{ display: 'grid', gap: 2 }}>
-        <Paper sx={{ p: 2, display: 'grid', gap: 1 }}>
-          <Typography variant="h6">Tally Status</Typography>
-          {tallyLoading ? (
-            <LoadingState variant="text" count={3} />
-          ) : tallyStatus ? (
-            <Box sx={{ display: 'grid', gap: 0.5 }}>
-              <Typography variant="body2">Status: {tallyStatus.status || '—'}</Typography>
-              <Typography variant="body2">Tally Run ID: {tallyStatus.tallyRunId || '—'}</Typography>
-              <Typography variant="body2">Started: {tallyStatus.startedAt ? new Date(tallyStatus.startedAt).toLocaleString() : '—'}</Typography>
-              <Typography variant="body2">Completed: {tallyStatus.completedAt ? new Date(tallyStatus.completedAt).toLocaleString() : '—'}</Typography>
-              <Typography variant="body2">Positions certified: {tallyStatus.totalPositionsCertified ?? 0}</Typography>
-              <Typography variant="body2">Winners applied: {tallyStatus.totalWinnersApplied ?? 0}</Typography>
-            </Box>
-          ) : (
-            <EmptyState title="No tally has been run" description="Run tally to lock the results." />
-          )}
+        {(tallyLoading || tallyStatus) && (
+          <Paper sx={{ p: 2, display: 'grid', gap: 1 }}>
+            <Typography variant="h6">Tally Status</Typography>
+            {tallyLoading ? (
+              <LoadingState variant="text" count={3} />
+            ) : tallyStatus ? (
+              <Box sx={{ display: 'grid', gap: 0.5 }}>
+                <Typography variant="body2">Status: {tallyStatus.status || '—'}</Typography>
+                <Typography variant="body2">Tally Run ID: {tallyStatus.tallyRunId || '—'}</Typography>
+                <Typography variant="body2">Started: {tallyStatus.startedAt ? new Date(tallyStatus.startedAt).toLocaleString() : '—'}</Typography>
+                <Typography variant="body2">Completed: {tallyStatus.completedAt ? new Date(tallyStatus.completedAt).toLocaleString() : '—'}</Typography>
+                <Typography variant="body2">Positions certified: {tallyStatus.totalPositionsCertified ?? 0}</Typography>
+                <Typography variant="body2">Winners applied: {tallyStatus.totalWinnersApplied ?? 0}</Typography>
+              </Box>
+            ) : null}
 
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-            <Button
-              variant="contained"
-              startIcon={<HowToVoteIcon />}
-              onClick={() => setTallyConfirmOpen(true)}
-              disabled={!canTally || tallyLoading}
-            >
-              Tally Results
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<FactCheckIcon />}
-              onClick={() => setCertifyConfirmOpen(true)}
-              disabled={!canCertify || certifyLoading}
-            >
-              Certify Results
-            </Button>
-          </Box>
-          {!canTally && (
-            <Alert severity="info" sx={{ mt: 1 }}>
-              Tally is enabled only after voting periods are closed. Current status: {election?.status || 'Unknown'}
-            </Alert>
-          )}
-        </Paper>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+              <Button
+                variant="contained"
+                startIcon={<HowToVoteIcon />}
+                onClick={() => setTallyConfirmOpen(true)}
+                disabled={!canTally || tallyLoading}
+              >
+                Tally Results
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<FactCheckIcon />}
+                onClick={() => setCertifyConfirmOpen(true)}
+                disabled={!canCertify || certifyLoading}
+              >
+                Certify Results
+              </Button>
+            </Box>
+            {!canTally && (
+              <Alert severity="info" sx={{ mt: 1 }}>
+                Tally is enabled only after voting periods are closed. Current period status: {normalizedPeriodStatus || 'Unknown'}
+              </Alert>
+            )}
+          </Paper>
+        )}
 
         <Paper
           sx={{
