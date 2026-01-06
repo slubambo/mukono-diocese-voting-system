@@ -18,6 +18,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { useAuth } from '../../context/AuthContext'
 import logoSrc from '../../assets/COU-Logo-Boundary_Favicon.png'
+import { SYSTEM_NAME } from '../../config/constants'
 
 interface TopbarProps {
   onMenuOpen: () => void
@@ -132,7 +133,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuOpen, showMenuButton = true, titl
                   lineHeight: 1.2,
                 }}
               >
-                Mukono Diocese
+                {SYSTEM_NAME}
               </Typography>
               {title && (
                 <Typography 

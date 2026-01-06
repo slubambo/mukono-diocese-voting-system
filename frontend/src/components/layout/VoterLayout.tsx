@@ -1,5 +1,6 @@
 import React from 'react'
 import { Box, Container, Typography, useTheme, AppBar, Toolbar } from '@mui/material'
+import { SYSTEM_PRODUCT_NAME, SYSTEM_VOTING_NAME } from '../../config/constants'
 
 interface VoterLayoutProps {
   children: React.ReactNode
@@ -76,7 +77,7 @@ const VoterLayout: React.FC<VoterLayoutProps> = ({
                 letterSpacing: '0.5px',
               }}
             >
-              Mukono Diocese Voting
+              {SYSTEM_VOTING_NAME}
             </Typography>
             <Typography
               variant="body2"
@@ -142,7 +143,7 @@ const VoterLayout: React.FC<VoterLayoutProps> = ({
             lineHeight: 1.4,
           }}
         >
-          Powered by Mukono Diocese Voting System
+          Powered by {SYSTEM_PRODUCT_NAME}
         </Typography>
       </Box>
     </Box>

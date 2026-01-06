@@ -22,6 +22,7 @@ import ExpandLess from '@mui/icons-material/ExpandLess'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 import { useAuth } from '../../context/AuthContext'
 import { LOGOUT_MENU_ITEM, getMenuItemsByRole, type MenuItem } from '../../routes/menu'
+import { SYSTEM_NAME } from '../../config/constants'
 
 interface SidebarProps {
   open: boolean
@@ -261,7 +262,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onNavigate, collapsed 
           {!collapsed && (
             <Box sx={{ flex: 1 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'primary.main', lineHeight: 1.2, fontSize: '0.95rem' }}>
-                Mukono Diocese
+                {SYSTEM_NAME}
               </Typography>
               <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.7rem' }}>
                 Voting System

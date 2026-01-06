@@ -23,6 +23,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import { useToast } from '../components/feedback/ToastProvider'
 import { useAuth } from '../context/AuthContext'
 import logoSrc from '../assets/COU-Logo-Boundary_Favicon.png'
+import { SYSTEM_NAME } from '../config/constants'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -250,7 +251,7 @@ const LoginPage = () => {
               />
               <Box sx={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
                 <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5, letterSpacing: '0.5px' }}>
-                  Mukono Diocese
+                  {SYSTEM_NAME}
                 </Typography>
                 <Typography variant="body1" sx={{ opacity: 0.95, fontWeight: 500 }}>
                   Voting System
