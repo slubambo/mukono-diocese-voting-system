@@ -1,7 +1,9 @@
 package com.mukono.voting.api.admin.controller;
 
+import com.mukono.voting.payload.request.tally.CertifyResultsRequest;
 import com.mukono.voting.payload.response.tally.*;
 import com.mukono.voting.api.admin.service.ElectionResultsAdminService;
+import com.mukono.voting.api.admin.service.ElectionResultsCertificationService;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,9 +27,12 @@ import java.util.List;
 public class ElectionResultsAdminController {
 
     private final ElectionResultsAdminService resultsService;
+    private final ElectionResultsCertificationService certificationService;
 
-    public ElectionResultsAdminController(ElectionResultsAdminService resultsService) {
+    public ElectionResultsAdminController(ElectionResultsAdminService resultsService,
+                                          ElectionResultsCertificationService certificationService) {
         this.resultsService = resultsService;
+        this.certificationService = certificationService;
     }
 
     /**
@@ -88,5 +93,22 @@ public class ElectionResultsAdminController {
         
         List<FlatResultRowResponse> responses = resultsService.exportResults(electionId, votingPeriodId);
         return ResponseEntity.ok(responses);
+    }
+
+    /**
+     * POST /certify
+     *
+     * Certify winners for a voting period and create leadership assignments.
+     */
+    @PostMapping("/certify")
+    public ResponseEntity<CertifyResultsResponse> certifyResults(
+            @PathVariable @NotNull(message = "Election ID is required") Long electionId,
+            @PathVariable @NotNull(message = "Voting Period ID is required") Long votingPeriodId,
+            @RequestBody(required = false) CertifyResultsRequest request) {
+
+        String remarks = request != null ? request.getRemarks() : null;
+        CertifyResultsResponse response = certificationService
+                .certifyResults(electionId, votingPeriodId, remarks);
+        return ResponseEntity.ok(response);
     }
 }
