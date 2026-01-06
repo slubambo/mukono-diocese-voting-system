@@ -9,6 +9,11 @@ public class PositionResultsResponse {
 	private Long positionId;
 	private String positionName;
 	private String scope;
+	private Long fellowshipId;
+	private String fellowshipName;
+	private String locationScope;
+	private Long locationId;
+	private String locationName;
 	private Integer seats;
 	private Integer maxVotesPerVoter;
 	private Long turnoutForPosition; // distinct voters who voted for this position
@@ -42,6 +47,46 @@ public class PositionResultsResponse {
 
 	public void setScope(String scope) {
 		this.scope = scope;
+	}
+
+	public Long getFellowshipId() {
+		return fellowshipId;
+	}
+
+	public void setFellowshipId(Long fellowshipId) {
+		this.fellowshipId = fellowshipId;
+	}
+
+	public String getFellowshipName() {
+		return fellowshipName;
+	}
+
+	public void setFellowshipName(String fellowshipName) {
+		this.fellowshipName = fellowshipName;
+	}
+
+	public String getLocationScope() {
+		return locationScope;
+	}
+
+	public void setLocationScope(String locationScope) {
+		this.locationScope = locationScope;
+	}
+
+	public Long getLocationId() {
+		return locationId;
+	}
+
+	public void setLocationId(Long locationId) {
+		this.locationId = locationId;
+	}
+
+	public String getLocationName() {
+		return locationName;
+	}
+
+	public void setLocationName(String locationName) {
+		this.locationName = locationName;
 	}
 
 	public Integer getSeats() {

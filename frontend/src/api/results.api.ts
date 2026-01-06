@@ -11,6 +11,7 @@ export interface ElectionResultsSummaryResponse {
   totalBallotsCast?: number
   totalSelectionsCast?: number
   totalDistinctVoters?: number
+  totalEligibleVoters?: number
   serverTime?: string
 }
 
@@ -30,6 +31,7 @@ export interface PositionResultsResponse {
   maxVotesPerVoter?: number
   turnoutForPosition?: number
   totalBallotsForPosition?: number
+  positionVoteShareOfTotal?: number
   candidates?: CandidateResultsResponse[]
 }
 
@@ -60,6 +62,9 @@ export interface TallyStatusResponse {
   remarks?: string
   totalPositionsCertified?: number
   totalWinnersApplied?: number
+  lastUpdatedAt?: string
+  positionsInTie?: number
+  positionsWithZeroVotes?: number
 }
 
 export interface RunTallyRequest {

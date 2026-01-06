@@ -87,14 +87,14 @@ public class ElectionResultsAdminService {
      * Get results for all positions in an election.
      */
     public List<PositionResultsResponse> getAllPositionResults(Long electionId, Long votingPeriodId) {
-        validateElectionAndPeriod(electionId, votingPeriodId);
+        Election election = validateElectionAndPeriod(electionId, votingPeriodId);
 
         long totalBallotsForPeriod = voteRecordRepository.countByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
         List<ElectionPosition> positions = positionRepository.findByElectionIdOrderByIdAsc(electionId);
         List<PositionResultsResponse> results = new ArrayList<>();
 
         for (ElectionPosition position : positions) {
-            results.add(buildPositionResults(electionId, votingPeriodId, position, totalBallotsForPeriod));
+            results.add(buildPositionResults(electionId, votingPeriodId, election, position, totalBallotsForPeriod));
         }
 
         return results;
@@ -104,14 +104,14 @@ public class ElectionResultsAdminService {
      * Get results for a single position.
      */
     public PositionResultsResponse getPositionResults(Long electionId, Long votingPeriodId, Long positionId) {
-        validateElectionAndPeriod(electionId, votingPeriodId);
+        Election election = validateElectionAndPeriod(electionId, votingPeriodId);
 
         ElectionPosition position = positionRepository.findById(positionId)
                 .filter(p -> p.getElection().getId().equals(electionId))
                 .orElseThrow(() -> new IllegalArgumentException("Position not found or does not belong to election"));
 
         long totalBallotsForPeriod = voteRecordRepository.countByElectionIdAndVotingPeriodId(electionId, votingPeriodId);
-        return buildPositionResults(electionId, votingPeriodId, position, totalBallotsForPeriod);
+        return buildPositionResults(electionId, votingPeriodId, election, position, totalBallotsForPeriod);
     }
 
     /**
@@ -167,7 +167,7 @@ public class ElectionResultsAdminService {
         return election;
     }
 
-    private PositionResultsResponse buildPositionResults(Long electionId, Long votingPeriodId, ElectionPosition position, long totalBallotsForPeriod) {
+    private PositionResultsResponse buildPositionResults(Long electionId, Long votingPeriodId, Election election, ElectionPosition position, long totalBallotsForPeriod) {
         long turnout = voteTallyService.countTurnoutForPosition(electionId, votingPeriodId, position.getId());
         long totalBallots = voteRecordRepository.countByElectionIdAndVotingPeriodIdAndPositionId(
                 electionId, votingPeriodId, position.getId());
@@ -201,6 +201,27 @@ public class ElectionResultsAdminService {
         posResponse.setPositionId(position.getId());
         posResponse.setPositionName(position.getFellowshipPosition().getTitle().getName());
         posResponse.setScope(position.getFellowshipPosition().getScope().name());
+        posResponse.setFellowshipId(position.getFellowship() != null ? position.getFellowship().getId() : null);
+        posResponse.setFellowshipName(position.getFellowship() != null ? position.getFellowship().getName() : null);
+        if (election != null && election.getScope() != null) {
+            posResponse.setLocationScope(election.getScope().name());
+            switch (election.getScope()) {
+                case DIOCESE:
+                    posResponse.setLocationId(election.getDiocese() != null ? election.getDiocese().getId() : null);
+                    posResponse.setLocationName(election.getDiocese() != null ? election.getDiocese().getName() : null);
+                    break;
+                case ARCHDEACONRY:
+                    posResponse.setLocationId(election.getArchdeaconry() != null ? election.getArchdeaconry().getId() : null);
+                    posResponse.setLocationName(election.getArchdeaconry() != null ? election.getArchdeaconry().getName() : null);
+                    break;
+                case CHURCH:
+                    posResponse.setLocationId(election.getChurch() != null ? election.getChurch().getId() : null);
+                    posResponse.setLocationName(election.getChurch() != null ? election.getChurch().getName() : null);
+                    break;
+                default:
+                    break;
+            }
+        }
         posResponse.setSeats(position.getFellowshipPosition().getSeats() != null ? position.getFellowshipPosition().getSeats() : 1);
         posResponse.setMaxVotesPerVoter(1);
         posResponse.setTurnoutForPosition(turnout);

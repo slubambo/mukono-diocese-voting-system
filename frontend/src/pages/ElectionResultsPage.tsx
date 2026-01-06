@@ -323,6 +323,7 @@ const ElectionResultsPage: React.FC = () => {
     const zeroVotePositions = positions.filter((p) => p.hasZeroVotes).length
     const livePositions = [...positions].sort((a, b) => (b.totalBallotsForPosition ?? 0) - (a.totalBallotsForPosition ?? 0)).slice(0, 6)
     const lastTallyCompletedAt = tallyStatus?.completedAt
+    const lastTallyUpdatedAt = tallyStatus?.lastUpdatedAt
     const serverTimeLabel = summary.serverTime ? new Date(summary.serverTime).toLocaleString() : '—'
     const nextUpdateLabel = refreshCountdown !== null ? `${Math.floor(refreshCountdown / 60000)}:${String(Math.floor((refreshCountdown % 60000) / 1000)).padStart(2, '0')}` : 'Paused'
     const isLive = (summary.periodStatus || '').toUpperCase().includes('OPEN')
@@ -330,21 +331,26 @@ const ElectionResultsPage: React.FC = () => {
     const periodWindowLabel = summary.periodStartTime || summary.periodEndTime
       ? `${summary.periodStartTime ? new Date(summary.periodStartTime).toLocaleString() : '—'} → ${summary.periodEndTime ? new Date(summary.periodEndTime).toLocaleString() : '—'}`
       : '—'
+    const turnoutRate = summary.totalEligibleVoters === null || summary.totalEligibleVoters === undefined
+      ? null
+      : Math.min(100, ((summary.totalBallotsCast ?? 0) / Math.max(summary.totalEligibleVoters, 1)) * 100)
+    const positionsInTie = tallyStatus?.positionsInTie ?? tieCount
+    const positionsWithZeroVotes = tallyStatus?.positionsWithZeroVotes ?? zeroVotePositions
 
     const headlineCards = [
+      {
+        label: 'Eligible voters',
+        value: formatNumber(summary.totalEligibleVoters),
+        icon: <SupervisorAccountIcon fontSize="small" />,
+      },
       {
         label: 'Ballots cast',
         value: formatNumber(summary.totalBallotsCast),
         icon: <HowToVoteIcon fontSize="small" />,
       },
       {
-        label: 'Distinct voters',
-        value: formatNumber(summary.totalDistinctVoters),
-        icon: <SupervisorAccountIcon fontSize="small" />,
-      },
-      {
-        label: 'Selections cast',
-        value: formatNumber(summary.totalSelectionsCast),
+        label: 'Turnout rate',
+        value: turnoutRate !== null ? `${turnoutRate.toFixed(1)}%` : '—',
         icon: <InsightsIcon fontSize="small" />,
       },
       {
@@ -480,19 +486,31 @@ const ElectionResultsPage: React.FC = () => {
                     <MilitaryTechIcon fontSize="small" />
                     <Typography variant="body2" color="text.secondary">Ties detected</Typography>
                   </Stack>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatNumber(tieCount)}</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatNumber(positionsInTie)}</Typography>
                 </Paper>
                 <Paper elevation={0} sx={{ p: 1.25, borderRadius: 2, bgcolor: 'grey.50', border: '1px solid', borderColor: 'grey.100' }}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <AccessTimeIcon fontSize="small" />
                     <Typography variant="body2" color="text.secondary">Zero-vote positions</Typography>
                   </Stack>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatNumber(zeroVotePositions)}</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatNumber(positionsWithZeroVotes)}</Typography>
                 </Paper>
               </Box>
+              <Paper elevation={0} sx={{ p: 1.25, borderRadius: 2, bgcolor: 'grey.50', border: '1px solid', borderColor: 'grey.100' }}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <SupervisorAccountIcon fontSize="small" />
+                  <Typography variant="body2" color="text.secondary">Distinct voters</Typography>
+                </Stack>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatNumber(summary.totalDistinctVoters)}</Typography>
+              </Paper>
               {lastTallyCompletedAt && (
                 <Typography variant="caption" color="text.secondary">
                   Last tally run: {new Date(lastTallyCompletedAt).toLocaleString()}
+                </Typography>
+              )}
+              {lastTallyUpdatedAt && (
+                <Typography variant="caption" color="text.secondary">
+                  Status updated: {new Date(lastTallyUpdatedAt).toLocaleString()}
                 </Typography>
               )}
             </Box>
@@ -520,6 +538,21 @@ const ElectionResultsPage: React.FC = () => {
                 <Typography variant="body2" color="text.secondary">Next refresh</Typography>
                 <Typography variant="body2">{nextUpdateLabel}</Typography>
               </Stack>
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>Turnout progress</Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={turnoutRate ?? 0}
+                  sx={{
+                    height: 8,
+                    borderRadius: 99,
+                    '& .MuiLinearProgress-bar': { transition: 'width 0.6s ease' },
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary">
+                  {formatNumber(summary.totalBallotsCast)} ballots of {formatNumber(summary.totalEligibleVoters)} eligible voters
+                </Typography>
+              </Box>
             </Box>
           </Paper>
         </Box>
@@ -542,7 +575,7 @@ const ElectionResultsPage: React.FC = () => {
               {livePositions.map((pos) => {
                 const ballots = pos.totalBallotsForPosition ?? 0
                 const totalBallots = summary.totalBallotsCast ?? 0
-                const percent = totalBallots > 0 ? Math.min(100, (ballots / totalBallots) * 100) : 0
+                const percent = pos.positionVoteShareOfTotal ?? (totalBallots > 0 ? Math.min(100, (ballots / totalBallots) * 100) : 0)
                 return (
                   <Paper
                     key={pos.positionId}
@@ -556,7 +589,7 @@ const ElectionResultsPage: React.FC = () => {
                   >
                     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{pos.positionName}</Typography>
-                      <Chip size="small" label={`${ballots} votes`} />
+                      <Chip size="small" label={`${ballots} ballots`} />
                     </Stack>
                     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
                       <Typography variant="body2" color="text.secondary">
