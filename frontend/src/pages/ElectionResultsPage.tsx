@@ -137,6 +137,12 @@ const ElectionResultsPage: React.FC = () => {
   const [refreshCountdown, setRefreshCountdown] = useState<number | null>(null)
   const refreshTimerRef = useRef<number | null>(null)
   const REFRESH_MS = 5 * 60 * 1000
+  const selectedPeriod = useMemo(
+    () => votingPeriods.find((vp) => String(vp.id) === String(selectedPeriodId)),
+    [votingPeriods, selectedPeriodId]
+  )
+  const normalizedPeriodStatus = String(summary?.periodStatus || selectedPeriod?.status || '').toUpperCase()
+  const isPeriodClosed = normalizedPeriodStatus.includes('CLOSED') || ['TALLIED', 'PUBLISHED', 'COMPLETED', 'ENDED'].includes(normalizedPeriodStatus)
   const scopeChipColor = useMemo(() => {
     const scope = String(election?.scope || '').toUpperCase()
     if (scope === 'DIOCESE') return 'primary' as const
@@ -791,51 +797,117 @@ const ElectionResultsPage: React.FC = () => {
     if (positions.length === 0) return <EmptyState title="No position results" description="No results were returned for this voting period." />
 
     return (
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 1.5,
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
-        }}
-      >
-        {positions.map((pos) => {
-          const ballots = pos.totalBallotsForPosition ?? 0
-          const totalBallots = summary?.totalBallotsCast ?? 0
-          const percent = totalBallots > 0 ? Math.min(100, (ballots / totalBallots) * 100) : 0
-          return (
-            <Paper
-              key={pos.positionId}
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'grey.100',
-                boxShadow: '0 12px 30px rgba(0,0,0,0.06)',
-              }}
-            >
-              <Stack spacing={1}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{pos.positionName}</Typography>
-                  <Chip size="small" label={`${ballots} votes`} />
-                </Box>
-                <Typography variant="body2" color="text.secondary">
-                  Position turnout compared to total ballots cast
-                </Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={percent}
-                  sx={{ height: 8, borderRadius: 99, '& .MuiLinearProgress-bar': { transition: 'width 0.6s ease' } }}
-                />
-                <Stack direction="row" spacing={1} flexWrap="wrap">
-                  <Chip size="small" variant="outlined" label={pos.scope || '—'} />
-                  <Chip size="small" variant="outlined" label={`Seats: ${pos.seats ?? '—'}`} />
-                  {pos.hasTie && <Chip size="small" color="warning" label="Tie detected" />}
-                  {pos.hasZeroVotes && <Chip size="small" color="error" label="Zero votes" />}
+      <Box sx={{ display: 'grid', gap: 1.5 }}>
+        <Paper
+          sx={{
+            p: 2,
+            borderRadius: 2.5,
+            border: '1px solid',
+            borderColor: 'grey.100',
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.02), rgba(59, 130, 246, 0.04))',
+          }}
+        >
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between">
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>Position Results</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {isPeriodClosed ? 'Final tallied results by position.' : 'Turnout by position while voting is still open.'}
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1} flexWrap="wrap">
+              <Chip
+                size="small"
+                label={normalizedPeriodStatus || 'Status —'}
+                color={isPeriodClosed ? 'success' : 'warning'}
+                variant="outlined"
+                sx={(theme) => ({
+                  fontWeight: 600,
+                  bgcolor: alpha(theme.palette[isPeriodClosed ? 'success' : 'warning'].main, 0.12),
+                  borderColor: alpha(theme.palette[isPeriodClosed ? 'success' : 'warning'].main, 0.35),
+                  color: theme.palette[isPeriodClosed ? 'success' : 'warning'].dark,
+                })}
+              />
+              <Chip size="small" label={`${positions.length} positions`} />
+            </Stack>
+          </Stack>
+        </Paper>
+
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 1.5,
+            gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+          }}
+        >
+          {positions.map((pos) => {
+            const ballots = pos.totalBallotsForPosition ?? 0
+            const totalBallots = summary?.totalBallotsCast ?? 0
+            const percent = totalBallots > 0 ? Math.min(100, (ballots / totalBallots) * 100) : 0
+            const leader = pos.rankedCandidates?.[0]
+            const leaderLabel = leader?.fullName ? `${leader.fullName}` : '—'
+            const leaderVotes = leader?.voteCount ?? 0
+            const leaderShare = typeof leader?.voteSharePercent === 'number' ? `${leader.voteSharePercent.toFixed(1)}%` : '—'
+            return (
+              <Paper
+                key={pos.positionId}
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'grey.100',
+                  boxShadow: '0 12px 30px rgba(0,0,0,0.06)',
+                }}
+              >
+                <Stack spacing={1.25}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{pos.positionName}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {pos.scope || '—'} · Seats: {pos.seats ?? '—'}
+                      </Typography>
+                    </Box>
+                    <Chip size="small" label={`${ballots} ${isPeriodClosed ? 'votes' : 'ballots'}`} />
+                  </Box>
+
+                  {!isPeriodClosed ? (
+                    <>
+                      <Typography variant="body2" color="text.secondary">
+                        Position turnout compared to total ballots cast
+                      </Typography>
+                      <LinearProgress
+                        variant="determinate"
+                        value={percent}
+                        sx={{ height: 8, borderRadius: 99, '& .MuiLinearProgress-bar': { transition: 'width 0.6s ease' } }}
+                      />
+                    </>
+                  ) : (
+                    <Box
+                      sx={{
+                        p: 1.25,
+                        borderRadius: 1.5,
+                        border: '1px solid',
+                        borderColor: alpha('#16a34a', 0.2),
+                        background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(16, 185, 129, 0.05))',
+                      }}
+                    >
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        Leading candidate
+                      </Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{leaderLabel}</Typography>
+                      <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                        <Chip size="small" color="success" variant="outlined" label={`${leaderVotes} votes`} />
+                        <Chip size="small" color="info" variant="outlined" label={`${leaderShare} share`} />
+                        {pos.hasTie && <Chip size="small" color="warning" label="Tie detected" />}
+                      </Stack>
+                    </Box>
+                  )}
+
+                  {pos.hasZeroVotes && isPeriodClosed && <Chip size="small" color="error" label="Zero votes" />}
                 </Stack>
-              </Stack>
-            </Paper>
-          )
-        })}
+              </Paper>
+            )
+          })}
+        </Box>
       </Box>
     )
   }
@@ -843,12 +915,17 @@ const ElectionResultsPage: React.FC = () => {
   const renderCandidateBreakdown = () => {
     if (!isAdmin) return <EmptyState title="Restricted" description="Candidate-level results are hidden during live tally." />
     if (!selectedPeriodId) return <EmptyState title="Select a voting period" description="Choose a closed voting period to view results." />
+    if (!isPeriodClosed) return <EmptyState title="Voting still open" description="Candidate breakdown is available once the voting period is closed." />
     if (positionsLoading) return <LoadingState variant="row" />
     if (filteredCandidates.length === 0) return <EmptyState title="No candidates" description="No candidates match your filters." />
 
     return (
-      <Paper sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+      <Paper sx={{ p: 2, borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2, alignItems: 'center' }}>
+          <Box sx={{ flex: 1, minWidth: 200 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>Candidate Breakdown</Typography>
+            <Typography variant="body2" color="text.secondary">Final vote distribution by candidate and position.</Typography>
+          </Box>
           <FormControl size="small" sx={{ minWidth: 200 }}>
             <InputLabel>Filter by position</InputLabel>
             <Select
@@ -869,10 +946,10 @@ const ElectionResultsPage: React.FC = () => {
             onChange={(e) => setCandidateSearch(e.target.value)}
           />
         </Box>
-        <TableContainer>
+        <TableContainer sx={{ borderRadius: 1.5, border: '1px solid', borderColor: 'grey.100' }}>
           <Table size="small">
             <TableHead>
-              <TableRow>
+              <TableRow sx={{ backgroundColor: 'rgba(15, 23, 42, 0.03)' }}>
                 <TableCell>Candidate</TableCell>
                 <TableCell>Position</TableCell>
                 <TableCell align="right">Rank</TableCell>
@@ -883,9 +960,16 @@ const ElectionResultsPage: React.FC = () => {
             <TableBody>
               {filteredCandidates.map((c) => (
                 <TableRow key={`${c.positionId}-${c.candidateId || c.personId || c.rank}`} hover>
-                  <TableCell>{c.fullName}</TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: c.rank === 1 ? 'success.main' : 'grey.400' }} />
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{c.fullName}</Typography>
+                    </Stack>
+                  </TableCell>
                   <TableCell>{c.positionName}</TableCell>
-                  <TableCell align="right">{c.rank}</TableCell>
+                  <TableCell align="right">
+                    <Chip size="small" label={`#${c.rank}`} color={c.rank === 1 ? 'success' : 'default'} />
+                  </TableCell>
                   <TableCell align="right">{c.voteCount ?? 0}</TableCell>
                   <TableCell align="right">
                     {typeof c.voteSharePercent === 'number' && (c.totalBallots ?? 0) > 0
