@@ -1,4 +1,5 @@
 import { api } from './axios'
+import type { LeadershipAssignmentResponse } from '../types/leadership'
 
 export interface ElectionResultsSummaryResponse {
   electionId?: number
@@ -101,6 +102,12 @@ export interface PositionTallyResponse {
   totalVotes?: number
 }
 
+export interface CertificationResponse {
+  message?: string
+  certifiedAt?: string
+  assignments?: LeadershipAssignmentResponse[]
+}
+
 const ADMIN_BASE = '/api/v1/admin/elections'
 const PUBLIC_BASE = '/api/v1/elections'
 
@@ -122,6 +129,9 @@ export const resultsApi = {
 
   runTally: (electionId: string | number, votingPeriodId: string | number, payload: RunTallyRequest = {}) =>
     api.post<RunTallyResponse>(`${ADMIN_BASE}/${electionId}/voting-periods/${votingPeriodId}/tally/run`, payload),
+
+  certifyResults: (electionId: string | number, votingPeriodId: string | number) =>
+    api.post<CertificationResponse>(`${ADMIN_BASE}/${electionId}/voting-periods/${votingPeriodId}/results/certify`, {}),
 
   // Public/read-only fallback endpoints (not voting-period scoped)
   positionTally: (electionId: string | number, positionId: string | number) =>

@@ -4,6 +4,7 @@ import {
   AccessTime as AccessTimeIcon,
   AssignmentTurnedIn as AssignmentTurnedInIcon,
   ArrowBack as ArrowBackIcon,
+  FactCheck as FactCheckIcon,
   HowToVote as HowToVoteIcon,
   EventAvailable as EventAvailableIcon,
   Insights as InsightsIcon,
@@ -51,6 +52,7 @@ import { electionApi } from '../api/election.api'
 import { resultsApi } from '../api/results.api'
 import type {
   CandidateResultsResponse,
+  CertificationResponse,
   ElectionResultsSummaryResponse,
   PositionResultsResponse,
   RunTallyResponse,
@@ -59,6 +61,7 @@ import type {
 import { useToast } from '../components/feedback/ToastProvider'
 import { useAuth } from '../context/AuthContext'
 import type { VotingPeriod } from '../types/election'
+import type { LeadershipAssignmentResponse } from '../types/leadership'
 
 interface RankedCandidate extends CandidateResultsResponse {
   rank: number
@@ -134,6 +137,10 @@ const ElectionResultsPage: React.FC = () => {
   const [tallyRemarks, setTallyRemarks] = useState('')
   const [expandedFellowships, setExpandedFellowships] = useState<Record<string, boolean>>({})
   const [lastTallyRun, setLastTallyRun] = useState<RunTallyResponse | null>(null)
+  const [certifyLoading, setCertifyLoading] = useState(false)
+  const [certifyConfirmOpen, setCertifyConfirmOpen] = useState(false)
+  const [certificationResult, setCertificationResult] = useState<CertificationResponse | null>(null)
+  const [certifiedAssignments, setCertifiedAssignments] = useState<LeadershipAssignmentResponse[]>([])
   const [refreshCountdown, setRefreshCountdown] = useState<number | null>(null)
   const refreshTimerRef = useRef<number | null>(null)
   const REFRESH_MS = 5 * 60 * 1000
@@ -300,6 +307,25 @@ const ElectionResultsPage: React.FC = () => {
       setTallyLoading(false)
       setTallyConfirmOpen(false)
       setTallyRemarks('')
+    }
+  }
+
+  const handleCertify = async () => {
+    if (!electionId || !selectedPeriodId) return
+    setCertifyLoading(true)
+    try {
+      const res = await resultsApi.certifyResults(electionId, selectedPeriodId)
+      setCertificationResult(res)
+      setCertifiedAssignments(res?.assignments ?? [])
+      toast.success(res?.message || 'Results certified')
+      fetchSummary(selectedPeriodId)
+      fetchPositions(selectedPeriodId)
+      fetchTallyStatus(selectedPeriodId)
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to certify results')
+    } finally {
+      setCertifyLoading(false)
+      setCertifyConfirmOpen(false)
     }
   }
 
@@ -1020,6 +1046,13 @@ const ElectionResultsPage: React.FC = () => {
     if (!isAdmin) return null
     if (!selectedPeriodId) return <EmptyState title="Select a voting period" description="Tally actions require a closed voting period." />
 
+    const hasVoting = (summary?.totalBallotsCast ?? 0) > 0
+    const canCertify = Boolean(isAdmin && selectedPeriodId && isPeriodClosed && hasVoting)
+    const certificationCount = certifiedAssignments.length
+    const certificationTime = certificationResult?.certifiedAt
+      ? new Date(certificationResult.certifiedAt).toLocaleString()
+      : null
+
     return (
       <Box sx={{ display: 'grid', gap: 2 }}>
         <Paper sx={{ p: 2, display: 'grid', gap: 1 }}>
@@ -1050,16 +1083,68 @@ const ElectionResultsPage: React.FC = () => {
             </Button>
             <Button
               variant="outlined"
-              startIcon={<AssignmentTurnedInIcon />}
-              disabled
-              title="Certification endpoint is not provided in the current Swagger spec"
+              startIcon={<FactCheckIcon />}
+              onClick={() => setCertifyConfirmOpen(true)}
+              disabled={!canCertify || certifyLoading}
             >
-              Certify Election
+              Certify Results
             </Button>
           </Box>
           {!canTally && (
             <Alert severity="info" sx={{ mt: 1 }}>
               Tally is enabled only after voting periods are closed. Current status: {election?.status || 'Unknown'}
+            </Alert>
+          )}
+        </Paper>
+
+        <Paper
+          sx={{
+            p: 2,
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'rgba(22, 163, 74, 0.2)',
+            background: 'linear-gradient(135deg, rgba(240, 253, 244, 0.9), rgba(236, 253, 245, 0.6))',
+          }}
+        >
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', md: 'center' }} justifyContent="space-between">
+            <Box sx={{ display: 'grid', gap: 0.5 }}>
+              <Typography variant="h6" sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <AssignmentTurnedInIcon fontSize="small" /> Certification
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Certify a closed voting period to assign winners to their leadership positions.
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 0.5 }}>
+                <Chip
+                  size="small"
+                  label={isPeriodClosed ? 'Period closed' : 'Period open'}
+                  color={isPeriodClosed ? 'success' : 'warning'}
+                  variant="outlined"
+                />
+                <Chip
+                  size="small"
+                  label={hasVoting ? 'Votes recorded' : 'No votes recorded'}
+                  color={hasVoting ? 'info' : 'default'}
+                  variant="outlined"
+                />
+                {certificationCount > 0 && (
+                  <Chip size="small" color="success" label={`${certificationCount} assignments created`} />
+                )}
+              </Stack>
+            </Box>
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={<FactCheckIcon />}
+              onClick={() => setCertifyConfirmOpen(true)}
+              disabled={!canCertify || certifyLoading}
+            >
+              Certify & Assign Winners
+            </Button>
+          </Stack>
+          {!canCertify && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Certification is available once the voting period is closed and at least one ballot has been cast.
             </Alert>
           )}
         </Paper>
@@ -1074,25 +1159,68 @@ const ElectionResultsPage: React.FC = () => {
             <Typography variant="body2">Ties detected: {lastTallyRun.tiesDetectedCount ?? 0}</Typography>
           </Paper>
         )}
+
+        {certificationResult && (
+          <Paper sx={{ p: 2, display: 'grid', gap: 0.75 }}>
+            <Typography variant="subtitle1">Certification Summary</Typography>
+            <Typography variant="body2">Message: {certificationResult.message || 'Results certified.'}</Typography>
+            {certificationTime && <Typography variant="body2">Certified at: {certificationTime}</Typography>}
+            <Typography variant="body2">Assignments created: {certificationCount}</Typography>
+          </Paper>
+        )}
+
+        {certifiedAssignments.length > 0 && (
+          <Paper sx={{ p: 2, borderRadius: 2 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
+              <SupervisorAccountIcon fontSize="small" />
+              <Typography variant="h6">Position Assignments</Typography>
+              <Chip size="small" label={`${certifiedAssignments.length} assignments`} />
+            </Stack>
+            <TableContainer sx={{ borderRadius: 1.5, border: '1px solid', borderColor: 'grey.100' }}>
+              <Table size="small" sx={{ '& thead th': { backgroundColor: 'rgba(88, 28, 135, 0.08)', fontWeight: 700 } }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Person</TableCell>
+                    <TableCell>Position</TableCell>
+                    <TableCell>Fellowship</TableCell>
+                    <TableCell>Scope</TableCell>
+                    <TableCell>Term</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {certifiedAssignments.map((assignment) => {
+                    const positionTitle =
+                      (assignment.fellowshipPosition as any)?.title?.name ||
+                      (assignment.fellowshipPosition as any)?.titleName ||
+                      '—'
+                    const scopeLabel =
+                      (assignment.fellowshipPosition as any)?.scope ||
+                      (assignment.fellowshipPosition as any)?.scopeName ||
+                      '—'
+                    const termStart = assignment.termStartDate ? new Date(assignment.termStartDate).toLocaleDateString() : '—'
+                    const termEnd = assignment.termEndDate ? new Date(assignment.termEndDate).toLocaleDateString() : '—'
+                    return (
+                      <TableRow key={assignment.id} hover>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {assignment.person?.fullName || '—'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{positionTitle}</TableCell>
+                        <TableCell>{assignment.fellowship?.name || (assignment.fellowshipPosition as any)?.fellowship?.name || '—'}</TableCell>
+                        <TableCell>{scopeLabel}</TableCell>
+                        <TableCell>{termStart} → {termEnd}</TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        )}
       </Box>
     )
   }
-
-  const renderLeadershipPreview = () => (
-    <Paper sx={{ p: 2, display: 'grid', gap: 1 }}>
-      <Typography variant="h6" sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-        <SupervisorAccountIcon fontSize="small" /> Leadership Update Preview
-      </Typography>
-      <Alert severity="warning">
-        The Swagger specification available to the UI does not expose a leadership preview or apply-winners endpoint. This section remains read-only until the backend provides those endpoints.
-      </Alert>
-      <Box>
-        <Button variant="contained" disabled title="Awaiting backend apply-winners endpoint">
-          Apply Winners to Leadership
-        </Button>
-      </Box>
-    </Paper>
-  )
 
   if (loading) {
     return (
@@ -1117,7 +1245,6 @@ const ElectionResultsPage: React.FC = () => {
     { label: 'Position Results', render: renderPositionResults },
     ...(isAdmin ? [{ label: 'Candidate Breakdown', render: renderCandidateBreakdown }] : []),
     ...(isAdmin ? [{ label: 'Tally & Certification', render: renderTally }] : []),
-    ...(isAdmin ? [{ label: 'Leadership Update Preview', render: renderLeadershipPreview }] : []),
   ]
 
   return (
@@ -1230,6 +1357,24 @@ const ElectionResultsPage: React.FC = () => {
           <Button onClick={() => setTallyConfirmOpen(false)}>Cancel</Button>
           <Button onClick={handleRunTally} variant="contained" color="error" disabled={tallyLoading}>
             Confirm Tally
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={certifyConfirmOpen} onClose={() => setCertifyConfirmOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Certify Results</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, mt: 1 }}>
+          <Alert severity="info">
+            Certifying will create leadership assignments for the winning candidates in this voting period.
+          </Alert>
+          <Typography variant="body2">
+            This action assigns winners to positions for the election term and cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCertifyConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleCertify} variant="contained" color="success" disabled={certifyLoading}>
+            Confirm Certification
           </Button>
         </DialogActions>
       </Dialog>
