@@ -321,7 +321,14 @@ const ElectionResultsPage: React.FC = () => {
 
     const tieCount = positions.filter((p) => p.hasTie).length
     const zeroVotePositions = positions.filter((p) => p.hasZeroVotes).length
-    const livePositions = [...positions].sort((a, b) => (b.totalBallotsForPosition ?? 0) - (a.totalBallotsForPosition ?? 0)).slice(0, 6)
+    const livePositions = [...positions].sort((a, b) => (b.totalBallotsForPosition ?? 0) - (a.totalBallotsForPosition ?? 0))
+    const positionsByScope = livePositions.reduce<Record<string, RankedPosition[]>>((acc, pos) => {
+      const key = pos.scope || 'OTHER'
+      if (!acc[key]) acc[key] = []
+      acc[key].push(pos)
+      return acc
+    }, {})
+    const orderedScopes = ['DIOCESE', 'ARCHDEACONRY', 'CHURCH', 'OTHER'].filter((scope) => positionsByScope[scope]?.length)
     const lastTallyCompletedAt = tallyStatus?.completedAt
     const lastTallyUpdatedAt = tallyStatus?.lastUpdatedAt
     const serverTimeLabel = summary.serverTime ? new Date(summary.serverTime).toLocaleString() : '—'
@@ -565,52 +572,74 @@ const ElectionResultsPage: React.FC = () => {
           {livePositions.length === 0 ? (
             <EmptyState title="No positions yet" description="Position progress will appear once votes are cast." />
           ) : (
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 1,
-                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
-              }}
-            >
-              {livePositions.map((pos) => {
-                const ballots = pos.totalBallotsForPosition ?? 0
-                const totalBallots = summary.totalBallotsCast ?? 0
-                const percent = pos.positionVoteShareOfTotal ?? (totalBallots > 0 ? Math.min(100, (ballots / totalBallots) * 100) : 0)
-                return (
-                  <Paper
-                    key={pos.positionId}
-                    variant="outlined"
+            <Box sx={{ display: 'grid', gap: 2 }}>
+              {orderedScopes.map((scopeKey) => (
+                <Box key={scopeKey} sx={{ display: 'grid', gap: 1.25 }}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip
+                      size="small"
+                      label={scopeKey === 'DIOCESE' ? 'Diocese positions' : scopeKey === 'ARCHDEACONRY' ? 'Archdeaconry positions' : scopeKey === 'CHURCH' ? 'Church positions' : 'Other positions'}
+                      color="primary"
+                      variant="outlined"
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      {positionsByScope[scopeKey].length} positions
+                    </Typography>
+                  </Stack>
+                  <Box
                     sx={{
-                      p: 1.5,
-                      borderRadius: 2,
-                      borderColor: alpha('#5b21b6', 0.15),
-                      background: 'linear-gradient(135deg, rgba(91, 33, 182, 0.04), rgba(59, 130, 246, 0.04))',
+                      display: 'grid',
+                      gap: 1,
+                      gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
                     }}
                   >
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{pos.positionName}</Typography>
-                      <Chip size="small" label={`${ballots} ballots`} />
-                    </Stack>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Share of all ballots
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {percent.toFixed(0)}%
-                      </Typography>
-                    </Stack>
-                    <LinearProgress
-                      variant="determinate"
-                      value={percent}
-                      sx={{ height: 8, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.06)', '& .MuiLinearProgress-bar': { transition: 'width 0.6s ease' } }}
-                    />
-                    <Stack direction="row" spacing={1} sx={{ mt: 0.75 }}>
-                      <Chip size="small" variant="outlined" label={pos.scope || '—'} />
-                      <Chip size="small" variant="outlined" label={`Seats: ${pos.seats ?? '—'}`} />
-                    </Stack>
-                  </Paper>
-                )
-              })}
+                    {positionsByScope[scopeKey].map((pos) => {
+                      const ballots = pos.totalBallotsForPosition ?? 0
+                      const totalBallots = summary.totalBallotsCast ?? 0
+                      const percent = pos.positionVoteShareOfTotal ?? (totalBallots > 0 ? Math.min(100, (ballots / totalBallots) * 100) : 0)
+                      return (
+                        <Paper
+                          key={pos.positionId}
+                          variant="outlined"
+                          sx={{
+                            p: 1.5,
+                            borderRadius: 2,
+                            borderColor: alpha('#5b21b6', 0.15),
+                            background: 'linear-gradient(135deg, rgba(91, 33, 182, 0.04), rgba(59, 130, 246, 0.04))',
+                          }}
+                        >
+                          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
+                            <Box>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{pos.positionName}</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {pos.fellowshipName || '—'} · {pos.locationName || '—'}
+                              </Typography>
+                            </Box>
+                            <Chip size="small" label={`${ballots} ballots`} />
+                          </Stack>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              Share of all ballots
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {percent.toFixed(0)}%
+                            </Typography>
+                          </Stack>
+                          <LinearProgress
+                            variant="determinate"
+                            value={percent}
+                            sx={{ height: 8, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.06)', '& .MuiLinearProgress-bar': { transition: 'width 0.6s ease' } }}
+                          />
+                          <Stack direction="row" spacing={1} sx={{ mt: 0.75 }}>
+                            <Chip size="small" variant="outlined" label={pos.scope || '—'} />
+                            <Chip size="small" variant="outlined" label={`Seats: ${pos.seats ?? '—'}`} />
+                          </Stack>
+                        </Paper>
+                      )
+                    })}
+                  </Box>
+                </Box>
+              ))}
             </Box>
           )}
         </Paper>

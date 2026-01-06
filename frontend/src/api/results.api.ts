@@ -27,6 +27,11 @@ export interface PositionResultsResponse {
   positionId?: number
   positionName?: string
   scope?: string
+  fellowshipId?: number
+  fellowshipName?: string
+  locationScope?: string
+  locationId?: number
+  locationName?: string
   seats?: number
   maxVotesPerVoter?: number
   turnoutForPosition?: number
