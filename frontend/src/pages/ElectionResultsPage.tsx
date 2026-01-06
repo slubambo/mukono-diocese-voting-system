@@ -137,6 +137,13 @@ const ElectionResultsPage: React.FC = () => {
   const [refreshCountdown, setRefreshCountdown] = useState<number | null>(null)
   const refreshTimerRef = useRef<number | null>(null)
   const REFRESH_MS = 5 * 60 * 1000
+  const scopeChipColor = useMemo(() => {
+    const scope = String(election?.scope || '').toUpperCase()
+    if (scope === 'DIOCESE') return 'primary' as const
+    if (scope === 'ARCHDEACONRY') return 'warning' as const
+    if (scope === 'CHURCH') return 'secondary' as const
+    return 'default' as const
+  }, [election?.scope])
 
   useEffect(() => {
     const loadElection = async () => {
@@ -348,6 +355,13 @@ const ElectionResultsPage: React.FC = () => {
       : Math.min(100, ((summary.totalBallotsCast ?? 0) / Math.max(summary.totalEligibleVoters, 1)) * 100)
     const positionsInTie = tallyStatus?.positionsInTie ?? tieCount
     const positionsWithZeroVotes = tallyStatus?.positionsWithZeroVotes ?? zeroVotePositions
+    const getScopeColor = (scope?: string) => {
+      const normalized = String(scope || '').toUpperCase()
+      if (normalized === 'DIOCESE') return 'primary' as const
+      if (normalized === 'ARCHDEACONRY') return 'warning' as const
+      if (normalized === 'CHURCH') return 'secondary' as const
+      return 'default' as const
+    }
 
     const headlineCards = [
       {
@@ -373,10 +387,10 @@ const ElectionResultsPage: React.FC = () => {
     ]
 
     return (
-      <Box sx={{ display: 'grid', gap: 2 }}>
+      <Box sx={{ display: 'grid', gap: 1.5 }}>
         <Paper
           sx={{
-            p: { xs: 2.5, md: 3.5 },
+            p: { xs: 2, md: 3 },
             position: 'relative',
             overflow: 'hidden',
             background: theme => `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.95)} 0%, ${alpha(theme.palette.primary.main, 0.85)} 45%, ${alpha(theme.palette.secondary?.main || theme.palette.primary.light, 0.85)} 100%)`,
@@ -427,7 +441,7 @@ const ElectionResultsPage: React.FC = () => {
             sx={{
               mt: 3,
               display: 'grid',
-              gap: 1.5,
+              gap: 1.25,
               gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
             }}
           >
@@ -435,7 +449,7 @@ const ElectionResultsPage: React.FC = () => {
               <Box
                 key={card.label}
                 sx={{
-                  p: 2,
+                  p: 1.5,
                   borderRadius: 2.5,
                   bgcolor: 'rgba(255,255,255,0.14)',
                   backdropFilter: 'blur(6px)',
@@ -595,8 +609,23 @@ const ElectionResultsPage: React.FC = () => {
                     <Chip
                       size="small"
                       label={scopeKey === 'DIOCESE' ? 'Diocese positions' : scopeKey === 'ARCHDEACONRY' ? 'Archdeaconry positions' : scopeKey === 'CHURCH' ? 'Church positions' : 'Other positions'}
-                      color="primary"
+                      color={getScopeColor(scopeKey)}
                       variant="outlined"
+                      sx={(theme) => {
+                        const chipColor = getScopeColor(scopeKey)
+                        return {
+                          fontWeight: 600,
+                          bgcolor: chipColor === 'default'
+                            ? alpha(theme.palette.grey[500], 0.12)
+                            : alpha(theme.palette[chipColor].main, 0.12),
+                          borderColor: chipColor === 'default'
+                            ? alpha(theme.palette.grey[500], 0.4)
+                            : alpha(theme.palette[chipColor].main, 0.4),
+                          color: chipColor === 'default'
+                            ? theme.palette.text.primary
+                            : theme.palette[chipColor].dark,
+                        }
+                      }}
                     />
                     <Typography variant="caption" color="text.secondary">
                       {totalPositions} positions
@@ -627,7 +656,18 @@ const ElectionResultsPage: React.FC = () => {
                             </Typography>
                           </Box>
                           <Stack direction="row" spacing={1} alignItems="center">
-                            <Chip size="small" label={`${group.items.length} positions`} />
+                            <Chip
+                              size="small"
+                              label={`${group.items.length} positions`}
+                              color="info"
+                              variant="outlined"
+                              sx={(theme) => ({
+                                fontWeight: 600,
+                                bgcolor: alpha(theme.palette.info.main, 0.12),
+                                borderColor: alpha(theme.palette.info.main, 0.35),
+                                color: theme.palette.info.dark,
+                              })}
+                            />
                             <IconButton
                               size="small"
                               onClick={() => {
@@ -666,7 +706,18 @@ const ElectionResultsPage: React.FC = () => {
                               >
                                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
                                   <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{pos.positionName}</Typography>
-                                  <Chip size="small" label={`${ballots} ballots`} />
+                                  <Chip
+                                    size="small"
+                                    label={`${ballots} ballots`}
+                                    color="success"
+                                    variant="outlined"
+                                    sx={(theme) => ({
+                                      fontWeight: 600,
+                                      bgcolor: alpha(theme.palette.success.main, 0.12),
+                                      borderColor: alpha(theme.palette.success.main, 0.35),
+                                      color: theme.palette.success.dark,
+                                    })}
+                                  />
                                 </Stack>
                                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
                                   <Typography variant="body2" color="text.secondary">
@@ -682,8 +733,39 @@ const ElectionResultsPage: React.FC = () => {
                                   sx={{ height: 8, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.06)', '& .MuiLinearProgress-bar': { transition: 'width 0.6s ease' } }}
                                 />
                                 <Stack direction="row" spacing={1} sx={{ mt: 0.75 }}>
-                                  <Chip size="small" variant="outlined" label={pos.scope || '—'} />
-                                  <Chip size="small" variant="outlined" label={`Seats: ${pos.seats ?? '—'}`} />
+                                  <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    label={pos.scope || '—'}
+                                    color={getScopeColor(pos.scope)}
+                                    sx={(theme) => {
+                                      const chipColor = getScopeColor(pos.scope)
+                                      return {
+                                        fontWeight: 600,
+                                        bgcolor: chipColor === 'default'
+                                          ? alpha(theme.palette.grey[500], 0.1)
+                                          : alpha(theme.palette[chipColor].main, 0.12),
+                                        borderColor: chipColor === 'default'
+                                          ? alpha(theme.palette.grey[500], 0.35)
+                                          : alpha(theme.palette[chipColor].main, 0.35),
+                                        color: chipColor === 'default'
+                                          ? theme.palette.text.primary
+                                          : theme.palette[chipColor].dark,
+                                      }
+                                    }}
+                                  />
+                                  <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    label={`Seats: ${pos.seats ?? '—'}`}
+                                    color="secondary"
+                                    sx={(theme) => ({
+                                      fontWeight: 600,
+                                      bgcolor: alpha(theme.palette.secondary.main, 0.12),
+                                      borderColor: alpha(theme.palette.secondary.main, 0.35),
+                                      color: theme.palette.secondary.dark,
+                                    })}
+                                  />
                                 </Stack>
                               </Paper>
                             )
@@ -934,12 +1016,55 @@ const ElectionResultsPage: React.FC = () => {
           </Button>
         )}
       >
-        <Paper sx={{ p: 2, mb: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Paper sx={{ p: 1.5, mb: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
             <StatusChip status={(election.status || 'pending') as any} />
-            <Chip size="small" label={`Scope: ${election.scope || '—'}`} />
-            {election.termStartDate && <Chip size="small" label={`Term start: ${new Date(election.termStartDate).toLocaleDateString()}`} />}
-            {election.termEndDate && <Chip size="small" label={`Term end: ${new Date(election.termEndDate).toLocaleDateString()}`} />}
+            <Chip
+              size="small"
+              label={`Scope: ${election.scope || '—'}`}
+              color={scopeChipColor}
+              variant="outlined"
+              sx={(theme) => ({
+                fontWeight: 600,
+                bgcolor: scopeChipColor === 'default'
+                  ? alpha(theme.palette.grey[500], 0.12)
+                  : alpha(theme.palette[scopeChipColor].main, 0.12),
+                borderColor: scopeChipColor === 'default'
+                  ? alpha(theme.palette.grey[500], 0.4)
+                  : alpha(theme.palette[scopeChipColor].main, 0.4),
+                color: scopeChipColor === 'default'
+                  ? theme.palette.text.primary
+                  : theme.palette[scopeChipColor].dark,
+              })}
+            />
+            {election.termStartDate && (
+              <Chip
+                size="small"
+                label={`Term start: ${new Date(election.termStartDate).toLocaleDateString()}`}
+                color="info"
+                variant="outlined"
+                sx={(theme) => ({
+                  fontWeight: 600,
+                  bgcolor: alpha(theme.palette.info.main, 0.12),
+                  borderColor: alpha(theme.palette.info.main, 0.4),
+                  color: theme.palette.info.dark,
+                })}
+              />
+            )}
+            {election.termEndDate && (
+              <Chip
+                size="small"
+                label={`Term end: ${new Date(election.termEndDate).toLocaleDateString()}`}
+                color="success"
+                variant="outlined"
+                sx={(theme) => ({
+                  fontWeight: 600,
+                  bgcolor: alpha(theme.palette.success.main, 0.12),
+                  borderColor: alpha(theme.palette.success.main, 0.4),
+                  color: theme.palette.success.dark,
+                })}
+              />
+            )}
           </Box>
           <Divider />
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
