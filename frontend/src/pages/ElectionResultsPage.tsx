@@ -113,8 +113,23 @@ const buildRankedPosition = (position: PositionResultsResponse): RankedPosition 
   return { ...position, rankedCandidates, hasTie, hasZeroVotes }
 }
 
-const ElectionResultsPage: React.FC = () => {
-  const { electionId } = useParams()
+type ElectionResultsViewProps = {
+  electionId?: string | number
+  initialVotingPeriodId?: string | number
+  showLayout?: boolean
+  showInternalSelectors?: boolean
+  hideBackButton?: boolean
+}
+
+export const ElectionResultsView: React.FC<ElectionResultsViewProps> = ({
+  electionId: electionIdProp,
+  initialVotingPeriodId,
+  showLayout = true,
+  showInternalSelectors = true,
+  hideBackButton = false,
+}) => {
+  const { electionId: electionIdParam } = useParams()
+  const resolvedElectionId = electionIdProp ?? electionIdParam
   const toast = useToast()
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -125,7 +140,7 @@ const ElectionResultsPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [election, setElection] = useState<any>(null)
   const [votingPeriods, setVotingPeriods] = useState<VotingPeriod[]>([])
-  const [selectedPeriodId, setSelectedPeriodId] = useState<string | number | undefined>(undefined)
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string | number | undefined>(initialVotingPeriodId)
   const [summary, setSummary] = useState<ElectionResultsSummaryResponse | null>(null)
   const [positions, setPositions] = useState<RankedPosition[]>([])
   const [positionsLoading, setPositionsLoading] = useState(false)
@@ -160,10 +175,10 @@ const ElectionResultsPage: React.FC = () => {
 
   useEffect(() => {
     const loadElection = async () => {
-      if (!electionId) return
+      if (!resolvedElectionId) return
       setLoading(true)
       try {
-        const res = await electionApi.get(electionId)
+        const res = await electionApi.get(resolvedElectionId)
         setElection(res)
       } catch (err: any) {
         toast.error(err?.message || 'Failed to load election')
@@ -173,13 +188,13 @@ const ElectionResultsPage: React.FC = () => {
     }
 
     loadElection()
-  }, [electionId, toast])
+  }, [resolvedElectionId, toast])
 
   useEffect(() => {
     const loadPeriods = async () => {
-      if (!electionId) return
+      if (!resolvedElectionId) return
       try {
-        const res = await electionApi.listVotingPeriods(electionId)
+        const res = await electionApi.listVotingPeriods(resolvedElectionId)
         const items: VotingPeriod[] = (res as any)?.content ?? (res as any) ?? []
         setVotingPeriods(items)
         const closed = items.filter((p) => (p.status || '').toUpperCase() === 'CLOSED')
@@ -192,7 +207,11 @@ const ElectionResultsPage: React.FC = () => {
     }
 
     loadPeriods()
-  }, [electionId, toast])
+  }, [resolvedElectionId, toast])
+
+  useEffect(() => {
+    setSelectedPeriodId(initialVotingPeriodId)
+  }, [initialVotingPeriodId, resolvedElectionId])
 
   // Auto-refresh when period is open and summary is available
   useEffect(() => {
@@ -236,9 +255,9 @@ const ElectionResultsPage: React.FC = () => {
   }, [selectedPeriodId, summary])
 
   const fetchSummary = async (periodId?: string | number) => {
-    if (!electionId || !periodId) return
+    if (!resolvedElectionId || !periodId) return
     try {
-      const res = await resultsApi.getSummary(electionId, periodId)
+      const res = await resultsApi.getSummary(resolvedElectionId, periodId)
       setSummary(res)
     } catch (err: any) {
       setSummary(null)
@@ -255,10 +274,10 @@ const ElectionResultsPage: React.FC = () => {
   }
 
   const fetchPositions = async (periodId?: string | number) => {
-    if (!electionId || !periodId) return
+    if (!resolvedElectionId || !periodId) return
     setPositionsLoading(true)
     try {
-      const res = await resultsApi.getPositions(electionId, periodId)
+      const res = await resultsApi.getPositions(resolvedElectionId, periodId)
       const ranked = (res || []).map(buildRankedPosition)
       setPositions(ranked)
     } catch (err: any) {
@@ -270,10 +289,10 @@ const ElectionResultsPage: React.FC = () => {
   }
 
   const fetchTallyStatus = async (periodId?: string | number) => {
-    if (!electionId || !periodId || !isAdmin) return
+    if (!resolvedElectionId || !periodId || !isAdmin) return
     setTallyLoading(true)
     try {
-      const res = await resultsApi.tallyStatus(electionId, periodId)
+      const res = await resultsApi.tallyStatus(resolvedElectionId, periodId)
       setTallyStatus(res)
     } catch (err: any) {
       setTallyStatus(null)
@@ -292,10 +311,10 @@ const ElectionResultsPage: React.FC = () => {
   }, [selectedPeriodId])
 
   const handleRunTally = async () => {
-    if (!electionId || !selectedPeriodId) return
+    if (!resolvedElectionId || !selectedPeriodId) return
     setTallyLoading(true)
     try {
-      const res = await resultsApi.runTally(electionId, selectedPeriodId, tallyRemarks ? { remarks: tallyRemarks } : {})
+      const res = await resultsApi.runTally(resolvedElectionId, selectedPeriodId, tallyRemarks ? { remarks: tallyRemarks } : {})
       setLastTallyRun(res)
       toast.success(res?.message || 'Tally completed')
       fetchTallyStatus(selectedPeriodId)
@@ -311,10 +330,10 @@ const ElectionResultsPage: React.FC = () => {
   }
 
   const handleCertify = async () => {
-    if (!electionId || !selectedPeriodId) return
+    if (!resolvedElectionId || !selectedPeriodId) return
     setCertifyLoading(true)
     try {
-      const res = await resultsApi.certifyResults(electionId, selectedPeriodId)
+      const res = await resultsApi.certifyResults(resolvedElectionId, selectedPeriodId)
       setCertificationResult(res)
       setCertifiedAssignments(res?.assignments ?? [])
       toast.success(res?.message || 'Results certified')
@@ -1223,20 +1242,20 @@ const ElectionResultsPage: React.FC = () => {
   }
 
   if (loading) {
-    return (
-      <AppShell>
-        <PageLayout title="Election Results"><LoadingState /></PageLayout>
-      </AppShell>
+    return showLayout ? (
+      <PageLayout title="Election Results"><LoadingState /></PageLayout>
+    ) : (
+      <LoadingState />
     )
   }
 
   if (!election) {
-    return (
-      <AppShell>
-        <PageLayout title="Election Results">
-          <EmptyState title="Election not found" description="The requested election could not be located." />
-        </PageLayout>
-      </AppShell>
+    return showLayout ? (
+      <PageLayout title="Election Results">
+        <EmptyState title="Election not found" description="The requested election could not be located." />
+      </PageLayout>
+    ) : (
+      <EmptyState title="Election not found" description="The requested election could not be located." />
     )
   }
 
@@ -1247,17 +1266,9 @@ const ElectionResultsPage: React.FC = () => {
     ...(isAdmin ? [{ label: 'Tally & Certification', render: renderTally }] : []),
   ]
 
-  return (
-    <AppShell>
-      <PageLayout
-        title={election.name || 'Election Results'}
-        subtitle="Closed voting period results, tallying, and leadership updates"
-        actions={(
-          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(isAdmin ? '/admin/elections' : '/ds/elections')}>
-            Back to Elections
-          </Button>
-        )}
-      >
+  const resultsContent = (
+    <>
+      {showInternalSelectors && (
         <Paper sx={{ p: 1.5, mb: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
             <StatusChip status={(election.status || 'pending') as any} />
@@ -1327,18 +1338,37 @@ const ElectionResultsPage: React.FC = () => {
             {!votingPeriods.length && <Alert severity="warning">No voting periods found for this election.</Alert>}
           </Box>
         </Paper>
+      )}
 
-        <Paper sx={{ mb: 2 }}>
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
-            {tabs.map((t) => (
-              <Tab key={t.label} label={t.label} />
-            ))}
-          </Tabs>
-        </Paper>
+      <Paper sx={{ mb: 2 }}>
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
+          {tabs.map((t) => (
+            <Tab key={t.label} label={t.label} />
+          ))}
+        </Tabs>
+      </Paper>
 
-        <Box sx={{ p: 1 }}>{tabs[tab]?.render()}</Box>
-      </PageLayout>
+      <Box sx={{ p: 1 }}>{tabs[tab]?.render()}</Box>
+    </>
+  )
 
+  const layout = showLayout ? (
+    <PageLayout
+      title={election.name || 'Election Results'}
+      subtitle="Closed voting period results, tallying, and leadership updates"
+      actions={hideBackButton ? undefined : (
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(isAdmin ? '/admin/elections' : '/ds/elections')}>
+          Back to Elections
+        </Button>
+      )}
+    >
+      {resultsContent}
+    </PageLayout>
+  ) : resultsContent
+
+  return (
+    <>
+      {layout}
       <Dialog open={tallyConfirmOpen} onClose={() => setTallyConfirmOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Confirm Tally</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, mt: 1 }}>
@@ -1378,6 +1408,16 @@ const ElectionResultsPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+    </>
+  )
+}
+
+const ElectionResultsPage: React.FC = () => {
+  const { electionId } = useParams()
+
+  return (
+    <AppShell>
+      <ElectionResultsView electionId={electionId} />
     </AppShell>
   )
 }
