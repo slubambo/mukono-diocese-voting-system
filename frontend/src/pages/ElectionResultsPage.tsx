@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Box,
@@ -53,6 +53,7 @@ import type {
 import { useToast } from '../components/feedback/ToastProvider'
 import { useAuth } from '../context/AuthContext'
 import type { VotingPeriod } from '../types/election'
+import { alpha } from '@mui/material/styles'
 
 interface RankedCandidate {
   candidateId?: number
@@ -129,6 +130,9 @@ const ElectionResultsPage: React.FC = () => {
   const [tallyConfirmOpen, setTallyConfirmOpen] = useState(false)
   const [tallyRemarks, setTallyRemarks] = useState('')
   const [lastTallyRun, setLastTallyRun] = useState<RunTallyResponse | null>(null)
+  const [refreshCountdown, setRefreshCountdown] = useState<number | null>(null)
+  const refreshTimerRef = useRef<number | null>(null)
+  const REFRESH_MS = 5 * 60 * 1000
 
   useEffect(() => {
     const loadElection = async () => {
@@ -165,6 +169,47 @@ const ElectionResultsPage: React.FC = () => {
 
     loadPeriods()
   }, [electionId, toast])
+
+  // Auto-refresh when period is open and summary is available
+  useEffect(() => {
+    if (!selectedPeriodId || !summary) {
+      setRefreshCountdown(null)
+      return
+    }
+
+    const isOpen = (summary.periodStatus || '').toUpperCase().includes('OPEN')
+    if (!isOpen) {
+      setRefreshCountdown(null)
+      if (refreshTimerRef.current) {
+        window.clearInterval(refreshTimerRef.current)
+        refreshTimerRef.current = null
+      }
+      return
+    }
+
+    setRefreshCountdown(REFRESH_MS)
+    if (refreshTimerRef.current) window.clearInterval(refreshTimerRef.current)
+
+    refreshTimerRef.current = window.setInterval(() => {
+      setRefreshCountdown((prev) => {
+        const next = prev !== null ? prev - 1000 : REFRESH_MS
+        if (next <= 0) {
+          fetchSummary(selectedPeriodId)
+          fetchPositions(selectedPeriodId)
+          fetchTallyStatus(selectedPeriodId)
+          return REFRESH_MS
+        }
+        return next
+      })
+    }, 1000)
+
+    return () => {
+      if (refreshTimerRef.current) {
+        window.clearInterval(refreshTimerRef.current)
+        refreshTimerRef.current = null
+      }
+    }
+  }, [selectedPeriodId, summary, REFRESH_MS])
 
   const fetchSummary = async (periodId?: string | number) => {
     if (!electionId || !periodId) return
@@ -271,9 +316,11 @@ const ElectionResultsPage: React.FC = () => {
 
     const tieCount = positions.filter((p) => p.hasTie).length
     const zeroVotePositions = positions.filter((p) => p.hasZeroVotes).length
-    const topPositions = positions.slice(0, 3)
+    const livePositions = [...positions].sort((a, b) => (b.totalBallotsForPosition ?? 0) - (a.totalBallotsForPosition ?? 0)).slice(0, 6)
     const lastTallyCompletedAt = tallyStatus?.completedAt
     const serverTimeLabel = summary.serverTime ? new Date(summary.serverTime).toLocaleString() : '—'
+    const nextUpdateLabel = refreshCountdown !== null ? `${Math.floor(refreshCountdown / 60000)}:${String(Math.floor((refreshCountdown % 60000) / 1000)).padStart(2, '0')}` : 'Paused'
+    const isLive = (summary.periodStatus || '').toUpperCase().includes('OPEN')
 
     const metricCards = [
       {
@@ -322,16 +369,18 @@ const ElectionResultsPage: React.FC = () => {
       <Box sx={{ display: 'grid', gap: 2 }}>
         <Paper
           sx={{
-            p: { xs: 2, md: 3 },
+            p: { xs: 2.5, md: 3 },
             position: 'relative',
             overflow: 'hidden',
-            background: 'linear-gradient(135deg, #0d47a1 0%, #1976d2 50%, #42a5f5 100%)',
+            background: theme => `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.9)} 0%, ${alpha(theme.palette.secondary?.main || theme.palette.primary.light, 0.9)} 100%)`,
             color: 'common.white',
+            borderRadius: 3,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
           }}
         >
           <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box sx={{ display: 'grid', gap: 0.5 }}>
-              <Typography variant="overline" sx={{ letterSpacing: 1 }}>Overview</Typography>
+              <Typography variant="overline" sx={{ letterSpacing: 1 }}>Live tally dashboard</Typography>
               <Typography variant="h4" sx={{ fontWeight: 800 }}>{election.name || 'Election results'}</Typography>
               <Typography variant="body1" sx={{ opacity: 0.9 }}>
                 {summary.totalPositions ?? 0} positions · {summary.totalBallotsCast ?? 0} ballots · {summary.totalDistinctVoters ?? 0} voters
@@ -339,17 +388,16 @@ const ElectionResultsPage: React.FC = () => {
             </Box>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap' }}>
               <StatusChip status={(election.status || 'pending') as any} />
-              <Chip size="small" color="primary" variant="outlined" label={`Period: ${summary.periodStatus || '—'}`} sx={{ color: 'common.white', borderColor: 'rgba(255,255,255,0.4)' }} />
-              {lastTallyCompletedAt && (
-                <Chip
-                  size="small"
-                  color="secondary"
-                  variant="filled"
-                  label={`Last tally: ${new Date(lastTallyCompletedAt).toLocaleString()}`}
-                  icon={<AccessTimeIcon fontSize="small" />}
-                  sx={{ bgcolor: 'rgba(0,0,0,0.25)' }}
-                />
-              )}
+              <Chip size="small" color="default" variant="filled" label={`Period: ${summary.periodStatus || '—'}`} sx={{ bgcolor: 'rgba(255,255,255,0.14)', color: 'common.white' }} />
+              <Chip size="small" color={isLive ? 'success' : 'default'} variant="filled" label={isLive ? 'Live updates' : 'Paused'} sx={{ bgcolor: isLive ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.14)', color: 'common.white' }} />
+              <Chip
+                size="small"
+                color="secondary"
+                variant="filled"
+                label={`Next update: ${nextUpdateLabel}`}
+                icon={<AccessTimeIcon fontSize="small" />}
+                sx={{ bgcolor: 'rgba(0,0,0,0.25)' }}
+              />
             </Stack>
           </Box>
 
@@ -362,7 +410,7 @@ const ElectionResultsPage: React.FC = () => {
             }}
           >
             {metricCards.slice(0, 4).map((card) => (
-              <Box key={card.label} sx={{ p: 1.5, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.12)' }}>
+              <Box key={card.label} sx={{ p: 1.5, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(6px)' }}>
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'inherit' }}>
                   {card.icon}
                   <Typography variant="body2" sx={{ opacity: 0.9 }}>{card.label}</Typography>
@@ -420,6 +468,10 @@ const ElectionResultsPage: React.FC = () => {
                 <Typography variant="body2">{serverTimeLabel}</Typography>
               </Stack>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">Next refresh</Typography>
+                <Typography variant="body2">{nextUpdateLabel}</Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Typography variant="body2" color="text.secondary">Tally status</Typography>
                 <Typography variant="body2">{tallyStatus?.status || 'Not started'}</Typography>
               </Stack>
@@ -441,44 +493,53 @@ const ElectionResultsPage: React.FC = () => {
         <Paper sx={{ p: 2, display: 'grid', gap: 1.5 }}>
           <Stack direction="row" spacing={1} alignItems="center">
             <MilitaryTechIcon fontSize="small" />
-            <Typography variant="h6">Highlights</Typography>
+            <Typography variant="h6">Live position activity</Typography>
           </Stack>
-          {topPositions.length === 0 ? (
-            <EmptyState title="No positions yet" description="Position results will appear once available." />
+          {livePositions.length === 0 ? (
+            <EmptyState title="No positions yet" description="Position progress will appear once votes are cast." />
           ) : (
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Position</TableCell>
-                    <TableCell>Leader</TableCell>
-                    <TableCell align="right">Votes</TableCell>
-                    <TableCell align="right">Vote %</TableCell>
-                    <TableCell>Status</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {topPositions.map((pos) => {
-                    const leader = pos.rankedCandidates[0]
-                    return (
-                      <TableRow key={pos.positionId} hover>
-                        <TableCell>{pos.positionName}</TableCell>
-                        <TableCell>{leader?.fullName || '—'}</TableCell>
-                        <TableCell align="right">{leader?.voteCount ?? 0}</TableCell>
-                        <TableCell align="right">{typeof leader?.voteSharePercent === 'number' ? `${leader.voteSharePercent.toFixed(2)}%` : '—'}</TableCell>
-                        <TableCell>
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            {pos.hasTie && <Chip size="small" color="warning" label="Tie" />}
-                            {pos.hasZeroVotes && <Chip size="small" color="error" label="Zero votes" />}
-                            {!pos.hasTie && !pos.hasZeroVotes && <Chip size="small" color="success" label="Leading" />}
-                          </Stack>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1,
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+              }}
+            >
+              {livePositions.map((pos) => {
+                const ballots = pos.totalBallotsForPosition ?? 0
+                const totalBallots = summary.totalBallotsCast ?? 0
+                const percent = totalBallots > 0 ? Math.min(100, (ballots / totalBallots) * 100) : 0
+                return (
+                  <Paper
+                    key={pos.positionId}
+                    variant="outlined"
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      borderColor: alpha('#5b21b6', 0.15),
+                      background: 'linear-gradient(135deg, rgba(91, 33, 182, 0.04), rgba(59, 130, 246, 0.04))',
+                    }}
+                  >
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{pos.positionName}</Typography>
+                      <Chip size="small" label={`${ballots} votes`} />
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      Turnout vs ballots cast
+                    </Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={percent}
+                      sx={{ height: 8, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.06)' }}
+                    />
+                    <Stack direction="row" spacing={1} sx={{ mt: 0.75 }}>
+                      <Chip size="small" variant="outlined" label={pos.scope || '—'} />
+                      <Chip size="small" variant="outlined" label={`Seats: ${pos.seats ?? '—'}`} />
+                    </Stack>
+                  </Paper>
+                )
+              })}
+            </Box>
           )}
         </Paper>
       </Box>
@@ -491,47 +552,53 @@ const ElectionResultsPage: React.FC = () => {
     if (positions.length === 0) return <EmptyState title="No position results" description="No results were returned for this voting period." />
 
     return (
-      <Box sx={{ display: 'grid', gap: 2 }}>
-        {positions.map((pos) => (
-          <Paper key={pos.positionId} sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', mb: 1 }}>
-              <Typography variant="h6">{pos.positionName}</Typography>
-              <Chip size="small" label={pos.scope || '—'} />
-              <Chip size="small" label={`Seats: ${pos.seats ?? '—'}`} />
-              {pos.hasTie && <Chip size="small" color="warning" label="Tie detected" />}
-              {pos.hasZeroVotes && <Chip size="small" color="error" label="Zero votes" />}
-            </Box>
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Rank</TableCell>
-                    <TableCell>Candidate</TableCell>
-                    <TableCell align="right">Votes</TableCell>
-                    <TableCell align="right">Vote %</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {pos.rankedCandidates.map((c) => (
-                    <TableRow key={`${pos.positionId}-${c.candidateId || c.personId || c.rank}`} hover>
-                      <TableCell>{c.rank}</TableCell>
-                      <TableCell>{c.fullName}</TableCell>
-                      <TableCell align="right">{c.voteCount ?? 0}</TableCell>
-                      <TableCell align="right">
-                        {typeof c.voteSharePercent === 'number' ? `${c.voteSharePercent.toFixed(2)}%` : '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        ))}
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 1.5,
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+        }}
+      >
+        {positions.map((pos) => {
+          const ballots = pos.totalBallotsForPosition ?? 0
+            const totalBallots = summary?.totalBallotsCast ?? 0
+            const percent = totalBallots > 0 ? Math.min(100, (ballots / totalBallots) * 100) : 0
+          return (
+            <Paper
+              key={pos.positionId}
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'grey.100',
+                boxShadow: '0 12px 30px rgba(0,0,0,0.06)',
+              }}
+            >
+              <Stack spacing={1}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{pos.positionName}</Typography>
+                  <Chip size="small" label={`${ballots} votes`} />
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  Position turnout compared to total ballots cast
+                </Typography>
+                <LinearProgress variant="determinate" value={percent} sx={{ height: 8, borderRadius: 99 }} />
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  <Chip size="small" variant="outlined" label={pos.scope || '—'} />
+                  <Chip size="small" variant="outlined" label={`Seats: ${pos.seats ?? '—'}`} />
+                  {pos.hasTie && <Chip size="small" color="warning" label="Tie detected" />}
+                  {pos.hasZeroVotes && <Chip size="small" color="error" label="Zero votes" />}
+                </Stack>
+              </Stack>
+            </Paper>
+          )
+        })}
       </Box>
     )
   }
 
   const renderCandidateBreakdown = () => {
+    if (!isAdmin) return <EmptyState title="Restricted" description="Candidate-level results are hidden during live tally." />
     if (!selectedPeriodId) return <EmptyState title="Select a voting period" description="Choose a closed voting period to view results." />
     if (positionsLoading) return <LoadingState variant="row" />
     if (filteredCandidates.length === 0) return <EmptyState title="No candidates" description="No candidates match your filters." />
@@ -690,7 +757,7 @@ const ElectionResultsPage: React.FC = () => {
   const tabs = [
     { label: 'Dashboard', render: renderSummary },
     { label: 'Position Results', render: renderPositionResults },
-    { label: 'Candidate Breakdown', render: renderCandidateBreakdown },
+    ...(isAdmin ? [{ label: 'Candidate Breakdown', render: renderCandidateBreakdown }] : []),
     ...(isAdmin ? [{ label: 'Tally & Certification', render: renderTally }] : []),
     ...(isAdmin ? [{ label: 'Leadership Update Preview', render: renderLeadershipPreview }] : []),
   ]
