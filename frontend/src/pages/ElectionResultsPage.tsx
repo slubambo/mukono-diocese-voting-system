@@ -7,7 +7,6 @@ import {
   HowToVote as HowToVoteIcon,
   EventAvailable as EventAvailableIcon,
   Insights as InsightsIcon,
-  TrendingUp as TrendingUpIcon,
   MilitaryTech as MilitaryTechIcon,
   Refresh,
   SupervisorAccount as SupervisorAccountIcon,
@@ -320,10 +319,6 @@ const ElectionResultsPage: React.FC = () => {
       return <EmptyState title="No results yet" description="Results are not available for this voting period." />
     }
 
-    const avgSelectionsPerBallot = (summary.totalBallotsCast ?? 0) > 0
-      ? (summary.totalSelectionsCast ?? 0) / (summary.totalBallotsCast ?? 1)
-      : null
-
     const tieCount = positions.filter((p) => p.hasTie).length
     const zeroVotePositions = positions.filter((p) => p.hasZeroVotes).length
     const livePositions = [...positions].sort((a, b) => (b.totalBallotsForPosition ?? 0) - (a.totalBallotsForPosition ?? 0)).slice(0, 6)
@@ -331,96 +326,74 @@ const ElectionResultsPage: React.FC = () => {
     const serverTimeLabel = summary.serverTime ? new Date(summary.serverTime).toLocaleString() : '—'
     const nextUpdateLabel = refreshCountdown !== null ? `${Math.floor(refreshCountdown / 60000)}:${String(Math.floor((refreshCountdown % 60000) / 1000)).padStart(2, '0')}` : 'Paused'
     const isLive = (summary.periodStatus || '').toUpperCase().includes('OPEN')
+    const formatNumber = (value?: number | null) => (value === null || value === undefined ? '—' : value.toLocaleString())
+    const periodWindowLabel = summary.periodStartTime || summary.periodEndTime
+      ? `${summary.periodStartTime ? new Date(summary.periodStartTime).toLocaleString() : '—'} → ${summary.periodEndTime ? new Date(summary.periodEndTime).toLocaleString() : '—'}`
+      : '—'
 
-    const metricCards = [
+    const headlineCards = [
       {
-        label: 'Votes cast',
-        value: summary.totalBallotsCast,
+        label: 'Ballots cast',
+        value: formatNumber(summary.totalBallotsCast),
         icon: <HowToVoteIcon fontSize="small" />,
-        available: summary.totalBallotsCast !== undefined && summary.totalBallotsCast !== null,
       },
       {
         label: 'Distinct voters',
-        value: summary.totalDistinctVoters,
+        value: formatNumber(summary.totalDistinctVoters),
         icon: <SupervisorAccountIcon fontSize="small" />,
-        available: summary.totalDistinctVoters !== undefined && summary.totalDistinctVoters !== null,
       },
       {
         label: 'Selections cast',
-        value: summary.totalSelectionsCast,
+        value: formatNumber(summary.totalSelectionsCast),
         icon: <InsightsIcon fontSize="small" />,
-        available: summary.totalSelectionsCast !== undefined && summary.totalSelectionsCast !== null,
       },
       {
         label: 'Positions',
-        value: summary.totalPositions,
+        value: formatNumber(summary.totalPositions),
         icon: <EventAvailableIcon fontSize="small" />,
-        available: summary.totalPositions !== undefined && summary.totalPositions !== null,
       },
-      {
-        label: 'Avg selections / ballot',
-        value: avgSelectionsPerBallot !== null ? avgSelectionsPerBallot.toFixed(2) : null,
-        icon: <TrendingUpIcon fontSize="small" />,
-        available: avgSelectionsPerBallot !== null,
-      },
-      {
-        label: 'Ties detected',
-        value: tieCount,
-        icon: <MilitaryTechIcon fontSize="small" />,
-        available: positions.length > 0,
-      },
-      {
-        label: 'Zero-vote positions',
-        value: zeroVotePositions,
-        icon: <AccessTimeIcon fontSize="small" />,
-        available: positions.length > 0,
-      },
-      {
-        label: 'Period status',
-        value: summary.periodStatus || election?.status || null,
-        icon: <EventAvailableIcon fontSize="small" />,
-        available: Boolean(summary.periodStatus || election?.status),
-      },
-    ].filter((card) => card.available)
+    ]
 
     return (
       <Box sx={{ display: 'grid', gap: 2 }}>
         <Paper
           sx={{
-            p: { xs: 2.5, md: 3 },
+            p: { xs: 2.5, md: 3.5 },
             position: 'relative',
             overflow: 'hidden',
-            background: theme => `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.9)} 0%, ${alpha(theme.palette.secondary?.main || theme.palette.primary.light, 0.9)} 100%)`,
+            background: theme => `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.95)} 0%, ${alpha(theme.palette.primary.main, 0.85)} 45%, ${alpha(theme.palette.secondary?.main || theme.palette.primary.light, 0.85)} 100%)`,
             color: 'common.white',
             borderRadius: 3,
-            boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+            boxShadow: '0 24px 70px rgba(12, 9, 30, 0.28)',
           }}
         >
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Box sx={{ display: 'grid', gap: 0.5 }}>
-              <Typography variant="overline" sx={{ letterSpacing: 1 }}>Live tally dashboard</Typography>
-              <Typography variant="h4" sx={{ fontWeight: 800 }}>{election.name || 'Election results'}</Typography>
-              <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                {summary.totalPositions ?? 0} positions · {summary.totalBallotsCast ?? 0} ballots · {summary.totalDistinctVoters ?? 0} voters
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'grid', gap: 0.75, minWidth: { xs: '100%', md: 420 } }}>
+              <Typography variant="overline" sx={{ letterSpacing: 1.2, opacity: 0.9 }}>Live tally display</Typography>
+              <Typography variant="h3" sx={{ fontWeight: 800 }}>{election.name || 'Election results'}</Typography>
+              <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
+                {summary.votingPeriodName ? `${summary.votingPeriodName} · ` : ''}{summary.periodStatus || 'Status —'}
               </Typography>
-              {summary.serverTime && (
-                <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                  Updated at {new Date(summary.serverTime).toLocaleString()}
-                </Typography>
-              )}
+              <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                Voting window: {periodWindowLabel}
+              </Typography>
+              <Typography variant="caption" sx={{ opacity: 0.75 }}>
+                Server time: {serverTimeLabel}
+              </Typography>
             </Box>
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', md: 'center' }} sx={{ flexWrap: 'wrap' }}>
-              <StatusChip status={(election.status || 'pending') as any} />
-              <Chip size="small" color="default" variant="filled" label={`Period: ${summary.periodStatus || '—'}`} sx={{ bgcolor: 'rgba(255,255,255,0.14)', color: 'common.white' }} />
-              <Chip size="small" color={isLive ? 'success' : 'default'} variant="filled" label={isLive ? 'Live updates' : 'Paused'} sx={{ bgcolor: isLive ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.14)', color: 'common.white' }} />
-              <Chip
-                size="small"
-                color="secondary"
-                variant="filled"
-                label={`Next update: ${nextUpdateLabel}`}
-                icon={<AccessTimeIcon fontSize="small" />}
-                sx={{ bgcolor: 'rgba(0,0,0,0.25)' }}
-              />
+            <Stack direction={{ xs: 'row', md: 'column' }} spacing={1} alignItems={{ xs: 'center', md: 'flex-end' }} sx={{ flexWrap: 'wrap' }}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+                <StatusChip status={(election.status || 'pending') as any} />
+                <Chip size="small" color="default" variant="filled" label={isLive ? 'Live updates' : 'Paused'} sx={{ bgcolor: isLive ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.14)', color: 'common.white' }} />
+                <Chip
+                  size="small"
+                  color="secondary"
+                  variant="filled"
+                  label={`Next update: ${nextUpdateLabel}`}
+                  icon={<AccessTimeIcon fontSize="small" />}
+                  sx={{ bgcolor: 'rgba(0,0,0,0.25)' }}
+                />
+              </Stack>
               <Button
                 variant="outlined"
                 color="inherit"
@@ -432,7 +405,6 @@ const ElectionResultsPage: React.FC = () => {
               </Button>
             </Stack>
           </Box>
-
           <Box
             sx={{
               mt: 3,
@@ -441,13 +413,22 @@ const ElectionResultsPage: React.FC = () => {
               gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
             }}
           >
-            {metricCards.slice(0, 4).map((card) => (
-              <Box key={card.label} sx={{ p: 1.5, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(6px)' }}>
+            {headlineCards.map((card) => (
+              <Box
+                key={card.label}
+                sx={{
+                  p: 2,
+                  borderRadius: 2.5,
+                  bgcolor: 'rgba(255,255,255,0.14)',
+                  backdropFilter: 'blur(6px)',
+                  border: '1px solid rgba(255,255,255,0.16)',
+                }}
+              >
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'inherit' }}>
                   {card.icon}
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>{card.label}</Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.85 }}>{card.label}</Typography>
                 </Stack>
-                <Typography variant="h5" sx={{ fontWeight: 700 }}>{card.value}</Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, mt: 0.5 }}>{card.value}</Typography>
               </Box>
             ))}
           </Box>
@@ -461,55 +442,19 @@ const ElectionResultsPage: React.FC = () => {
             alignItems: 'stretch',
           }}
         >
-          <Paper sx={{ p: 2, display: 'grid', gap: 1.5 }}>
+          <Paper sx={{ p: 2.5, display: 'grid', gap: 1.75 }}>
             <Stack direction="row" spacing={1} alignItems="center">
               <InsightsIcon fontSize="small" />
-              <Typography variant="h6">Key metrics</Typography>
+              <Typography variant="h6">Integrity & tally</Typography>
             </Stack>
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 1,
-                gridTemplateColumns: { xs: 'repeat(1, minmax(0, 1fr))', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
-              }}
-            >
-              {metricCards.map((card) => (
-                <Paper key={card.label} elevation={0} sx={{ p: 1.5, bgcolor: 'grey.50', borderRadius: 2, border: '1px solid', borderColor: 'grey.100' }}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    {card.icon}
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>{card.label}</Typography>
-                  </Stack>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{card.value}</Typography>
-                </Paper>
-              ))}
-            </Box>
-          </Paper>
-
-          <Paper sx={{ p: 2, display: 'grid', gap: 1.25 }}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <AccessTimeIcon fontSize="small" />
-              <Typography variant="h6">Period health</Typography>
-            </Stack>
-            <Box sx={{ display: 'grid', gap: 1 }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="body2" color="text.secondary">Voting period</Typography>
-                <Chip size="small" label={summary.periodStatus || '—'} color="primary" variant="outlined" />
-              </Stack>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="body2" color="text.secondary">Server time</Typography>
-                <Typography variant="body2">{serverTimeLabel}</Typography>
-              </Stack>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="body2" color="text.secondary">Next refresh</Typography>
-                <Typography variant="body2">{nextUpdateLabel}</Typography>
-              </Stack>
+            <Box sx={{ display: 'grid', gap: 1.5 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Typography variant="body2" color="text.secondary">Tally status</Typography>
-                <Typography variant="body2">{tallyStatus?.status || 'Not started'}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{tallyStatus?.status || 'Not started'}</Typography>
               </Stack>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Typography variant="body2" color="text.secondary">Positions certified</Typography>
-                <Typography variant="body2">{tallyStatus?.totalPositionsCertified ?? 0}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{formatNumber(tallyStatus?.totalPositionsCertified ?? 0)}</Typography>
               </Stack>
               <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>Tally completion</Typography>
@@ -523,11 +468,58 @@ const ElectionResultsPage: React.FC = () => {
                   }}
                 />
               </Box>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gap: 1,
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+                }}
+              >
+                <Paper elevation={0} sx={{ p: 1.25, borderRadius: 2, bgcolor: 'grey.50', border: '1px solid', borderColor: 'grey.100' }}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <MilitaryTechIcon fontSize="small" />
+                    <Typography variant="body2" color="text.secondary">Ties detected</Typography>
+                  </Stack>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatNumber(tieCount)}</Typography>
+                </Paper>
+                <Paper elevation={0} sx={{ p: 1.25, borderRadius: 2, bgcolor: 'grey.50', border: '1px solid', borderColor: 'grey.100' }}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <AccessTimeIcon fontSize="small" />
+                    <Typography variant="body2" color="text.secondary">Zero-vote positions</Typography>
+                  </Stack>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatNumber(zeroVotePositions)}</Typography>
+                </Paper>
+              </Box>
               {lastTallyCompletedAt && (
                 <Typography variant="caption" color="text.secondary">
                   Last tally run: {new Date(lastTallyCompletedAt).toLocaleString()}
                 </Typography>
               )}
+            </Box>
+          </Paper>
+
+          <Paper sx={{ p: 2.5, display: 'grid', gap: 1.5 }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <AccessTimeIcon fontSize="small" />
+              <Typography variant="h6">Period timing</Typography>
+            </Stack>
+            <Box sx={{ display: 'grid', gap: 1.25 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">Voting period</Typography>
+                <Chip size="small" label={summary.periodStatus || '—'} color="primary" variant="outlined" />
+              </Stack>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">Window</Typography>
+                <Typography variant="body2">{periodWindowLabel}</Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">Server time</Typography>
+                <Typography variant="body2">{serverTimeLabel}</Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">Next refresh</Typography>
+                <Typography variant="body2">{nextUpdateLabel}</Typography>
+              </Stack>
             </Box>
           </Paper>
         </Box>
@@ -566,9 +558,14 @@ const ElectionResultsPage: React.FC = () => {
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{pos.positionName}</Typography>
                       <Chip size="small" label={`${ballots} votes`} />
                     </Stack>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                      Turnout vs ballots cast
-                    </Typography>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Share of all ballots
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {percent.toFixed(0)}%
+                      </Typography>
+                    </Stack>
                     <LinearProgress
                       variant="determinate"
                       value={percent}
