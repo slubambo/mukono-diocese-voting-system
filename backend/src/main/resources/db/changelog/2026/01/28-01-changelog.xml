@@ -1,0 +1,1367 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.29.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+    <changeSet id="1769608484919-1" author="Simon">
+        <createTable tableName="archdeaconries">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_archdeaconries"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(255)"/>
+            <column name="diocese_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-2" author="Simon">
+        <createTable tableName="certified_candidate_results">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_certified_candidate_results"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="certified_position_result_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="candidate_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="vote_count" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="vote_share_percent" type="DOUBLE"/>
+            <column name="rank" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_winner" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-3" author="Simon">
+        <createTable tableName="certified_position_results">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_certified_position_results"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voting_period_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="position_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_ballots_for_position" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="turnout_for_position" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="computed_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="computed_by_person_id" type="BIGINT"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="VARCHAR(1000)"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-4" author="Simon">
+        <createTable tableName="churches">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_churches"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(255)"/>
+            <column name="archdeaconry_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-5" author="Simon">
+        <createTable tableName="dioceses">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_dioceses"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(255)"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-6" author="Simon">
+        <createTable tableName="election_applicants">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_election_applicants"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_position_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="person_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="submitted_by_person_id" type="BIGINT"/>
+            <column name="source" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="submitted_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="decision_at" type="DATETIME"/>
+            <column name="decision_by" type="VARCHAR(255)"/>
+            <column name="notes" type="VARCHAR(1000)"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-7" author="Simon">
+        <createTable tableName="election_candidates">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_election_candidates"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_position_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="person_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="applicant_id" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-8" author="Simon">
+        <createTable tableName="election_positions">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_election_positions"/>
+            </column>
+            <column name="election_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fellowship_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fellowship_position_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="seats" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="max_votes_per_voter" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-9" author="Simon">
+        <createTable tableName="election_tally_runs">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_election_tally_runs"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voting_period_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="started_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="completed_at" type="DATETIME"/>
+            <column name="started_by_person_id" type="BIGINT"/>
+            <column name="completed_by_person_id" type="BIGINT"/>
+            <column name="remarks" type="VARCHAR(1000)"/>
+            <column name="result_hash" type="VARCHAR(64)"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-10" author="Simon">
+        <createTable tableName="election_voter_roll">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_election_voter_roll"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voting_period_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="person_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="eligible" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reason" type="VARCHAR(1000)"/>
+            <column name="added_by" type="VARCHAR(255)"/>
+            <column name="added_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-11" author="Simon">
+        <createTable tableName="election_votes">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_election_votes"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_position_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="candidate_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voter_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cast_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source" type="VARCHAR(50)"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-12" author="Simon">
+        <createTable tableName="election_winner_assignments">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_election_winner_assignments"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voting_period_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="position_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="candidate_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="person_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="vote_count" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rank" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tally_run_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by_person_id" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-13" author="Simon">
+        <createTable tableName="elections">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_elections"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(1000)"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fellowship_id" type="BIGINT"/>
+            <column name="scope" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="diocese_id" type="BIGINT"/>
+            <column name="archdeaconry_id" type="BIGINT"/>
+            <column name="church_id" type="BIGINT"/>
+            <column name="term_start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="term_end_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nomination_start_at" type="DATETIME"/>
+            <column name="nomination_end_at" type="DATETIME"/>
+            <column name="voting_start_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voting_end_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-14" author="Simon">
+        <createTable tableName="fellowship_positions">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_fellowship_positions"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fellowship_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="scope" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="seats" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-15" author="Simon">
+        <createTable tableName="fellowships">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_fellowships"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(255)"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-16" author="Simon">
+        <createTable tableName="leadership_assignments">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_leadership_assignments"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="person_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fellowship_position_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="diocese_id" type="BIGINT"/>
+            <column name="archdeaconry_id" type="BIGINT"/>
+            <column name="church_id" type="BIGINT"/>
+            <column name="term_start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="term_end_date" type="DATE"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="VARCHAR(1000)"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-17" author="Simon">
+        <createTable tableName="people">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_people"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="full_name" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(100)"/>
+            <column name="phone_number" type="VARCHAR(20)"/>
+            <column name="gender" type="VARCHAR(10)"/>
+            <column name="date_of_birth" type="DATE"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-18" author="Simon">
+        <createTable tableName="position_titles">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_position_titles"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-19" author="Simon">
+        <createTable tableName="roles">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_roles"/>
+            </column>
+            <column name="name" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-20" author="Simon">
+        <createTable tableName="user_roles">
+            <column name="role_id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user_roles"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user_roles"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-21" author="Simon">
+        <createTable tableName="users">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_users"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(100)"/>
+            <column name="password" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="person_id" type="BIGINT"/>
+            <column name="display_name" type="VARCHAR(150)"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-22" author="Simon">
+        <createTable tableName="vote_records">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_vote_records"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voting_period_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="person_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="position_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="submitted_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="receipt_id" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-23" author="Simon">
+        <createTable tableName="vote_selections">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_vote_selections"/>
+            </column>
+            <column name="vote_record_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="candidate_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-24" author="Simon">
+        <createTable tableName="voting_codes">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_voting_codes"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voting_period_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="person_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issued_by_person_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issued_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="used_at" type="DATETIME"/>
+            <column name="revoked_at" type="DATETIME"/>
+            <column name="revoked_by_person_id" type="BIGINT"/>
+            <column name="expired_at" type="DATETIME"/>
+            <column name="remarks" type="VARCHAR(1000)"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-25" author="Simon">
+        <createTable tableName="voting_period_positions">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_voting_period_positions"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voting_period_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_position_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-26" author="Simon">
+        <createTable tableName="voting_periods">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_voting_periods"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="election_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(500)"/>
+            <column name="start_time" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_time" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1769608484919-27" author="Simon">
+        <addUniqueConstraint columnNames="code" constraintName="uc_dioceses_code" tableName="dioceses"/>
+    </changeSet>
+    <changeSet id="1769608484919-28" author="Simon">
+        <addUniqueConstraint columnNames="name" constraintName="uc_dioceses_name" tableName="dioceses"/>
+    </changeSet>
+    <changeSet id="1769608484919-29" author="Simon">
+        <addUniqueConstraint columnNames="code" constraintName="uc_fellowships_code" tableName="fellowships"/>
+    </changeSet>
+    <changeSet id="1769608484919-30" author="Simon">
+        <addUniqueConstraint columnNames="name" constraintName="uc_fellowships_name" tableName="fellowships"/>
+    </changeSet>
+    <changeSet id="1769608484919-31" author="Simon">
+        <addUniqueConstraint columnNames="email" constraintName="uc_people_email" tableName="people"/>
+    </changeSet>
+    <changeSet id="1769608484919-32" author="Simon">
+        <addUniqueConstraint columnNames="phone_number" constraintName="uc_people_phonenumber" tableName="people"/>
+    </changeSet>
+    <changeSet id="1769608484919-33" author="Simon">
+        <addUniqueConstraint columnNames="name" constraintName="uc_roles_name" tableName="roles"/>
+    </changeSet>
+    <changeSet id="1769608484919-34" author="Simon">
+        <addUniqueConstraint columnNames="email" constraintName="uc_users_email" tableName="users"/>
+    </changeSet>
+    <changeSet id="1769608484919-35" author="Simon">
+        <addUniqueConstraint columnNames="username" constraintName="uc_users_username" tableName="users"/>
+    </changeSet>
+    <changeSet id="1769608484919-36" author="Simon">
+        <addUniqueConstraint columnNames="diocese_id, name" constraintName="uk_archdeaconry_diocese_name"
+                             tableName="archdeaconries"/>
+    </changeSet>
+    <changeSet id="1769608484919-37" author="Simon">
+        <addUniqueConstraint columnNames="certified_position_result_id, candidate_id"
+                             constraintName="uk_certified_candidate_result" tableName="certified_candidate_results"/>
+    </changeSet>
+    <changeSet id="1769608484919-38" author="Simon">
+        <addUniqueConstraint columnNames="election_id, voting_period_id, position_id"
+                             constraintName="uk_certified_position_result" tableName="certified_position_results"/>
+    </changeSet>
+    <changeSet id="1769608484919-39" author="Simon">
+        <addUniqueConstraint columnNames="archdeaconry_id, name" constraintName="uk_church_archdeaconry_name"
+                             tableName="churches"/>
+    </changeSet>
+    <changeSet id="1769608484919-40" author="Simon">
+        <addUniqueConstraint columnNames="election_id, election_position_id, person_id"
+                             constraintName="uk_election_applicant_unique" tableName="election_applicants"/>
+    </changeSet>
+    <changeSet id="1769608484919-41" author="Simon">
+        <addUniqueConstraint columnNames="election_id, election_position_id, person_id"
+                             constraintName="uk_election_candidate_unique" tableName="election_candidates"/>
+    </changeSet>
+    <changeSet id="1769608484919-42" author="Simon">
+        <addUniqueConstraint columnNames="election_id, fellowship_id, fellowship_position_id"
+                             constraintName="uk_election_fellowship_position" tableName="election_positions"/>
+    </changeSet>
+    <changeSet id="1769608484919-43" author="Simon">
+        <addUniqueConstraint columnNames="election_id, election_position_id, voter_id"
+                             constraintName="uk_election_vote_one_per_position" tableName="election_votes"/>
+    </changeSet>
+    <changeSet id="1769608484919-44" author="Simon">
+        <addUniqueConstraint columnNames="election_id, voting_period_id, person_id"
+                             constraintName="uk_election_voter_roll_unique" tableName="election_voter_roll"/>
+    </changeSet>
+    <changeSet id="1769608484919-45" author="Simon">
+        <addUniqueConstraint columnNames="fellowship_id, scope, title_id" constraintName="uk_fellowship_position"
+                             tableName="fellowship_positions"/>
+    </changeSet>
+    <changeSet id="1769608484919-46" author="Simon">
+        <addUniqueConstraint columnNames="name" constraintName="uk_position_title_name" tableName="position_titles"/>
+    </changeSet>
+    <changeSet id="1769608484919-47" author="Simon">
+        <addUniqueConstraint columnNames="election_id, voting_period_id" constraintName="uk_tally_run_election_period"
+                             tableName="election_tally_runs"/>
+    </changeSet>
+    <changeSet id="1769608484919-48" author="Simon">
+        <addUniqueConstraint columnNames="election_id, voting_period_id, person_id, position_id"
+                             constraintName="uk_vote_record_unique" tableName="vote_records"/>
+    </changeSet>
+    <changeSet id="1769608484919-49" author="Simon">
+        <addUniqueConstraint columnNames="vote_record_id, candidate_id" constraintName="uk_vote_selection_unique"
+                             tableName="vote_selections"/>
+    </changeSet>
+    <changeSet id="1769608484919-50" author="Simon">
+        <addUniqueConstraint columnNames="code" constraintName="uk_voting_code" tableName="voting_codes"/>
+    </changeSet>
+    <changeSet id="1769608484919-51" author="Simon">
+        <addUniqueConstraint columnNames="voting_period_id, election_position_id"
+                             constraintName="uk_voting_period_position" tableName="voting_period_positions"/>
+    </changeSet>
+    <changeSet id="1769608484919-52" author="Simon">
+        <addUniqueConstraint columnNames="election_id, voting_period_id, position_id, person_id"
+                             constraintName="uk_winner_assignment" tableName="election_winner_assignments"/>
+    </changeSet>
+    <changeSet id="1769608484919-55" author="Simon">
+        <createIndex indexName="idx_certified_cand_winner" tableName="certified_candidate_results">
+            <column name="is_winner"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-62" author="Simon">
+        <createIndex indexName="idx_election_applicants_source" tableName="election_applicants">
+            <column name="source"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-63" author="Simon">
+        <createIndex indexName="idx_election_applicants_status" tableName="election_applicants">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-72" author="Simon">
+        <createIndex indexName="idx_election_votes_election_position" tableName="election_votes">
+            <column name="election_id"/>
+            <column name="election_position_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-73" author="Simon">
+        <createIndex indexName="idx_election_votes_election_voter" tableName="election_votes">
+            <column name="election_id"/>
+            <column name="voter_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-80" author="Simon">
+        <createIndex indexName="idx_elections_scope" tableName="elections">
+            <column name="scope"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-81" author="Simon">
+        <createIndex indexName="idx_elections_status" tableName="elections">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-87" author="Simon">
+        <createIndex indexName="idx_leadership_status" tableName="leadership_assignments">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-90" author="Simon">
+        <createIndex indexName="idx_tally_run_status" tableName="election_tally_runs">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-98" author="Simon">
+        <createIndex indexName="idx_voter_roll_election_period_eligible" tableName="election_voter_roll">
+            <column name="election_id"/>
+            <column name="voting_period_id"/>
+            <column name="eligible"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-99" author="Simon">
+        <createIndex indexName="idx_voter_roll_eligible" tableName="election_voter_roll">
+            <column name="eligible"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-102" author="Simon">
+        <createIndex indexName="idx_voting_code_code" tableName="voting_codes">
+            <column name="code"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-106" author="Simon">
+        <createIndex indexName="idx_voting_code_status" tableName="voting_codes">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-108" author="Simon">
+        <createIndex indexName="idx_voting_period_end" tableName="voting_periods">
+            <column name="end_time"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-109" author="Simon">
+        <createIndex indexName="idx_voting_period_start" tableName="voting_periods">
+            <column name="start_time"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-110" author="Simon">
+        <createIndex indexName="idx_voting_period_status" tableName="voting_periods">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-111" author="Simon">
+        <createIndex indexName="idx_vpp_election" tableName="voting_period_positions">
+            <column name="election_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-116" author="Simon">
+        <createIndex indexName="idx_winner_person" tableName="election_winner_assignments">
+            <column name="person_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-119" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="diocese_id" baseTableName="archdeaconries"
+                                 constraintName="FK_ARCHDEACONRIES_ON_DIOCESE" referencedColumnNames="id"
+                                 referencedTableName="dioceses"/>
+    </changeSet>
+    <changeSet id="1769608484919-120" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="candidate_id" baseTableName="certified_candidate_results"
+                                 constraintName="FK_CERTIFIED_CANDIDATE_RESULTS_ON_CANDIDATE" referencedColumnNames="id"
+                                 referencedTableName="election_candidates"/>
+
+        <createIndex indexName="idx_certified_cand_candidate" tableName="certified_candidate_results">
+            <column name="candidate_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-121" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="certified_position_result_id"
+                                 baseTableName="certified_candidate_results"
+                                 constraintName="FK_CERTIFIED_CANDIDATE_RESULTS_ON_CERTIFIED_POSITION_RESULT"
+                                 referencedColumnNames="id" referencedTableName="certified_position_results"/>
+
+        <createIndex indexName="idx_certified_cand_position" tableName="certified_candidate_results">
+            <column name="certified_position_result_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-122" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_id" baseTableName="certified_position_results"
+                                 constraintName="FK_CERTIFIED_POSITION_RESULTS_ON_ELECTION" referencedColumnNames="id"
+                                 referencedTableName="elections"/>
+
+        <createIndex indexName="idx_certified_pos_election" tableName="certified_position_results">
+            <column name="election_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-123" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="position_id" baseTableName="certified_position_results"
+                                 constraintName="FK_CERTIFIED_POSITION_RESULTS_ON_POSITION" referencedColumnNames="id"
+                                 referencedTableName="election_positions"/>
+
+        <createIndex indexName="idx_certified_pos_position" tableName="certified_position_results">
+            <column name="position_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-124" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="voting_period_id" baseTableName="certified_position_results"
+                                 constraintName="FK_CERTIFIED_POSITION_RESULTS_ON_VOTING_PERIOD"
+                                 referencedColumnNames="id" referencedTableName="voting_periods"/>
+
+        <createIndex indexName="idx_certified_pos_period" tableName="certified_position_results">
+            <column name="voting_period_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-125" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="archdeaconry_id" baseTableName="churches"
+                                 constraintName="FK_CHURCHES_ON_ARCHDEACONRY" referencedColumnNames="id"
+                                 referencedTableName="archdeaconries"/>
+    </changeSet>
+    <changeSet id="1769608484919-126" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="archdeaconry_id" baseTableName="elections"
+                                 constraintName="FK_ELECTIONS_ON_ARCHDEACONRY" referencedColumnNames="id"
+                                 referencedTableName="archdeaconries"/>
+
+        <createIndex indexName="idx_elections_archdeaconry" tableName="elections">
+            <column name="archdeaconry_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-127" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="church_id" baseTableName="elections"
+                                 constraintName="FK_ELECTIONS_ON_CHURCH" referencedColumnNames="id"
+                                 referencedTableName="churches"/>
+
+        <createIndex indexName="idx_elections_church" tableName="elections">
+            <column name="church_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-128" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="diocese_id" baseTableName="elections"
+                                 constraintName="FK_ELECTIONS_ON_DIOCESE" referencedColumnNames="id"
+                                 referencedTableName="dioceses"/>
+
+        <createIndex indexName="idx_elections_diocese" tableName="elections">
+            <column name="diocese_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-129" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="fellowship_id" baseTableName="elections"
+                                 constraintName="FK_ELECTIONS_ON_FELLOWSHIP" referencedColumnNames="id"
+                                 referencedTableName="fellowships"/>
+
+        <createIndex indexName="idx_elections_fellowship" tableName="elections">
+            <column name="fellowship_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-130" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_id" baseTableName="election_applicants"
+                                 constraintName="FK_ELECTION_APPLICANTS_ON_ELECTION" referencedColumnNames="id"
+                                 referencedTableName="elections"/>
+
+        <createIndex indexName="idx_election_applicants_election" tableName="election_applicants">
+            <column name="election_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-131" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_position_id" baseTableName="election_applicants"
+                                 constraintName="FK_ELECTION_APPLICANTS_ON_ELECTION_POSITION" referencedColumnNames="id"
+                                 referencedTableName="election_positions"/>
+
+        <createIndex indexName="idx_election_applicants_election_position" tableName="election_applicants">
+            <column name="election_position_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-132" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="person_id" baseTableName="election_applicants"
+                                 constraintName="FK_ELECTION_APPLICANTS_ON_PERSON" referencedColumnNames="id"
+                                 referencedTableName="people"/>
+
+        <createIndex indexName="idx_election_applicants_person" tableName="election_applicants">
+            <column name="person_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-133" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="submitted_by_person_id" baseTableName="election_applicants"
+                                 constraintName="FK_ELECTION_APPLICANTS_ON_SUBMITTED_BY_PERSON"
+                                 referencedColumnNames="id" referencedTableName="people"/>
+    </changeSet>
+    <changeSet id="1769608484919-134" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="applicant_id" baseTableName="election_candidates"
+                                 constraintName="FK_ELECTION_CANDIDATES_ON_APPLICANT" referencedColumnNames="id"
+                                 referencedTableName="election_applicants"/>
+    </changeSet>
+    <changeSet id="1769608484919-135" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_id" baseTableName="election_candidates"
+                                 constraintName="FK_ELECTION_CANDIDATES_ON_ELECTION" referencedColumnNames="id"
+                                 referencedTableName="elections"/>
+
+        <createIndex indexName="idx_election_candidates_election" tableName="election_candidates">
+            <column name="election_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-136" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_position_id" baseTableName="election_candidates"
+                                 constraintName="FK_ELECTION_CANDIDATES_ON_ELECTION_POSITION" referencedColumnNames="id"
+                                 referencedTableName="election_positions"/>
+
+        <createIndex indexName="idx_election_candidates_election_position" tableName="election_candidates">
+            <column name="election_position_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-137" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="person_id" baseTableName="election_candidates"
+                                 constraintName="FK_ELECTION_CANDIDATES_ON_PERSON" referencedColumnNames="id"
+                                 referencedTableName="people"/>
+
+        <createIndex indexName="idx_election_candidates_person" tableName="election_candidates">
+            <column name="person_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-138" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_id" baseTableName="election_positions"
+                                 constraintName="FK_ELECTION_POSITIONS_ON_ELECTION" referencedColumnNames="id"
+                                 referencedTableName="elections"/>
+
+        <createIndex indexName="idx_election_positions_election" tableName="election_positions">
+            <column name="election_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-139" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="fellowship_id" baseTableName="election_positions"
+                                 constraintName="FK_ELECTION_POSITIONS_ON_FELLOWSHIP" referencedColumnNames="id"
+                                 referencedTableName="fellowships"/>
+
+        <createIndex indexName="idx_election_positions_fellowship" tableName="election_positions">
+            <column name="fellowship_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-140" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="fellowship_position_id" baseTableName="election_positions"
+                                 constraintName="FK_ELECTION_POSITIONS_ON_FELLOWSHIP_POSITION"
+                                 referencedColumnNames="id" referencedTableName="fellowship_positions"/>
+
+        <createIndex indexName="idx_election_positions_fellowship_position" tableName="election_positions">
+            <column name="fellowship_position_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-141" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_id" baseTableName="election_tally_runs"
+                                 constraintName="FK_ELECTION_TALLY_RUNS_ON_ELECTION" referencedColumnNames="id"
+                                 referencedTableName="elections"/>
+
+        <createIndex indexName="idx_tally_run_election" tableName="election_tally_runs">
+            <column name="election_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-142" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="voting_period_id" baseTableName="election_tally_runs"
+                                 constraintName="FK_ELECTION_TALLY_RUNS_ON_VOTING_PERIOD" referencedColumnNames="id"
+                                 referencedTableName="voting_periods"/>
+
+        <createIndex indexName="idx_tally_run_period" tableName="election_tally_runs">
+            <column name="voting_period_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-143" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_id" baseTableName="election_voter_roll"
+                                 constraintName="FK_ELECTION_VOTER_ROLL_ON_ELECTION" referencedColumnNames="id"
+                                 referencedTableName="elections"/>
+
+        <createIndex indexName="idx_voter_roll_election" tableName="election_voter_roll">
+            <column name="election_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-144" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="person_id" baseTableName="election_voter_roll"
+                                 constraintName="FK_ELECTION_VOTER_ROLL_ON_PERSON" referencedColumnNames="id"
+                                 referencedTableName="people"/>
+
+        <createIndex indexName="idx_voter_roll_person" tableName="election_voter_roll">
+            <column name="person_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-145" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="voting_period_id" baseTableName="election_voter_roll"
+                                 constraintName="FK_ELECTION_VOTER_ROLL_ON_VOTING_PERIOD" referencedColumnNames="id"
+                                 referencedTableName="voting_periods"/>
+
+        <createIndex indexName="idx_voter_roll_voting_period" tableName="election_voter_roll">
+            <column name="voting_period_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-146" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="candidate_id" baseTableName="election_votes"
+                                 constraintName="FK_ELECTION_VOTES_ON_CANDIDATE" referencedColumnNames="id"
+                                 referencedTableName="election_candidates"/>
+
+        <createIndex indexName="idx_election_votes_candidate" tableName="election_votes">
+            <column name="candidate_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-147" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_id" baseTableName="election_votes"
+                                 constraintName="FK_ELECTION_VOTES_ON_ELECTION" referencedColumnNames="id"
+                                 referencedTableName="elections"/>
+
+        <createIndex indexName="idx_election_votes_election" tableName="election_votes">
+            <column name="election_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-148" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_position_id" baseTableName="election_votes"
+                                 constraintName="FK_ELECTION_VOTES_ON_ELECTION_POSITION" referencedColumnNames="id"
+                                 referencedTableName="election_positions"/>
+
+        <createIndex indexName="idx_election_votes_position" tableName="election_votes">
+            <column name="election_position_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-149" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="voter_id" baseTableName="election_votes"
+                                 constraintName="FK_ELECTION_VOTES_ON_VOTER" referencedColumnNames="id"
+                                 referencedTableName="people"/>
+
+        <createIndex indexName="idx_election_votes_voter" tableName="election_votes">
+            <column name="voter_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-150" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="candidate_id" baseTableName="election_winner_assignments"
+                                 constraintName="FK_ELECTION_WINNER_ASSIGNMENTS_ON_CANDIDATE" referencedColumnNames="id"
+                                 referencedTableName="election_candidates"/>
+    </changeSet>
+    <changeSet id="1769608484919-151" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_id" baseTableName="election_winner_assignments"
+                                 constraintName="FK_ELECTION_WINNER_ASSIGNMENTS_ON_ELECTION" referencedColumnNames="id"
+                                 referencedTableName="elections"/>
+
+        <createIndex indexName="idx_winner_election" tableName="election_winner_assignments">
+            <column name="election_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-152" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="position_id" baseTableName="election_winner_assignments"
+                                 constraintName="FK_ELECTION_WINNER_ASSIGNMENTS_ON_POSITION" referencedColumnNames="id"
+                                 referencedTableName="election_positions"/>
+
+        <createIndex indexName="idx_winner_position" tableName="election_winner_assignments">
+            <column name="position_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-153" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="tally_run_id" baseTableName="election_winner_assignments"
+                                 constraintName="FK_ELECTION_WINNER_ASSIGNMENTS_ON_TALLY_RUN" referencedColumnNames="id"
+                                 referencedTableName="election_tally_runs"/>
+
+        <createIndex indexName="idx_winner_tally" tableName="election_winner_assignments">
+            <column name="tally_run_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-154" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="voting_period_id" baseTableName="election_winner_assignments"
+                                 constraintName="FK_ELECTION_WINNER_ASSIGNMENTS_ON_VOTING_PERIOD"
+                                 referencedColumnNames="id" referencedTableName="voting_periods"/>
+
+        <createIndex indexName="idx_winner_period" tableName="election_winner_assignments">
+            <column name="voting_period_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-155" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="fellowship_id" baseTableName="fellowship_positions"
+                                 constraintName="FK_FELLOWSHIP_POSITIONS_ON_FELLOWSHIP" referencedColumnNames="id"
+                                 referencedTableName="fellowships"/>
+    </changeSet>
+    <changeSet id="1769608484919-156" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="title_id" baseTableName="fellowship_positions"
+                                 constraintName="FK_FELLOWSHIP_POSITIONS_ON_TITLE" referencedColumnNames="id"
+                                 referencedTableName="position_titles"/>
+    </changeSet>
+    <changeSet id="1769608484919-157" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="archdeaconry_id" baseTableName="leadership_assignments"
+                                 constraintName="FK_LEADERSHIP_ASSIGNMENTS_ON_ARCHDEACONRY" referencedColumnNames="id"
+                                 referencedTableName="archdeaconries"/>
+
+        <createIndex indexName="idx_leadership_archdeaconry" tableName="leadership_assignments">
+            <column name="archdeaconry_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-158" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="church_id" baseTableName="leadership_assignments"
+                                 constraintName="FK_LEADERSHIP_ASSIGNMENTS_ON_CHURCH" referencedColumnNames="id"
+                                 referencedTableName="churches"/>
+
+        <createIndex indexName="idx_leadership_church" tableName="leadership_assignments">
+            <column name="church_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-159" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="diocese_id" baseTableName="leadership_assignments"
+                                 constraintName="FK_LEADERSHIP_ASSIGNMENTS_ON_DIOCESE" referencedColumnNames="id"
+                                 referencedTableName="dioceses"/>
+
+        <createIndex indexName="idx_leadership_diocese" tableName="leadership_assignments">
+            <column name="diocese_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-160" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="fellowship_position_id" baseTableName="leadership_assignments"
+                                 constraintName="FK_LEADERSHIP_ASSIGNMENTS_ON_FELLOWSHIP_POSITION"
+                                 referencedColumnNames="id" referencedTableName="fellowship_positions"/>
+
+        <createIndex indexName="idx_leadership_fellowship_position" tableName="leadership_assignments">
+            <column name="fellowship_position_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-161" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="person_id" baseTableName="leadership_assignments"
+                                 constraintName="FK_LEADERSHIP_ASSIGNMENTS_ON_PERSON" referencedColumnNames="id"
+                                 referencedTableName="people"/>
+
+        <createIndex indexName="idx_leadership_person" tableName="leadership_assignments">
+            <column name="person_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-162" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="person_id" baseTableName="users" constraintName="FK_USERS_ON_PERSON"
+                                 referencedColumnNames="id" referencedTableName="people"/>
+    </changeSet>
+    <changeSet id="1769608484919-163" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_id" baseTableName="vote_records"
+                                 constraintName="FK_VOTE_RECORDS_ON_ELECTION" referencedColumnNames="id"
+                                 referencedTableName="elections"/>
+
+        <createIndex indexName="idx_vote_record_election" tableName="vote_records">
+            <column name="election_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-164" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="person_id" baseTableName="vote_records"
+                                 constraintName="FK_VOTE_RECORDS_ON_PERSON" referencedColumnNames="id"
+                                 referencedTableName="people"/>
+
+        <createIndex indexName="idx_vote_record_person" tableName="vote_records">
+            <column name="person_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-165" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="position_id" baseTableName="vote_records"
+                                 constraintName="FK_VOTE_RECORDS_ON_POSITION" referencedColumnNames="id"
+                                 referencedTableName="election_positions"/>
+
+        <createIndex indexName="idx_vote_record_position" tableName="vote_records">
+            <column name="position_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-166" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="voting_period_id" baseTableName="vote_records"
+                                 constraintName="FK_VOTE_RECORDS_ON_VOTING_PERIOD" referencedColumnNames="id"
+                                 referencedTableName="voting_periods"/>
+
+        <createIndex indexName="idx_vote_record_period" tableName="vote_records">
+            <column name="voting_period_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-167" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="candidate_id" baseTableName="vote_selections"
+                                 constraintName="FK_VOTE_SELECTIONS_ON_CANDIDATE" referencedColumnNames="id"
+                                 referencedTableName="election_candidates"/>
+
+        <createIndex indexName="idx_vote_selection_candidate" tableName="vote_selections">
+            <column name="candidate_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-168" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="vote_record_id" baseTableName="vote_selections"
+                                 constraintName="FK_VOTE_SELECTIONS_ON_VOTE_RECORD" referencedColumnNames="id"
+                                 referencedTableName="vote_records"/>
+
+        <createIndex indexName="idx_vote_selection_record" tableName="vote_selections">
+            <column name="vote_record_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-169" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_id" baseTableName="voting_codes"
+                                 constraintName="FK_VOTING_CODES_ON_ELECTION" referencedColumnNames="id"
+                                 referencedTableName="elections"/>
+
+        <createIndex indexName="idx_voting_code_election" tableName="voting_codes">
+            <column name="election_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-170" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="issued_by_person_id" baseTableName="voting_codes"
+                                 constraintName="FK_VOTING_CODES_ON_ISSUED_BY_PERSON" referencedColumnNames="id"
+                                 referencedTableName="people"/>
+    </changeSet>
+    <changeSet id="1769608484919-171" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="person_id" baseTableName="voting_codes"
+                                 constraintName="FK_VOTING_CODES_ON_PERSON" referencedColumnNames="id"
+                                 referencedTableName="people"/>
+
+        <createIndex indexName="idx_voting_code_person" tableName="voting_codes">
+            <column name="person_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-172" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="revoked_by_person_id" baseTableName="voting_codes"
+                                 constraintName="FK_VOTING_CODES_ON_REVOKED_BY_PERSON" referencedColumnNames="id"
+                                 referencedTableName="people"/>
+    </changeSet>
+    <changeSet id="1769608484919-173" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="voting_period_id" baseTableName="voting_codes"
+                                 constraintName="FK_VOTING_CODES_ON_VOTING_PERIOD" referencedColumnNames="id"
+                                 referencedTableName="voting_periods"/>
+
+        <createIndex indexName="idx_voting_code_period" tableName="voting_codes">
+            <column name="voting_period_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-174" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_id" baseTableName="voting_periods"
+                                 constraintName="FK_VOTING_PERIODS_ON_ELECTION" referencedColumnNames="id"
+                                 referencedTableName="elections"/>
+
+        <createIndex indexName="idx_voting_period_election" tableName="voting_periods">
+            <column name="election_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-175" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="election_position_id" baseTableName="voting_period_positions"
+                                 constraintName="FK_VOTING_PERIOD_POSITIONS_ON_ELECTION_POSITION"
+                                 referencedColumnNames="id" referencedTableName="election_positions"/>
+
+        <createIndex indexName="idx_vpp_election_position" tableName="voting_period_positions">
+            <column name="election_position_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-176" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="voting_period_id" baseTableName="voting_period_positions"
+                                 constraintName="FK_VOTING_PERIOD_POSITIONS_ON_VOTING_PERIOD" referencedColumnNames="id"
+                                 referencedTableName="voting_periods"/>
+
+        <createIndex indexName="idx_vpp_voting_period" tableName="voting_period_positions">
+            <column name="voting_period_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1769608484919-177" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="role_id" baseTableName="user_roles" constraintName="fk_userol_on_role"
+                                 referencedColumnNames="id" referencedTableName="roles"/>
+    </changeSet>
+    <changeSet id="1769608484919-178" author="Simon">
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="user_roles" constraintName="fk_userol_on_user"
+                                 referencedColumnNames="id" referencedTableName="users"/>
+    </changeSet>
+
+</databaseChangeLog>
