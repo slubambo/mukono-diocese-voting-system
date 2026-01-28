@@ -93,7 +93,7 @@ const EligibilityTab: React.FC<EligibilityTabProps> = ({ electionId, votingPerio
   const [editing, setEditing] = useState<VoterRollEntryResponse | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<VoterRollEntryResponse | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
-  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
+  const [_lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
 
   const loadCounts = async () => {
     try {

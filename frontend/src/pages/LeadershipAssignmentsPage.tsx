@@ -249,7 +249,6 @@ const LeadershipAssignmentsPage: React.FC = () => {
     else setSort(`${key},asc` as any)
   }
 
-  const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString() : '—')
   const formatTerm = (start?: string | null, end?: string | null) => {
     const startYear = start ? dayjs(start).year() : null
     const endYear = end ? dayjs(end).year() : null

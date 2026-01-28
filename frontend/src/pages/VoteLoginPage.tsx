@@ -2,17 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Card,
-  CardContent,
-  TextField,
-  Button,
+  CardContent, Button,
   Typography,
   Box,
   Alert,
-  CircularProgress,
-  InputAdornment,
-  Stepper,
+  CircularProgress, Stepper,
   Step,
-  StepLabel,
+  StepLabel
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import HowToVoteIcon from '@mui/icons-material/HowToVote'

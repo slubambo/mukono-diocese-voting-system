@@ -78,7 +78,7 @@ const AssignmentForm: React.FC<Props> = ({ personId, assignment = null, onSaved,
       const archFromAssignment = assignment.archdeaconry ?? null
       const dioceseFromAssignment = assignment.diocese ?? null
 
-      let archId =
+      const archId =
         archFromAssignment?.id ??
         assignment.archdeaconryId ??
         churchFromAssignment?.archdeaconryId ??
