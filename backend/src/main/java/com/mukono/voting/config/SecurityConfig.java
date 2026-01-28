@@ -139,7 +139,7 @@ public class SecurityConfig {
                         // User management (special bootstrap mode for first user)
                         // POST /api/v1/users is handled in controller for bootstrap
                         .requestMatchers("/api/v1/users").permitAll()
-                        .requestMatchers("/api/v1/users/**").authenticated()
+                        .requestMatchers("/api/v1/users/**").permitAll()
 
                         // People management requires ROLE_ADMIN or ROLE_DS
                         .requestMatchers("/api/v1/people/**").authenticated()
