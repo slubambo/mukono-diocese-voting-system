@@ -16,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -24,7 +26,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/users")
-@PreAuthorize("hasAnyRole('ADMIN','DS')")
 public class UserController {
 
     private final UserService userService;
@@ -38,12 +39,10 @@ public class UserController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         boolean isBootstrap = userRepository.count() == 0;
-        if (!isBootstrap) {
-            // For safety, restrict to ADMIN after bootstrap
-            // Method-level PreAuthorize ensures this, but we keep the check
+        if (!isBootstrap && !currentUserIsAdmin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin role required to create users after bootstrap");
         }
         User createdUser = userService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.toUserResponse(createdUser));
@@ -131,5 +130,14 @@ public class UserController {
     public ResponseEntity<List<String>> listRoles() {
         List<String> roles = roleRepository.findAllRoleNames();
         return ResponseEntity.ok(roles);
+    }
+
+    private boolean currentUserIsAdmin() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
     }
 }

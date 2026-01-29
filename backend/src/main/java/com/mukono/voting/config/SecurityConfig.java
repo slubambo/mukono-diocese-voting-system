@@ -16,6 +16,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -137,9 +138,9 @@ public class SecurityConfig {
                         .requestMatchers("/webjars/**").permitAll()
 
                         // User management (special bootstrap mode for first user)
-                        // POST /api/v1/users is handled in controller for bootstrap
-                        .requestMatchers("/api/v1/users").permitAll()
-                        .requestMatchers("/api/v1/users/**").permitAll()
+                        // POST /api/v1/users is handled in controller for bootstrap (first user)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
+                        .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
 
                         // People management requires ROLE_ADMIN or ROLE_DS
                         .requestMatchers("/api/v1/people/**").authenticated()
