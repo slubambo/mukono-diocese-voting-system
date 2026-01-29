@@ -172,7 +172,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const me = await authApi.me()
+      const me = await authApi.me({
+        headers: {
+          Authorization: `Bearer ${response.accessToken}`,
+        },
+      })
       if (me?.roles?.length) {
         resolvedUser = { username: me.username, roles: me.roles }
       }
